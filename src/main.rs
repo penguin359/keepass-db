@@ -1,6 +1,8 @@
 extern crate byteorder;
 extern crate uuid;
 extern crate ring;
+extern crate rpassword;
+extern crate openssl;
 
 use std::io::Cursor;
 use std::env;
@@ -12,7 +14,10 @@ use std::collections::HashMap;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use uuid::{Builder, Uuid};
-use ring::digest::{Context, Digest, SHA256};
+use ring::digest::{Context, SHA256};
+use ring::hmac;
+use rpassword::read_password;
+use openssl::symm::{encrypt, Cipher};
 
 fn main() -> io::Result<()> {
     let mut stderr = io::stderr();
@@ -116,7 +121,7 @@ fn main() -> io::Result<()> {
     };
 
     let master_seed = &tlvs[&4u8];
-    let encrption_iv = &tlvs[&7u8];
+    let encryption_iv = &tlvs[&7u8];
     let kdf_parameters = &tlvs[&11u8];
     let mut c = Cursor::new(kdf_parameters);
     let variant_minor = c.read_u8()?;
@@ -127,6 +132,8 @@ fn main() -> io::Result<()> {
                  variant_major, variant_minor)?;
         process::exit(1);
     };
+
+    let mut custom_data = HashMap::<String, Vec<u8>>::new();
     loop {
         let item_type = c.read_u8()?;
         if item_type == 0 {
@@ -134,15 +141,16 @@ fn main() -> io::Result<()> {
         }
         let item_key_len = c.read_u32::<LittleEndian>()?;
         let mut item_key = vec![0; item_key_len as usize];
-        c.read_exact(&mut item_key);
-        let item_key_str = String::from_utf8_lossy(&item_key);
+        c.read_exact(&mut item_key)?;
+        let item_key_str = String::from_utf8_lossy(&item_key).to_owned();
         let item_value_len = c.read_u32::<LittleEndian>()?;
         let mut item_value = vec![0; item_value_len as usize];
-        c.read_exact(&mut item_value);
+        c.read_exact(&mut item_value)?;
         println!("K: {}, V: {:?}", item_key_str, item_value);
+        custom_data.insert(item_key_str.to_owned().to_string(), item_value);
     }
 
-    let mut context = Context::new(&SHA256);
+    let context = Context::new(&SHA256);
     let digest = context.finish();
     println!("{:?}", digest);
 
@@ -152,6 +160,7 @@ fn main() -> io::Result<()> {
     file.seek(SeekFrom::Start(header_start))?;
     let mut header = vec![0; (pos-header_start) as usize];
     file.read_exact(&mut header)?;
+    file.seek(SeekFrom::Start(pos))?;
     context.update(&header);
     let digest = context.finish();
     println!("{:?}", digest);
@@ -161,6 +170,72 @@ fn main() -> io::Result<()> {
         writeln!(stderr, "Possible header corruption\n")?;
         process::exit(1);
     }
+
+    let mut composite_key_intermediate = Vec::<u8>::new();
+
+    let user_password = read_password().unwrap();
+    {
+        let mut context = Context::new(&SHA256);
+        context.update(&user_password.as_bytes());
+        let digest = context.finish();
+        composite_key_intermediate.extend(digest.as_ref());
+    }
+
+    let keyfile: Option<Vec<u8>> = None;
+    if let Some(key) = keyfile {
+        let mut context = Context::new(&SHA256);
+        context.update(&key);
+        let digest = context.finish();
+        composite_key_intermediate.extend(digest.as_ref());
+    }
+
+    let windows_credentials: Option<Vec<u8>> = None;
+    if let Some(key) = windows_credentials {
+        let mut context = Context::new(&SHA256);
+        context.update(&key);
+        let digest = context.finish();
+        composite_key_intermediate.extend(digest.as_ref());
+    }
+
+    let composite_key = {
+        let mut context = Context::new(&SHA256);
+        context.update(&composite_key_intermediate);
+        context.finish()
+    };
+
+    let transform_seed = &custom_data["S"];
+    let mut c = Cursor::new(&custom_data["R"]);
+    let transform_round = c.read_u64::<LittleEndian>()?;
+
+    println!("Calculating transformed key ({})", transform_round);
+
+    let mut transform_key = composite_key.as_ref().to_owned();
+    let cipher = Cipher::aes_256_cbc();
+    for i in 0..transform_round {
+        transform_key = encrypt(cipher, transform_seed, Some(encryption_iv), &transform_key)?;
+        if i % 10000 == 0 {
+            println!("{}", i);
+        }
+    }
+    let mut context = Context::new(&SHA256);
+    context.update(&transform_key);
+    transform_key = context.finish().as_ref().to_owned();
+
+    println!("Calculating master key");
+
+    let mut master_key = master_seed.to_owned();
+    master_key.extend(transform_key);
+    let mut context = Context::new(&SHA256);
+    context.update(&master_key);
+    master_key = context.finish().as_ref().to_owned();
+
+    let mut hmac_tag = [0; 32];
+    file.read_exact(&mut hmac_tag)?;
+    let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &master_key);
+    println!("Verifying HMAC");
+    hmac::verify(&hmac_key, &header, &hmac_tag).unwrap();
+
+    println!("Complete");
 
     Ok(())
 }
