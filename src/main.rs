@@ -12,7 +12,7 @@ use std::io::{self, SeekFrom};
 use std::io::prelude::*;
 use std::collections::HashMap;
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use uuid::{Builder, Uuid};
 use ring::digest::{Context, SHA256, SHA512};
 use ring::hmac;
@@ -227,7 +227,7 @@ fn main() -> io::Result<()> {
     let mut context = Context::new(&SHA256);
     context.update(&transform_key);
     transform_key = context.finish().as_ref().to_owned();
-    println!("Key OUT: {:x?}", transform_key);
+    println!("Key OUT: {:0x?}", transform_key);
 
     println!("Calculating master key");
     let mut hmac_context = Context::new(&SHA512);
@@ -239,23 +239,46 @@ fn main() -> io::Result<()> {
     hmac_context.update(&master_key);
     hmac_context.update(&[1u8]);
     master_key = context.finish().as_ref().to_owned();
-    let hmac_key = hmac_context.finish().as_ref().to_owned();
-    println!("Master OUT: {:x?}", master_key);
-    println!("HMAC OUT: {:x?}", hmac_key);
+    let hmac_key_base = hmac_context.finish().as_ref().to_owned();
+    println!("Master OUT: {:0x?}", master_key);
+    println!("HMAC OUT: {:0x?}", hmac_key_base);
 
     let mut hmac_context = Context::new(&SHA512);
     hmac_context.update(&[0xff; 8]);
-    hmac_context.update(&hmac_key);
+    hmac_context.update(&hmac_key_base);
     let hmac_key = hmac_context.finish().as_ref().to_owned();
 
     let mut hmac_tag = [0; 32];
     file.read_exact(&mut hmac_tag)?;
-    println!("HMAC Tag: {:x?}", hmac_tag);
+    println!("HMAC Tag: {:0x?}", hmac_tag);
     let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
     println!("Verifying HMAC");
     hmac::verify(&hmac_key, &header, &hmac_tag).unwrap();
 
     println!("Complete");
+
+    for idx in 0.. {
+        println!("Block {}", idx);
+        file.read_exact(&mut hmac_tag)?;
+        let block_size = file.read_u32::<LittleEndian>()?;
+        if block_size == 0 {
+            break;
+        }
+        let mut block = vec![0; block_size as usize];
+        file.read_exact(&mut block)?;
+
+        let mut hmac_context = Context::new(&SHA512);
+        let mut buf = Cursor::new(Vec::new());
+        buf.write_u64::<LittleEndian>(idx);
+        hmac_context.update(buf.get_ref());
+        hmac_context.update(&hmac_key_base);
+        let hmac_key = hmac_context.finish().as_ref().to_owned();
+        buf.write_u32::<LittleEndian>(block_size);
+        buf.write(&block);
+        let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
+        println!("Verifying HMAC");
+        hmac::verify(&hmac_key, buf.get_ref(), &hmac_tag).unwrap();
+    };
 
     Ok(())
 }
