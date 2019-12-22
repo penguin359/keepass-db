@@ -17,7 +17,7 @@ use uuid::{Builder, Uuid};
 use ring::digest::{Context, SHA256};
 use ring::hmac;
 use rpassword::read_password;
-use openssl::symm::{encrypt, Crypter, Cipher};
+use openssl::symm::{encrypt, Crypter, Cipher, Mode};
 
 fn main() -> io::Result<()> {
     let mut stderr = io::stderr();
@@ -211,28 +211,23 @@ fn main() -> io::Result<()> {
 
     let mut transform_key = composite_key.as_ref().to_owned();
     let cipher = Cipher::aes_256_ecb();
-    for i in 0..transform_round {
-        let transform_key_out1 = encrypt(cipher, transform_seed, None, &transform_key[0..16])?;
-        let transform_key_out2 = encrypt(cipher, transform_seed, None, &transform_key[16..32])?;
-        if i < 10 {
-            println!("{} {} {}", cipher.block_size(), transform_seed.len(), transform_key.len());
-        }
-        transform_key = vec![];
-        transform_key.extend(transform_key_out1);
-        transform_key.extend(transform_key_out2);
-        //let mut c = Crypter::new(cipher, Encrypt, transform_seed, Some(encryption_iv))?
-        //let mut out = vec![0; data.len() + t.block_size()];
-        //let count = c.update(data, &mut out)?;
-        //let rest = c.finalize(&mut out[count..])?;
-        //out.truncate(count + rest);
-        //Ok(out)
-        if i % 10000 == 0 {
-            println!("{}: len: {}", i, transform_key.len());
-        }
+    let mut c = Crypter::new(cipher, Mode::Encrypt, transform_seed, None)?;
+    for i in 0..cipher.block_size() {
+        transform_key.push(0);
     }
+    let mut out = vec![0; 16 + 16 + cipher.block_size()];
+    c.pad(false);
+    for i in 0..transform_round {
+        let count = c.update(&transform_key[0..32], &mut out)?;
+        let temp = transform_key;
+        transform_key = out;
+        out = temp;
+    }
+    transform_key.truncate(32);
     let mut context = Context::new(&SHA256);
     context.update(&transform_key);
     transform_key = context.finish().as_ref().to_owned();
+    println!("Key OUT: {:x?}", transform_key);
 
     println!("Calculating master key");
 
