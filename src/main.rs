@@ -3,6 +3,7 @@ extern crate uuid;
 extern crate ring;
 extern crate rpassword;
 extern crate openssl;
+extern crate flate2;
 
 use std::io::Cursor;
 use std::env;
@@ -18,6 +19,7 @@ use ring::digest::{Context, SHA256, SHA512};
 use ring::hmac;
 use rpassword::read_password;
 use openssl::symm::{decrypt, encrypt, Crypter, Cipher, Mode};
+use flate2::read::GzDecoder;
 
 fn main() -> io::Result<()> {
     let mut stderr = io::stderr();
@@ -257,7 +259,6 @@ fn main() -> io::Result<()> {
 
     println!("Complete");
 
-    let mut file_out = File::create("data.gz")?;
     for idx in 0.. {
         println!("Block {}", idx);
         file.read_exact(&mut hmac_tag)?;
@@ -281,7 +282,24 @@ fn main() -> io::Result<()> {
         hmac::verify(&hmac_key, buf.get_ref(), &hmac_tag).unwrap();
 
         let data = decrypt(Cipher::aes_256_cbc(), &master_key, Some(encryption_iv), &block).unwrap();
-        file_out.write(&data);
+        let mut gz = GzDecoder::new(Cursor::new(data));
+
+        let mut tlvs = HashMap::new();
+        loop {
+            let tlv_type = gz.read_u8()?;
+            let tlv_len = gz.read_u32::<LittleEndian>()?;
+            let mut tlv_data = vec![0; tlv_len as usize];
+            gz.read_exact(&mut tlv_data)?;
+            if tlv_type == 0 {
+                break;
+            }
+            println!("TLV({}, {}): {:?}", tlv_type, tlv_len, tlv_data);
+            tlvs.insert(tlv_type, tlv_data);
+        };
+        let mut xml_file = File::create("data.xml")?;
+        let mut buf = vec![];
+        gz.read_to_end(&mut buf);
+        xml_file.write(&buf);
     };
 
     Ok(())
