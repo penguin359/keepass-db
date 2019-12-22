@@ -17,7 +17,7 @@ use uuid::{Builder, Uuid};
 use ring::digest::{Context, SHA256, SHA512};
 use ring::hmac;
 use rpassword::read_password;
-use openssl::symm::{encrypt, Crypter, Cipher, Mode};
+use openssl::symm::{decrypt, encrypt, Crypter, Cipher, Mode};
 
 fn main() -> io::Result<()> {
     let mut stderr = io::stderr();
@@ -257,6 +257,7 @@ fn main() -> io::Result<()> {
 
     println!("Complete");
 
+    let mut file_out = File::create("data.gz")?;
     for idx in 0.. {
         println!("Block {}", idx);
         file.read_exact(&mut hmac_tag)?;
@@ -278,6 +279,9 @@ fn main() -> io::Result<()> {
         let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
         println!("Verifying HMAC");
         hmac::verify(&hmac_key, buf.get_ref(), &hmac_tag).unwrap();
+
+        let data = decrypt(Cipher::aes_256_cbc(), &master_key, Some(encryption_iv), &block).unwrap();
+        file_out.write(&data);
     };
 
     Ok(())
