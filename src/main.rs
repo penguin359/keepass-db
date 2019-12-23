@@ -7,6 +7,7 @@ extern crate openssl;
 extern crate flate2;
 extern crate sxd_document;
 extern crate sxd_xpath;
+extern crate chrono;
 
 use std::io::Cursor;
 use std::env;
@@ -26,6 +27,7 @@ use openssl::symm::{decrypt, encrypt, Crypter, Cipher, Mode};
 use flate2::read::GzDecoder;
 use sxd_document::parser;
 use sxd_xpath::{evaluate_xpath, Context as XPathContext, Factory, Value};
+use chrono::prelude::*;
 
 fn main() -> io::Result<()> {
     let mut stderr = io::stderr();
@@ -342,7 +344,11 @@ fn main() -> io::Result<()> {
         let database_name_node = evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseName/text()").expect("Missing database name");
         println!("Database Name: {}", database_name_node.string());
         let database_name_changed_node = evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseNameChanged/text()").expect("Missing database name changed");
-        println!("Database Name Changed: {}", Cursor::new(decode(&database_name_changed_node.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - offset);
+        let timestamp = Cursor::new(decode(&database_name_changed_node.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - offset;
+        //let naive = NaiveDateTime::from_timestamp(timestamp, 0);
+        //let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+        let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
+        println!("Database Name Changed: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
 
         let xpath_username = Factory::new().build("String[Key/text() = 'UserName']/Value/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
         let xpath_last_mod_time = Factory::new().build("Times/LastModificationTime/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
@@ -350,13 +356,15 @@ fn main() -> io::Result<()> {
         let entry_nodes = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry").expect("Missing database entries");
         match entry_nodes {
             Value::Nodeset(nodes) => {
-        for entry in nodes {
-            //let n = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry/String[Key/text() = 'UserName']/Value/text()").expect("Missing entry username");
-            let n = xpath_username.evaluate(&xpath_context, entry).expect("Missing entry username");
-            let t = xpath_last_mod_time.evaluate(&xpath_context, entry).expect("Missing entry modification");
-            println!("Name: {}", n.string());
-            println!("Changed: {}", Cursor::new(decode(&t.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - offset);
-        }
+                for entry in nodes {
+                    //let n = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry/String[Key/text() = 'UserName']/Value/text()").expect("Missing entry username");
+                    let n = xpath_username.evaluate(&xpath_context, entry).expect("Missing entry username");
+                    let t = xpath_last_mod_time.evaluate(&xpath_context, entry).expect("Missing entry modification");
+                    println!("Name: {}", n.string());
+                    let timestamp = Cursor::new(decode(&t.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - offset;
+                    let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
+                    println!("Changed: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                }
             },
             _ => { panic!("XML corruption"); },
         };
