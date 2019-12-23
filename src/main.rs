@@ -1,3 +1,4 @@
+extern crate hex;
 extern crate byteorder;
 extern crate base64;
 extern crate uuid;
@@ -17,17 +18,96 @@ use std::io::{self, SeekFrom};
 use std::io::prelude::*;
 use std::collections::HashMap;
 
-use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
+use hex::ToHex;
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use base64::decode;
 use uuid::{Builder, Uuid};
 use ring::digest::{Context, SHA256, SHA512};
 use ring::hmac;
 use rpassword::read_password;
-use openssl::symm::{decrypt, encrypt, Crypter, Cipher, Mode};
+use openssl::symm::{decrypt, Crypter, Cipher, Mode};
 use flate2::read::GzDecoder;
 use sxd_document::parser;
 use sxd_xpath::{evaluate_xpath, Context as XPathContext, Factory, Value};
 use chrono::prelude::*;
+
+#[cfg(test)]
+mod tests {
+    use hex::FromHex;
+
+    use super::*;
+
+    // Simple password is asdf
+    const PASSWORD_SIMPLE : &str = "61736466";
+
+    // Composite key generated from simple, password-only lock
+    const COMPOSITE_KEY_PASSWORD : &str =
+        "fe9a32f5b565da46af951e4aab23c24b8c1565eb0b6603a03118b7d225a21e8c";
+
+    #[test]
+    fn test_user_password() {
+        let password = "61736466";
+        let data = Vec::from_hex(password).unwrap();
+        let mut key = Key::new();
+        key.set_user_password(data);
+        assert_eq!(key.composite_key(), Vec::from_hex(COMPOSITE_KEY_PASSWORD).unwrap());
+    }
+}
+
+struct Key {
+    user_password: Option<Vec<u8>>,
+    keyfile: Option<Vec<u8>>,
+    windows_credentials: Option<Vec<u8>>,
+}
+
+impl Key {
+    fn new() -> Key {
+        Key {
+            user_password: None,
+            keyfile: None,
+            windows_credentials: None,
+        }
+    }
+
+    fn set_user_password<T>(&mut self, user_password: T)
+        where T : AsRef<[u8]> {
+            let mut context = Context::new(&SHA256);
+            context.update(user_password.as_ref());
+            self.user_password = Some(context.finish().as_ref().to_owned());
+    }
+
+    fn set_keyfile<T>(&mut self, keyfile: T)
+        where T : AsRef<[u8]> {
+            let mut context = Context::new(&SHA256);
+            context.update(keyfile.as_ref());
+            self.keyfile = Some(context.finish().as_ref().to_owned());
+    }
+
+    fn set_windows_credentials<T>(&mut self, windows_credentials: T)
+        where T : AsRef<[u8]> {
+            let mut context = Context::new(&SHA256);
+            context.update(windows_credentials.as_ref());
+            self.windows_credentials = Some(context.finish().as_ref().to_owned());
+    }
+
+    fn composite_key(&self) -> Vec<u8> {
+        let mut context = Context::new(&SHA256);
+
+        if let Some(key) = &self.user_password {
+            context.update(&key);
+        }
+
+        if let Some(key) = &self.keyfile {
+            context.update(&key);
+        }
+
+        if let Some(key) = &self.windows_credentials {
+            context.update(&key);
+        }
+
+        context.finish().as_ref().to_owned()
+    }
+}
 
 fn main() -> io::Result<()> {
     let mut stderr = io::stderr();
@@ -183,6 +263,7 @@ fn main() -> io::Result<()> {
 
     let mut composite_key_intermediate = Vec::<u8>::new();
 
+    let mut key = Key::new();
     let user_password = match env::var("KDBX_PASSWORD") {
         Ok(password) => password,
         Err(env::VarError::NotPresent) => read_password().unwrap(),
@@ -190,49 +271,25 @@ fn main() -> io::Result<()> {
             panic!("Invalid password");
         },
     };
-    {
-        let mut context = Context::new(&SHA256);
-        context.update(&user_password.as_bytes());
-        let digest = context.finish();
-        composite_key_intermediate.extend(digest.as_ref());
-    }
-
-    let keyfile: Option<Vec<u8>> = None;
-    if let Some(key) = keyfile {
-        let mut context = Context::new(&SHA256);
-        context.update(&key);
-        let digest = context.finish();
-        composite_key_intermediate.extend(digest.as_ref());
-    }
-
-    let windows_credentials: Option<Vec<u8>> = None;
-    if let Some(key) = windows_credentials {
-        let mut context = Context::new(&SHA256);
-        context.update(&key);
-        let digest = context.finish();
-        composite_key_intermediate.extend(digest.as_ref());
-    }
-
-    let composite_key = {
-        let mut context = Context::new(&SHA256);
-        context.update(&composite_key_intermediate);
-        context.finish()
-    };
+    println!("User PW: {}", user_password.encode_hex::<String>());
+    key.set_user_password(user_password);
+    let composite_key = key.composite_key();
+    println!("Composite Key: {}", composite_key.encode_hex::<String>());
 
     let kdf_id = Builder::from_slice(&custom_data["$UUID"]).unwrap().build();
     println!("KDF: {:?}", kdf_id);
-    let KDF_AES_KDBX3 = Uuid::parse_str("c9d9f39a-628a-4460-bf74-0d08c18a4fea").unwrap();
-    let KDF_AES_KDBX4 = Uuid::parse_str("7c02bb82-79a7-4ac0-927d-114a00648238").unwrap();
-    let KDF_ARGON2    = Uuid::parse_str("ef636ddf-8c29-444b-91f7-a9a403e30a0c").unwrap();
+    let kdf_aes_kdbx3 = Uuid::parse_str("c9d9f39a-628a-4460-bf74-0d08c18a4fea").unwrap();
+    let kdf_aes_kdbx4 = Uuid::parse_str("7c02bb82-79a7-4ac0-927d-114a00648238").unwrap();
+    let kdf_argon2    = Uuid::parse_str("ef636ddf-8c29-444b-91f7-a9a403e30a0c").unwrap();
 
     match kdf_id {
-        x if x == KDF_AES_KDBX3 => {
+        x if x == kdf_aes_kdbx3 => {
             //panic!("KDBX 3 AES-KDF not supported!");
         },
-        x if x == KDF_AES_KDBX4 => {
+        x if x == kdf_aes_kdbx4 => {
             panic!("KDBX 4 AES-KDF not supported!");
         },
-        x if x == KDF_ARGON2 => {
+        x if x == kdf_argon2 => {
             panic!("Argon2 KDF not supported!");
         },
         _ => {
@@ -246,16 +303,16 @@ fn main() -> io::Result<()> {
 
     println!("Calculating transformed key ({})", transform_round);
 
-    let mut transform_key = composite_key.as_ref().to_owned();
+    let mut transform_key = composite_key;
     let cipher = Cipher::aes_256_ecb();
     let mut c = Crypter::new(cipher, Mode::Encrypt, transform_seed, None)?;
-    for i in 0..cipher.block_size() {
+    for _ in 0..cipher.block_size() {
         transform_key.push(0);
     }
     let mut out = vec![0; 16 + 16 + cipher.block_size()];
     c.pad(false);
-    for i in 0..transform_round {
-        let count = c.update(&transform_key[0..32], &mut out)?;
+    for _ in 0..transform_round {
+        c.update(&transform_key[0..32], &mut out)?;
         let temp = transform_key;
         transform_key = out;
         out = temp;
@@ -306,12 +363,12 @@ fn main() -> io::Result<()> {
 
         let mut hmac_context = Context::new(&SHA512);
         let mut buf = Cursor::new(Vec::new());
-        buf.write_u64::<LittleEndian>(idx);
+        buf.write_u64::<LittleEndian>(idx)?;
         hmac_context.update(buf.get_ref());
         hmac_context.update(&hmac_key_base);
         let hmac_key = hmac_context.finish().as_ref().to_owned();
-        buf.write_u32::<LittleEndian>(block_size);
-        buf.write(&block);
+        buf.write_u32::<LittleEndian>(block_size)?;
+        buf.write(&block)?;
         let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
         println!("Verifying HMAC");
         hmac::verify(&hmac_key, buf.get_ref(), &hmac_tag).unwrap();
@@ -337,14 +394,14 @@ fn main() -> io::Result<()> {
         gz.read_to_string(&mut contents)?;
         //gz.read_to_end(&mut buf);
         //xml_file.write(&buf);
-        const offset: i64 = 62135596800;
+        const KDBX4_TIME_OFFSET : i64 = 62135596800;
         let package = parser::parse(&contents).unwrap();
         let document = package.as_document();
         println!("Root element: {}", document.root().children()[0].element().unwrap().name().local_part());
         let database_name_node = evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseName/text()").expect("Missing database name");
         println!("Database Name: {}", database_name_node.string());
         let database_name_changed_node = evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseNameChanged/text()").expect("Missing database name changed");
-        let timestamp = Cursor::new(decode(&database_name_changed_node.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - offset;
+        let timestamp = Cursor::new(decode(&database_name_changed_node.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - KDBX4_TIME_OFFSET ;
         //let naive = NaiveDateTime::from_timestamp(timestamp, 0);
         //let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
         let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
@@ -361,7 +418,7 @@ fn main() -> io::Result<()> {
                     let n = xpath_username.evaluate(&xpath_context, entry).expect("Missing entry username");
                     let t = xpath_last_mod_time.evaluate(&xpath_context, entry).expect("Missing entry modification");
                     println!("Name: {}", n.string());
-                    let timestamp = Cursor::new(decode(&t.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - offset;
+                    let timestamp = Cursor::new(decode(&t.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - KDBX4_TIME_OFFSET ;
                     let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
                     println!("Changed: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
                 }
