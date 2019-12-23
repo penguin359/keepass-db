@@ -4,6 +4,8 @@ extern crate ring;
 extern crate rpassword;
 extern crate openssl;
 extern crate flate2;
+extern crate sxd_document;
+extern crate sxd_xpath;
 
 use std::io::Cursor;
 use std::env;
@@ -20,6 +22,7 @@ use ring::hmac;
 use rpassword::read_password;
 use openssl::symm::{decrypt, encrypt, Crypter, Cipher, Mode};
 use flate2::read::GzDecoder;
+use sxd_document::parser;
 
 fn main() -> io::Result<()> {
     let mut stderr = io::stderr();
@@ -175,7 +178,13 @@ fn main() -> io::Result<()> {
 
     let mut composite_key_intermediate = Vec::<u8>::new();
 
-    let user_password = read_password().unwrap();
+    let user_password = match env::var("KDBX_PASSWORD") {
+        Ok(password) => password,
+        Err(env::VarError::NotPresent) => read_password().unwrap(),
+        Err(env::VarError::NotUnicode(_)) => {
+            panic!("Invalid password");
+        },
+    };
     {
         let mut context = Context::new(&SHA256);
         context.update(&user_password.as_bytes());
@@ -252,7 +261,7 @@ fn main() -> io::Result<()> {
 
     let mut hmac_tag = [0; 32];
     file.read_exact(&mut hmac_tag)?;
-    println!("HMAC Tag: {:0x?}", hmac_tag);
+    //println!("HMAC Tag: {:0x?}", hmac_tag);
     let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
     println!("Verifying HMAC");
     hmac::verify(&hmac_key, &header, &hmac_tag).unwrap();
@@ -297,9 +306,13 @@ fn main() -> io::Result<()> {
             tlvs.insert(tlv_type, tlv_data);
         };
         let mut xml_file = File::create("data.xml")?;
-        let mut buf = vec![];
-        gz.read_to_end(&mut buf);
-        xml_file.write(&buf);
+        //let mut buf = vec![];
+        let mut contents = String::new();
+        gz.read_to_string(&mut contents)?;
+        //gz.read_to_end(&mut buf);
+        //xml_file.write(&buf);
+        let doc = parser::parse(&contents).unwrap();
+        println!("Root element: {}", doc.as_document().root().children()[0].element().unwrap().name().local_part());
     };
 
     Ok(())
