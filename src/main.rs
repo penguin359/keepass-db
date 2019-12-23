@@ -1,4 +1,5 @@
 extern crate byteorder;
+extern crate base64;
 extern crate uuid;
 extern crate ring;
 extern crate rpassword;
@@ -15,7 +16,8 @@ use std::io::{self, SeekFrom};
 use std::io::prelude::*;
 use std::collections::HashMap;
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
+use base64::decode;
 use uuid::{Builder, Uuid};
 use ring::digest::{Context, SHA256, SHA512};
 use ring::hmac;
@@ -23,6 +25,7 @@ use rpassword::read_password;
 use openssl::symm::{decrypt, encrypt, Crypter, Cipher, Mode};
 use flate2::read::GzDecoder;
 use sxd_document::parser;
+use sxd_xpath::{evaluate_xpath, Context as XPathContext, Factory, Value};
 
 fn main() -> io::Result<()> {
     let mut stderr = io::stderr();
@@ -151,7 +154,7 @@ fn main() -> io::Result<()> {
         let item_value_len = c.read_u32::<LittleEndian>()?;
         let mut item_value = vec![0; item_value_len as usize];
         c.read_exact(&mut item_value)?;
-        println!("K: {}, V: {:?}", item_key_str, item_value);
+        println!("K: {}, V: {:0x?}", item_key_str, item_value);
         custom_data.insert(item_key_str.to_owned().to_string(), item_value);
     }
 
@@ -212,6 +215,27 @@ fn main() -> io::Result<()> {
         let mut context = Context::new(&SHA256);
         context.update(&composite_key_intermediate);
         context.finish()
+    };
+
+    let kdf_id = Builder::from_slice(&custom_data["$UUID"]).unwrap().build();
+    println!("KDF: {:?}", kdf_id);
+    let KDF_AES_KDBX3 = Uuid::parse_str("c9d9f39a-628a-4460-bf74-0d08c18a4fea").unwrap();
+    let KDF_AES_KDBX4 = Uuid::parse_str("7c02bb82-79a7-4ac0-927d-114a00648238").unwrap();
+    let KDF_ARGON2    = Uuid::parse_str("ef636ddf-8c29-444b-91f7-a9a403e30a0c").unwrap();
+
+    match kdf_id {
+        x if x == KDF_AES_KDBX3 => {
+            //panic!("KDBX 3 AES-KDF not supported!");
+        },
+        x if x == KDF_AES_KDBX4 => {
+            panic!("KDBX 4 AES-KDF not supported!");
+        },
+        x if x == KDF_ARGON2 => {
+            panic!("Argon2 KDF not supported!");
+        },
+        _ => {
+            panic!("Unknown");
+        },
     };
 
     let transform_seed = &custom_data["S"];
@@ -305,14 +329,37 @@ fn main() -> io::Result<()> {
             println!("TLV({}, {}): {:?}", tlv_type, tlv_len, tlv_data);
             tlvs.insert(tlv_type, tlv_data);
         };
-        let mut xml_file = File::create("data.xml")?;
+        //let mut xml_file = File::create("data.xml")?;
         //let mut buf = vec![];
         let mut contents = String::new();
         gz.read_to_string(&mut contents)?;
         //gz.read_to_end(&mut buf);
         //xml_file.write(&buf);
-        let doc = parser::parse(&contents).unwrap();
-        println!("Root element: {}", doc.as_document().root().children()[0].element().unwrap().name().local_part());
+        const offset: i64 = 62135596800;
+        let package = parser::parse(&contents).unwrap();
+        let document = package.as_document();
+        println!("Root element: {}", document.root().children()[0].element().unwrap().name().local_part());
+        let database_name_node = evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseName/text()").expect("Missing database name");
+        println!("Database Name: {}", database_name_node.string());
+        let database_name_changed_node = evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseNameChanged/text()").expect("Missing database name changed");
+        println!("Database Name Changed: {}", Cursor::new(decode(&database_name_changed_node.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - offset);
+
+        let xpath_username = Factory::new().build("String[Key/text() = 'UserName']/Value/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
+        let xpath_last_mod_time = Factory::new().build("Times/LastModificationTime/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
+        let xpath_context = XPathContext::new();
+        let entry_nodes = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry").expect("Missing database entries");
+        match entry_nodes {
+            Value::Nodeset(nodes) => {
+        for entry in nodes {
+            //let n = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry/String[Key/text() = 'UserName']/Value/text()").expect("Missing entry username");
+            let n = xpath_username.evaluate(&xpath_context, entry).expect("Missing entry username");
+            let t = xpath_last_mod_time.evaluate(&xpath_context, entry).expect("Missing entry modification");
+            println!("Name: {}", n.string());
+            println!("Changed: {}", Cursor::new(decode(&t.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - offset);
+        }
+            },
+            _ => { panic!("XML corruption"); },
+        };
     };
 
     Ok(())
