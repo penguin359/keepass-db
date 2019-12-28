@@ -9,6 +9,7 @@ extern crate flate2;
 extern crate sxd_document;
 extern crate sxd_xpath;
 extern crate chrono;
+extern crate argon2;
 
 use std::io::Cursor;
 use std::env;
@@ -31,6 +32,9 @@ use sxd_document::parser;
 use sxd_xpath::{evaluate_xpath, Context as XPathContext, Factory, Value};
 use chrono::prelude::*;
 
+use argon2::{Config, ThreadMode, Variant, Version};
+
+
 #[cfg(test)]
 mod tests {
     use hex::FromHex;
@@ -46,12 +50,81 @@ mod tests {
 
     #[test]
     fn test_user_password() {
-        let password = "61736466";
-        let data = Vec::from_hex(password).unwrap();
+        let data = Vec::from_hex(PASSWORD_SIMPLE).unwrap();
         let mut key = Key::new();
         key.set_user_password(data);
         assert_eq!(key.composite_key(), Vec::from_hex(COMPOSITE_KEY_PASSWORD).unwrap());
     }
+
+    #[test]
+    fn test_argon2() {
+        let password = b"password";
+        let salt = b"othersalt";
+        let config = Config {
+            variant: Variant::Argon2d,
+            version: Version::Version13,
+            mem_cost: 65536,
+            time_cost: 10,
+            lanes: 4,
+            thread_mode: ThreadMode::Parallel,
+            secret: &[],
+            ad: &[],
+            hash_length: 32
+        };
+        let hash = argon2::hash_encoded(password, salt, &config).unwrap();
+        let matches = argon2::verify_encoded(&hash, password).unwrap();
+        assert!(matches);
+    }
+
+    fn make_u32(value: u32) -> Vec<u8> {
+        let out = vec![0; 4];
+        let mut cursor = Cursor::new(out);
+        cursor.write_u32::<LittleEndian>(value).unwrap();
+        cursor.into_inner()
+    }
+
+    fn make_u64(value: u64) -> Vec<u8> {
+        let out = vec![0; 8];
+        let mut cursor = Cursor::new(out);
+        cursor.write_u64::<LittleEndian>(value).unwrap();
+        cursor.into_inner()
+    }
+
+    const ARGON2_HASH : &str = "4eb4d1f66ae3c88d85445fb49ae7c4a8fd51eeaa132c53cb8b37610f02569371";
+
+    #[test]
+    fn test_argon2_kdf() {
+        //let data = Vec::from_hex(PASSWORD_SIMPLE).unwrap();
+        //let mut key = Key::new();
+        //key.set_user_password(data);
+        //let composite_key = Vec::from_hex(COMPOSITE_KEY_PASSWORD).unwrap();
+        let password = b"password";
+        let salt = b"othersalt";
+        let mut custom_data = HashMap::new();
+        custom_data.insert("S".to_string(), salt.to_vec());
+        custom_data.insert("V".to_string(), make_u32(13));
+        custom_data.insert("M".to_string(), make_u64(65536));
+        custom_data.insert("I".to_string(), make_u64(10));
+        custom_data.insert("P".to_string(), make_u32(4));
+        let transform_key = transform_argon2(&password[..], &custom_data);
+        assert!(transform_key.is_ok());
+    }
+}
+
+fn unmake_u32(value: &[u8]) -> Option<u32> {
+    if value.len() != 4 {
+        return None
+    }
+    let mut cursor = Cursor::new(value);
+    Some(cursor.read_u32::<LittleEndian>().unwrap())
+}
+
+fn unmake_u64(value: &[u8]) -> Option<u64> {
+    if value.len() != 8 {
+        return None
+    }
+    let mut cursor = Cursor::new(value);
+    Some(cursor.read_u64::<LittleEndian>().unwrap())
 }
 
 struct Key {
@@ -107,6 +180,86 @@ impl Key {
 
         context.finish().as_ref().to_owned()
     }
+}
+
+fn transform_aes_kdf(composite_key: &[u8], custom_data: &HashMap<String, Vec<u8>>) -> io::Result<Vec<u8>> {
+    let transform_seed = &custom_data["S"];
+    let mut c = Cursor::new(&custom_data["R"]);
+    let transform_round = c.read_u64::<LittleEndian>()?;
+
+    println!("Calculating transformed key ({})", transform_round);
+
+    let mut transform_key = composite_key.to_owned();
+    let cipher = Cipher::aes_256_ecb();
+    let mut c = Crypter::new(cipher, Mode::Encrypt, transform_seed, None)?;
+    for _ in 0..cipher.block_size() {
+        transform_key.push(0);
+    }
+    let mut out = vec![0; 16 + 16 + cipher.block_size()];
+    c.pad(false);
+    for _ in 0..transform_round {
+        c.update(&transform_key[0..32], &mut out)?;
+        let temp = transform_key;
+        transform_key = out;
+        out = temp;
+    }
+    transform_key.truncate(32);
+    let mut context = Context::new(&SHA256);
+    context.update(&transform_key);
+    Ok(context.finish().as_ref().to_owned())
+}
+
+const KDF_PARAM_SALT         : &str = "S"; // Byte[], Generates 32 bytes, required
+const KDF_PARAM_PARALLELISM  : &str = "P"; // UInt32, Default, required
+const KDF_PARAM_MEMORY       : &str = "M"; // UInt64, Default, required
+const KDF_PARAM_ITERATIONS   : &str = "I"; // UInt64, Default, required
+const KDF_PARAM_VERSION      : &str = "V"; // UInt32, Min/Max, Default Max, required
+const KDF_PARAM_SECRET_KEY   : &str = "K"; // Byte[]
+const KDF_PARAM_ASSOC_DATA   : &str = "A"; // Byte[]
+
+const DEFAULT_ITERATIONS     : u64 = 2;
+const DEFAULT_MEMORY         : u64 = 1024 * 1024;
+const DEFAULT_PARALLELISM    : u32 = 2;
+
+fn transform_argon2(composite_key: &[u8], custom_data: &HashMap<String, Vec<u8>>) -> io::Result<Vec<u8>> {
+let password = b"password";
+let salt = b"othersalt";
+    let version = match custom_data.get(KDF_PARAM_VERSION) {
+        Some(x) => {
+            //match x.parse::<u32>() {
+            match unmake_u32(x) {
+                Some(x) => Version::Version13,
+                None => { panic!(""); },
+            }
+        }
+        /*
+        Some(ref x) if x > 13 => {
+            return Err(io::Result::new(io::ErrorKind::Other, "Argon2 version too new"));
+        },
+        Some(ref x) if x == 13 => Version::Version13,
+        Some(ref x) if x >= 10 => Version::Version10,
+        Some(ref x) => {
+            return Err(io::Result::new(io::ErrorKind::Other, "Argon2 version too old"));
+        },
+        */
+        None => {
+            return Err(io::Error::new(io::ErrorKind::Other, "Argon2 version missing"));
+        },
+    };
+    let config = Config {
+        variant: Variant::Argon2d,
+        version: version,
+        mem_cost: 65536,
+        time_cost: 10,
+        lanes: 4,
+        thread_mode: ThreadMode::Parallel,
+        secret: &[],
+        ad: &[],
+        hash_length: 32
+    };
+let hash = argon2::hash_raw(password, salt, &config).unwrap();
+    //Err(io::Error::new(io::ErrorKind::Other, "Argon2 unimplemented"))
+    Ok(hash)
 }
 
 fn main() -> io::Result<()> {
@@ -240,10 +393,6 @@ fn main() -> io::Result<()> {
         custom_data.insert(item_key_str.to_owned().to_string(), item_value);
     }
 
-    let context = Context::new(&SHA256);
-    let digest = context.finish();
-    println!("{:?}", digest);
-
     let mut context = Context::new(&SHA256);
     let header_start = 0;
     let pos = file.seek(SeekFrom::Current(0))?;
@@ -253,7 +402,6 @@ fn main() -> io::Result<()> {
     file.seek(SeekFrom::Start(pos))?;
     context.update(&header);
     let digest = context.finish();
-    println!("{:?}", digest);
     let mut expected_hash = [0; 32];
     file.read_exact(&mut expected_hash)?;
     if digest.as_ref() != expected_hash {
@@ -282,45 +430,23 @@ fn main() -> io::Result<()> {
     let kdf_aes_kdbx4 = Uuid::parse_str("7c02bb82-79a7-4ac0-927d-114a00648238").unwrap();
     let kdf_argon2    = Uuid::parse_str("ef636ddf-8c29-444b-91f7-a9a403e30a0c").unwrap();
 
-    match kdf_id {
+    let transform_key = match kdf_id {
         x if x == kdf_aes_kdbx3 => {
             //panic!("KDBX 3 AES-KDF not supported!");
+            transform_aes_kdf(&composite_key, &custom_data)?
         },
         x if x == kdf_aes_kdbx4 => {
             panic!("KDBX 4 AES-KDF not supported!");
         },
         x if x == kdf_argon2 => {
-            panic!("Argon2 KDF not supported!");
+            transform_argon2(&composite_key, &custom_data)?
+            //panic!("Argon2 KDF not supported!");
         },
         _ => {
             panic!("Unknown");
         },
     };
 
-    let transform_seed = &custom_data["S"];
-    let mut c = Cursor::new(&custom_data["R"]);
-    let transform_round = c.read_u64::<LittleEndian>()?;
-
-    println!("Calculating transformed key ({})", transform_round);
-
-    let mut transform_key = composite_key;
-    let cipher = Cipher::aes_256_ecb();
-    let mut c = Crypter::new(cipher, Mode::Encrypt, transform_seed, None)?;
-    for _ in 0..cipher.block_size() {
-        transform_key.push(0);
-    }
-    let mut out = vec![0; 16 + 16 + cipher.block_size()];
-    c.pad(false);
-    for _ in 0..transform_round {
-        c.update(&transform_key[0..32], &mut out)?;
-        let temp = transform_key;
-        transform_key = out;
-        out = temp;
-    }
-    transform_key.truncate(32);
-    let mut context = Context::new(&SHA256);
-    context.update(&transform_key);
-    transform_key = context.finish().as_ref().to_owned();
     println!("Key OUT: {:0x?}", transform_key);
 
     println!("Calculating master key");
