@@ -9,7 +9,10 @@ extern crate flate2;
 extern crate sxd_document;
 extern crate sxd_xpath;
 extern crate chrono;
+#[cfg(feature = "rust-argon2")]
 extern crate argon2;
+#[cfg(feature = "argonautica")]
+extern crate argonautica;
 
 use std::io::Cursor;
 use std::env;
@@ -32,7 +35,10 @@ use sxd_document::parser;
 use sxd_xpath::{evaluate_xpath, Context as XPathContext, Factory, Value};
 use chrono::prelude::*;
 
+#[cfg(feature = "rust-argon2")]
 use argon2::{Config, ThreadMode, Variant, Version};
+#[cfg(feature = "argonautica")]
+use argonautica::{Hasher, config::{Variant, Version}};
 
 
 #[cfg(test)]
@@ -58,6 +64,7 @@ mod tests {
 
     #[test]
     #[ignore]
+    #[cfg(feature = "rust-argon2")]
     fn test_argon2() {
         let password = b"password";
         let salt = b"othersalt";
@@ -251,6 +258,54 @@ const DEFAULT_ITERATIONS     : u64 = 2;
 const DEFAULT_MEMORY         : u64 = 1024 * 1024;
 const DEFAULT_PARALLELISM    : u32 = 2;
 
+#[cfg(feature = "rust-argon2")]
+fn transform_argon2_lib(composite_key: &[u8], salt: &[u8], version: u32, mem_cost: u64, time_cost: u64, lanes: u32) -> io::Result<Vec<u8>> {
+    let version = match version {
+        0x13 => Version::Version13,
+        0x10 => Version::Version10,
+        _ => { panic!("Misconfigured!"); },
+    };
+    let config = Config {
+        variant: Variant::Argon2d,
+        version,
+        mem_cost: mem_cost as u32,  // XXX Is this correct per Argon2 spec?
+        time_cost: time_cost as u32,
+        lanes,
+        thread_mode: ThreadMode::Parallel,
+        secret: &[],
+        ad: &[],
+        hash_length: 32
+    };
+    let hash = argon2::hash_raw(composite_key, salt, &config).unwrap();
+    println!("P: {:0x?}, S: {:0x?}, H: {:0x?}, C: {:#?}", composite_key, salt, hash, config);
+    Ok(hash)
+}
+
+#[cfg(feature = "argonautica")]
+fn transform_argon2_lib(composite_key: &[u8], salt: &[u8], version: u32, mem_cost: u64, time_cost: u64, lanes: u32) -> io::Result<Vec<u8>> {
+    let version = match version {
+        0x13 => Version::_0x13,
+        0x10 => Version::_0x10,
+        _ => { panic!("Misconfigured!"); },
+    };
+    let mut hasher = Hasher::default();
+    hasher
+        .configure_iterations(time_cost as u32)
+        .configure_lanes(lanes)
+        .configure_memory_size(mem_cost as u32)
+        .configure_variant(Variant::Argon2d)
+        .configure_version(version)
+        .opt_out_of_secret_key(true);
+    Ok(hasher
+        .with_password(composite_key)
+        .with_salt(salt)
+        .hash_raw()
+        .unwrap()
+        .raw_hash_bytes()
+        .to_owned())
+}
+
+#[cfg(any(feature = "rust-argon2", feature = "argonautica"))]
 fn transform_argon2(composite_key: &[u8], custom_data: &HashMap<String, Vec<u8>>) -> io::Result<Vec<u8>> {
     let salt = match custom_data.get(KDF_PARAM_SALT) {
         Some(x) => x,
@@ -265,8 +320,8 @@ fn transform_argon2(composite_key: &[u8], custom_data: &HashMap<String, Vec<u8>>
                     println!("Version: {}", x);
                     return Err(io::Error::new(io::ErrorKind::Other, "Argon2 version too new"));
                 },
-                Some(x) if x == 0x13 => Version::Version13,
-                Some(x) if x >= 0x10 => Version::Version10,
+                Some(x) if x == 0x13 => 0x13,
+                Some(x) if x >= 0x10 => 0x10,
                 Some(x) => {
                     return Err(io::Error::new(io::ErrorKind::Other, "Argon2 version too old"));
                 },
@@ -318,21 +373,13 @@ fn transform_argon2(composite_key: &[u8], custom_data: &HashMap<String, Vec<u8>>
             return Err(io::Error::new(io::ErrorKind::Other, "Argon2 parallelism parameter missing"));
         },
     };
-    let config = Config {
-        variant: Variant::Argon2d,
-        version,
-        mem_cost: mem_cost as u32,  // XXX Is this correct per Argon2 spec?
-        time_cost: time_cost as u32,
-        lanes,
-        thread_mode: ThreadMode::Parallel,
-        secret: &[],
-        ad: &[],
-        hash_length: 32
-    };
-    let hash = argon2::hash_raw(composite_key, salt, &config).unwrap();
-    println!("P: {:0x?}, S: {:0x?}, H: {:0x?}, C: {:#?}", composite_key, salt, hash, config);
-    //Err(io::Error::new(io::ErrorKind::Other, "Argon2 unimplemented"))
+    let hash = transform_argon2_lib(composite_key, salt, version, mem_cost, time_cost, lanes).unwrap();
     Ok(hash)
+}
+
+#[cfg(not(any(feature = "rust-argon2", feature = "argonautica")))]
+fn transform_argon2(_composite_key: &[u8], custom_data: &HashMap<String, Vec<u8>>) -> io::Result<Vec<u8>> {
+    Err(io::Error::new(io::ErrorKind::Other, "Argon2 unimplemented"))
 }
 
 fn main() -> io::Result<()> {
