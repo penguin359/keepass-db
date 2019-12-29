@@ -57,6 +57,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_argon2() {
         let password = b"password";
         let salt = b"othersalt";
@@ -93,6 +94,7 @@ mod tests {
     const ARGON2_HASH : &str = "4eb4d1f66ae3c88d85445fb49ae7c4a8fd51eeaa132c53cb8b37610f02569371";
 
     #[test]
+    #[ignore]
     fn test_argon2_kdf() {
         //let data = Vec::from_hex(PASSWORD_SIMPLE).unwrap();
         //let mut key = Key::new();
@@ -102,12 +104,40 @@ mod tests {
         let salt = b"othersalt";
         let mut custom_data = HashMap::new();
         custom_data.insert("S".to_string(), salt.to_vec());
-        custom_data.insert("V".to_string(), make_u32(13));
+        custom_data.insert("V".to_string(), make_u32(0x13));
         custom_data.insert("M".to_string(), make_u64(65536));
         custom_data.insert("I".to_string(), make_u64(10));
         custom_data.insert("P".to_string(), make_u32(4));
         let transform_key = transform_argon2(&password[..], &custom_data);
         assert!(transform_key.is_ok());
+    }
+
+    #[test]
+    fn test_argon2_kdf_alternate() {
+        let password = b"asdf";
+        let salt = b"7kAWcXSFs31RtR0g";
+        let hash = "eff8bd51dae17d129c135de8097049362977529d81aa4f279190ee73b8a08810";
+        let hash_raw = Vec::from_hex(hash).unwrap();
+        let mut custom_data = HashMap::new();
+        custom_data.insert("S".to_string(), salt.to_vec());
+        custom_data.insert("V".to_string(), make_u32(0x13));
+        custom_data.insert("M".to_string(), make_u64(24));
+        custom_data.insert("I".to_string(), make_u64(20));
+        custom_data.insert("P".to_string(), make_u32(3));
+        let transform_key = transform_argon2(&password[..], &custom_data);
+        assert!(transform_key.is_ok());
+        let transform_key_raw = transform_key.unwrap();
+        assert_eq!(transform_key_raw, hash_raw);
+    }
+
+    #[test]
+    fn test_argon2_kdf_defaults() {
+        assert!(false);
+    }
+
+    #[test]
+    fn test_argon2_kdf_secret_and_associative() {
+        assert!(false);
     }
 }
 
@@ -222,42 +252,85 @@ const DEFAULT_MEMORY         : u64 = 1024 * 1024;
 const DEFAULT_PARALLELISM    : u32 = 2;
 
 fn transform_argon2(composite_key: &[u8], custom_data: &HashMap<String, Vec<u8>>) -> io::Result<Vec<u8>> {
-let password = b"password";
-let salt = b"othersalt";
+    let salt = match custom_data.get(KDF_PARAM_SALT) {
+        Some(x) => x,
+        None => {
+            return Err(io::Error::new(io::ErrorKind::Other, "Argon2 salt missing"));
+        },
+    };
     let version = match custom_data.get(KDF_PARAM_VERSION) {
         Some(x) => {
-            //match x.parse::<u32>() {
             match unmake_u32(x) {
-                Some(x) => Version::Version13,
-                None => { panic!(""); },
+                Some(x) if x > 0x13 => {
+                    println!("Version: {}", x);
+                    return Err(io::Error::new(io::ErrorKind::Other, "Argon2 version too new"));
+                },
+                Some(x) if x == 0x13 => Version::Version13,
+                Some(x) if x >= 0x10 => Version::Version10,
+                Some(x) => {
+                    return Err(io::Error::new(io::ErrorKind::Other, "Argon2 version too old"));
+                },
+                None => {
+                    return Err(io::Error::new(io::ErrorKind::Other, "Invalid version"));
+                },
             }
-        }
-        /*
-        Some(ref x) if x > 13 => {
-            return Err(io::Result::new(io::ErrorKind::Other, "Argon2 version too new"));
         },
-        Some(ref x) if x == 13 => Version::Version13,
-        Some(ref x) if x >= 10 => Version::Version10,
-        Some(ref x) => {
-            return Err(io::Result::new(io::ErrorKind::Other, "Argon2 version too old"));
-        },
-        */
         None => {
             return Err(io::Error::new(io::ErrorKind::Other, "Argon2 version missing"));
         },
     };
+    let mem_cost = match custom_data.get(KDF_PARAM_MEMORY) {
+        Some(x) => {
+            match unmake_u64(x) {
+                Some(x) => x,
+                None => {
+                    return Err(io::Error::new(io::ErrorKind::Other, "Invalid memory parameter"));
+                },
+            }
+        },
+        None => {
+            return Err(io::Error::new(io::ErrorKind::Other, "Argon2 memory parameter missing"));
+        },
+    };
+    let time_cost = match custom_data.get(KDF_PARAM_ITERATIONS) {
+        Some(x) => {
+            match unmake_u64(x) {
+                Some(x) => x,
+                None => {
+                    return Err(io::Error::new(io::ErrorKind::Other, "Invalid time parameter"));
+                },
+            }
+        },
+        None => {
+            return Err(io::Error::new(io::ErrorKind::Other, "Argon2 time parameter missing"));
+        },
+    };
+    let lanes = match custom_data.get(KDF_PARAM_PARALLELISM) {
+        Some(x) => {
+            match unmake_u32(x) {
+                Some(x) => x,
+                None => {
+                    return Err(io::Error::new(io::ErrorKind::Other, "Invalid parallelism parameter"));
+                },
+            }
+        },
+        None => {
+            return Err(io::Error::new(io::ErrorKind::Other, "Argon2 parallelism parameter missing"));
+        },
+    };
     let config = Config {
         variant: Variant::Argon2d,
-        version: version,
-        mem_cost: 65536,
-        time_cost: 10,
-        lanes: 4,
+        version,
+        mem_cost: mem_cost as u32,  // XXX Is this correct per Argon2 spec?
+        time_cost: time_cost as u32,
+        lanes,
         thread_mode: ThreadMode::Parallel,
         secret: &[],
         ad: &[],
         hash_length: 32
     };
-let hash = argon2::hash_raw(password, salt, &config).unwrap();
+    let hash = argon2::hash_raw(composite_key, salt, &config).unwrap();
+    println!("P: {:0x?}, S: {:0x?}, H: {:0x?}, C: {:#?}", composite_key, salt, hash, config);
     //Err(io::Error::new(io::ErrorKind::Other, "Argon2 unimplemented"))
     Ok(hash)
 }
