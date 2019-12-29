@@ -259,7 +259,7 @@ const DEFAULT_MEMORY         : u64 = 1024 * 1024;
 const DEFAULT_PARALLELISM    : u32 = 2;
 
 #[cfg(feature = "rust-argon2")]
-fn transform_argon2_lib(composite_key: &[u8], salt: &[u8], version: u32, mem_cost: u64, time_cost: u64, lanes: u32) -> io::Result<Vec<u8>> {
+fn transform_argon2_lib(composite_key: &[u8], salt: &[u8], version: u32, mem_cost: u32, time_cost: u32, lanes: u32) -> io::Result<Vec<u8>> {
     let version = match version {
         0x13 => Version::Version13,
         0x10 => Version::Version10,
@@ -268,8 +268,8 @@ fn transform_argon2_lib(composite_key: &[u8], salt: &[u8], version: u32, mem_cos
     let config = Config {
         variant: Variant::Argon2d,
         version,
-        mem_cost: mem_cost as u32,  // XXX Is this correct per Argon2 spec?
-        time_cost: time_cost as u32,
+        mem_cost,
+        time_cost,
         lanes,
         thread_mode: ThreadMode::Parallel,
         secret: &[],
@@ -282,7 +282,7 @@ fn transform_argon2_lib(composite_key: &[u8], salt: &[u8], version: u32, mem_cos
 }
 
 #[cfg(feature = "argonautica")]
-fn transform_argon2_lib(composite_key: &[u8], salt: &[u8], version: u32, mem_cost: u64, time_cost: u64, lanes: u32) -> io::Result<Vec<u8>> {
+fn transform_argon2_lib(composite_key: &[u8], salt: &[u8], version: u32, mem_cost: u32, time_cost: u32, lanes: u32) -> io::Result<Vec<u8>> {
     let version = match version {
         0x13 => Version::_0x13,
         0x10 => Version::_0x10,
@@ -290,12 +290,13 @@ fn transform_argon2_lib(composite_key: &[u8], salt: &[u8], version: u32, mem_cos
     };
     let mut hasher = Hasher::default();
     hasher
-        .configure_iterations(time_cost as u32)
+        .configure_iterations(time_cost)
         .configure_lanes(lanes)
-        .configure_memory_size(mem_cost as u32)
+        .configure_memory_size(mem_cost)
         .configure_variant(Variant::Argon2d)
         .configure_version(version)
         .opt_out_of_secret_key(true);
+    //println!("P: {:0x?}, S: {:0x?}, H: {:0x?}, C: {:#?}", composite_key, salt, b"", hasher);//hash, config);
     Ok(hasher
         .with_password(composite_key)
         .with_salt(salt)
@@ -337,7 +338,7 @@ fn transform_argon2(composite_key: &[u8], custom_data: &HashMap<String, Vec<u8>>
     let mem_cost = match custom_data.get(KDF_PARAM_MEMORY) {
         Some(x) => {
             match unmake_u64(x) {
-                Some(x) => x,
+                Some(x) => x/1024,
                 None => {
                     return Err(io::Error::new(io::ErrorKind::Other, "Invalid memory parameter"));
                 },
@@ -373,7 +374,7 @@ fn transform_argon2(composite_key: &[u8], custom_data: &HashMap<String, Vec<u8>>
             return Err(io::Error::new(io::ErrorKind::Other, "Argon2 parallelism parameter missing"));
         },
     };
-    let hash = transform_argon2_lib(composite_key, salt, version, mem_cost, time_cost, lanes).unwrap();
+    let hash = transform_argon2_lib(composite_key, salt, version, mem_cost as u32, time_cost as u32, lanes).unwrap();
     Ok(hash)
 }
 
@@ -619,6 +620,7 @@ fn main() -> io::Result<()> {
         println!("Verifying HMAC");
         hmac::verify(&hmac_key, buf.get_ref(), &hmac_tag).unwrap();
 
+        println!("{} {}", master_key.len(), block.len());
         let data = decrypt(Cipher::aes_256_cbc(), &master_key, Some(encryption_iv), &block).unwrap();
         let mut gz = GzDecoder::new(Cursor::new(data));
 
