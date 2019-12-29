@@ -595,9 +595,9 @@ fn main() -> io::Result<()> {
     let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
     println!("Verifying HMAC");
     hmac::verify(&hmac_key, &header, &hmac_tag).unwrap();
-
     println!("Complete");
 
+    let mut ciphertext = vec![];
     for idx in 0.. {
         println!("Block {}", idx);
         file.read_exact(&mut hmac_tag)?;
@@ -619,60 +619,61 @@ fn main() -> io::Result<()> {
         let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
         println!("Verifying HMAC");
         hmac::verify(&hmac_key, buf.get_ref(), &hmac_tag).unwrap();
+        println!("Complete");
+        ciphertext.extend(block);
+    };
 
-        println!("{} {}", master_key.len(), block.len());
-        let data = decrypt(Cipher::aes_256_cbc(), &master_key, Some(encryption_iv), &block).unwrap();
-        let mut gz = GzDecoder::new(Cursor::new(data));
+    let data = decrypt(Cipher::aes_256_cbc(), &master_key, Some(encryption_iv), &ciphertext).unwrap();
+    let mut gz = GzDecoder::new(Cursor::new(data));
 
-        let mut tlvs = HashMap::new();
-        loop {
-            let tlv_type = gz.read_u8()?;
-            let tlv_len = gz.read_u32::<LittleEndian>()?;
-            let mut tlv_data = vec![0; tlv_len as usize];
-            gz.read_exact(&mut tlv_data)?;
-            if tlv_type == 0 {
-                break;
+    let mut tlvs = HashMap::new();
+    loop {
+        let tlv_type = gz.read_u8()?;
+        let tlv_len = gz.read_u32::<LittleEndian>()?;
+        let mut tlv_data = vec![0; tlv_len as usize];
+        gz.read_exact(&mut tlv_data)?;
+        if tlv_type == 0 {
+            break;
+        }
+        println!("TLV({}, {}): {:?}", tlv_type, tlv_len, tlv_data);
+        tlvs.insert(tlv_type, tlv_data);
+    };
+    //let mut xml_file = File::create("data.xml")?;
+    //let mut buf = vec![];
+    let mut contents = String::new();
+    gz.read_to_string(&mut contents)?;
+    //gz.read_to_end(&mut buf);
+    //xml_file.write(&buf);
+    const KDBX4_TIME_OFFSET : i64 = 62135596800;
+    let package = parser::parse(&contents).unwrap();
+    let document = package.as_document();
+    println!("Root element: {}", document.root().children()[0].element().unwrap().name().local_part());
+    let database_name_node = evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseName/text()").expect("Missing database name");
+    println!("Database Name: {}", database_name_node.string());
+    let database_name_changed_node = evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseNameChanged/text()").expect("Missing database name changed");
+    let timestamp = Cursor::new(decode(&database_name_changed_node.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - KDBX4_TIME_OFFSET ;
+    //let naive = NaiveDateTime::from_timestamp(timestamp, 0);
+    //let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+    let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
+    println!("Database Name Changed: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+
+    let xpath_username = Factory::new().build("String[Key/text() = 'UserName']/Value/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
+    let xpath_last_mod_time = Factory::new().build("Times/LastModificationTime/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
+    let xpath_context = XPathContext::new();
+    let entry_nodes = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry").expect("Missing database entries");
+    match entry_nodes {
+        Value::Nodeset(nodes) => {
+            for entry in nodes {
+                //let n = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry/String[Key/text() = 'UserName']/Value/text()").expect("Missing entry username");
+                let n = xpath_username.evaluate(&xpath_context, entry).expect("Missing entry username");
+                let t = xpath_last_mod_time.evaluate(&xpath_context, entry).expect("Missing entry modification");
+                println!("Name: {}", n.string());
+                let timestamp = Cursor::new(decode(&t.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - KDBX4_TIME_OFFSET ;
+                let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
+                println!("Changed: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
             }
-            println!("TLV({}, {}): {:?}", tlv_type, tlv_len, tlv_data);
-            tlvs.insert(tlv_type, tlv_data);
-        };
-        //let mut xml_file = File::create("data.xml")?;
-        //let mut buf = vec![];
-        let mut contents = String::new();
-        gz.read_to_string(&mut contents)?;
-        //gz.read_to_end(&mut buf);
-        //xml_file.write(&buf);
-        const KDBX4_TIME_OFFSET : i64 = 62135596800;
-        let package = parser::parse(&contents).unwrap();
-        let document = package.as_document();
-        println!("Root element: {}", document.root().children()[0].element().unwrap().name().local_part());
-        let database_name_node = evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseName/text()").expect("Missing database name");
-        println!("Database Name: {}", database_name_node.string());
-        let database_name_changed_node = evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseNameChanged/text()").expect("Missing database name changed");
-        let timestamp = Cursor::new(decode(&database_name_changed_node.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - KDBX4_TIME_OFFSET ;
-        //let naive = NaiveDateTime::from_timestamp(timestamp, 0);
-        //let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
-        let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
-        println!("Database Name Changed: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
-
-        let xpath_username = Factory::new().build("String[Key/text() = 'UserName']/Value/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
-        let xpath_last_mod_time = Factory::new().build("Times/LastModificationTime/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
-        let xpath_context = XPathContext::new();
-        let entry_nodes = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry").expect("Missing database entries");
-        match entry_nodes {
-            Value::Nodeset(nodes) => {
-                for entry in nodes {
-                    //let n = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry/String[Key/text() = 'UserName']/Value/text()").expect("Missing entry username");
-                    let n = xpath_username.evaluate(&xpath_context, entry).expect("Missing entry username");
-                    let t = xpath_last_mod_time.evaluate(&xpath_context, entry).expect("Missing entry modification");
-                    println!("Name: {}", n.string());
-                    let timestamp = Cursor::new(decode(&t.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - KDBX4_TIME_OFFSET ;
-                    let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
-                    println!("Changed: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
-                }
-            },
-            _ => { panic!("XML corruption"); },
-        };
+        },
+        _ => { panic!("XML corruption"); },
     };
 
     Ok(())
