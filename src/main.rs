@@ -408,6 +408,20 @@ fn main() -> io::Result<()> {
         0xB54BFB65 => {
             // XXX Untested
             writeln!(stderr, "KeePass 1.x files not supported\n")?;
+            let flags = file.read_u32::<LittleEndian>()?;
+            let version = file.read_u32::<LittleEndian>()?;
+            let mut master_seed = vec![0; 16];
+            file.read_exact(&mut master_seed)?;
+            let mut encryption_iv = vec![0; 16];
+            file.read_exact(&mut encryption_iv)?;
+            let num_groups = file.read_u32::<LittleEndian>()?;
+            let num_entries = file.read_u32::<LittleEndian>()?;
+            let mut content_hash = vec![0; 16];
+            file.read_exact(&mut content_hash)?;
+            let mut transform_seed = vec![0; 16];
+            file.read_exact(&mut transform_seed)?;
+            let transform_round = file.read_u32::<LittleEndian>()?;
+            println!("flags: {}, version: {}, groups: {}, entries: {}, round: {}", flags, version, num_groups, num_entries, transform_round);
             process::exit(1);
         },
         0xB54BFB66 => {
