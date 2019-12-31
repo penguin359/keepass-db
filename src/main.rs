@@ -23,7 +23,7 @@ use std::io::prelude::*;
 use std::collections::HashMap;
 
 use hex::ToHex;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use base64::decode;
 use uuid::{Builder, Uuid};
 use ring::digest::{Context, SHA256, SHA512};
@@ -162,6 +162,14 @@ fn unmake_u64(value: &[u8]) -> Option<u64> {
     }
     let mut cursor = Cursor::new(value);
     Some(cursor.read_u64::<LittleEndian>().unwrap())
+}
+
+fn unmake_u64_be(value: &[u8]) -> Option<u64> {
+    if value.len() != 8 {
+        return None
+    }
+    let mut cursor = Cursor::new(value);
+    Some(cursor.read_u64::<BigEndian>().unwrap())
 }
 
 struct Key {
@@ -398,6 +406,34 @@ fn transform_argon2(_composite_key: &[u8], custom_data: &HashMap<String, Vec<u8>
     Err(io::Error::new(io::ErrorKind::Other, "Argon2 unimplemented"))
 }
 
+fn decode_string_kdb1(mut content: Vec<u8>) -> String {
+    if content[content.len()-1] != 0 {
+        panic!("Need null terminator");
+    }
+    content.truncate(content.len()-1);
+    String::from_utf8(content).unwrap()
+}
+
+fn decode_datetime_kdb1(content: &[u8]) -> NaiveDateTime {
+    let mut buf = vec![0, 0, 0];
+    buf.extend(content);
+    let mut raw = unmake_u64_be(&buf).unwrap();
+    //println!("{:010x}: {:?}", raw, buf);
+    let second = raw & 0x3f;
+    raw >>= 6;
+    let minute = raw & 0x3f;
+    raw >>= 6;
+    let hour = raw & 0x1f;
+    raw >>= 5;
+    let day = raw & 0x1f;
+    raw >>= 5;
+    let month = raw & 0x0f;
+    raw >>= 4;
+    let year = raw & 0xfff;
+    NaiveDate::from_ymd(year as i32, month as u32, day as u32)
+              .and_hms(hour as u32, minute as u32, second as u32)
+}
+
 fn main() -> io::Result<()> {
     let mut stderr = io::stderr();
 
@@ -552,6 +588,161 @@ fn main() -> io::Result<()> {
             let hash = context.finish().as_ref().to_owned();
             if hash != content_hash {
                 println!("Failed to decode");
+                process::exit(1);
+            }
+
+            let mut c = Cursor::new(data);
+            println!("Groups:");
+            for _ in 0..num_groups {
+                loop {
+                    let field_type = c.read_u16::<LittleEndian>()?;
+                    let field_len = c.read_u32::<LittleEndian>()?;
+                    let mut field_content = vec![0; field_len as usize];
+                    c.read_exact(&mut field_content)?;
+                    if field_type == 0xffff {
+                        break;
+                    }
+                    //println!("TLV({}, {}): {:?}", field_type, field_len, field_content);
+                    match field_type {
+                        0x0000 => {
+                            //readExtData(dataInput);
+                        },
+                        0x0001 => {
+                            let mut c = Cursor::new(field_content);
+                            let uuid = c.read_u32::<LittleEndian>()?;
+                            println!("UUID: {}", uuid);
+                        },
+                        0x0002 => {
+                            let name = decode_string_kdb1(field_content);
+                            println!("Name: {}", name);
+                        },
+                        0x0003 => {
+                            let date = decode_datetime_kdb1(&field_content);
+                            let datetime = Local.from_utc_datetime(&date);
+                            println!("Creation Time: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                        },
+                        0x0004 => {
+                            let date = decode_datetime_kdb1(&field_content);
+                            let datetime = Local.from_utc_datetime(&date);
+                            println!("Last Modification Time: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                        },
+                        0x0005 => {
+                            let date = decode_datetime_kdb1(&field_content);
+                            let datetime = Local.from_utc_datetime(&date);
+                            println!("Last Access Time: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                        },
+                        0x0006 => {
+                            let date = decode_datetime_kdb1(&field_content);
+                            let datetime = Local.from_utc_datetime(&date);
+                            println!("Expiry Time: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                        },
+                        0x0007 => {
+                            let mut c = Cursor::new(field_content);
+                            let icon = c.read_u32::<LittleEndian>()?;
+                            println!("Icon: {}", icon);
+                        },
+                        0x0008 => {
+                            //int level = readShort(dataInput);
+                            //group.setParent(computeParentGroup(lastGroup, level));
+                            let mut c = Cursor::new(field_content);
+                            let level = c.read_u16::<LittleEndian>()?;
+                            println!("Level: {}", level);
+                        },
+                        0x0009 => {
+                            let mut c = Cursor::new(field_content);
+                            let flags = c.read_u32::<LittleEndian>()?;
+                            println!("Flags: 0x{:08x}", flags);
+                        },
+                        _ => {
+                            panic!("Unknown field");
+                        },
+                    };
+                }
+                println!("");
+            }
+            println!("Entries:");
+            for _ in 0..num_entries {
+                loop {
+                    let field_type = c.read_u16::<LittleEndian>()?;
+                    let field_len = c.read_u32::<LittleEndian>()?;
+                    let mut field_content = vec![0; field_len as usize];
+                    c.read_exact(&mut field_content)?;
+                    if field_type == 0xffff {
+                        break;
+                    }
+                    //println!("TLV({}, {}): {:?}", field_type, field_len, field_content);
+                    match field_type {
+                        0x0000 => {
+                            //readExtData(dataInput);
+                        },
+                        0x0001 => {
+                            let mut c = Cursor::new(field_content);
+                            let uuid = c.read_u32::<LittleEndian>()?;
+                            println!("UUID: {}", uuid);
+                        },
+                        0x0002 => {
+                            let mut c = Cursor::new(field_content);
+                            let group_id = c.read_u32::<LittleEndian>()?;
+                            println!("Group: {}", group_id);
+                        },
+                        0x0003 => {
+                            let mut c = Cursor::new(field_content);
+                            let icon = c.read_u32::<LittleEndian>()?;
+                            println!("Icon: {}", icon);
+                        },
+                        0x0004 => {
+                            let name = decode_string_kdb1(field_content);
+                            println!("Title: {}", name);
+                        },
+                        0x0005 => {
+                            let name = decode_string_kdb1(field_content);
+                            println!("Url: {}", name);
+                        },
+                        0x0006 => {
+                            let name = decode_string_kdb1(field_content);
+                            println!("Username: {}", name);
+                        },
+                        0x0007 => {
+                            let name = decode_string_kdb1(field_content);
+                            println!("Password: {}", name);
+                        },
+                        0x0008 => {
+                            let name = decode_string_kdb1(field_content);
+                            println!("Notes: {}", name);
+                        },
+                        0x0009 => {
+                            let date = decode_datetime_kdb1(&field_content);
+                            let datetime = Local.from_utc_datetime(&date);
+                            println!("Creation Time: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                        },
+                        0x000a => {
+                            let date = decode_datetime_kdb1(&field_content);
+                            let datetime = Local.from_utc_datetime(&date);
+                            println!("Last Modification Time: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                        },
+                        0x000b => {
+                            let date = decode_datetime_kdb1(&field_content);
+                            let datetime = Local.from_utc_datetime(&date);
+                            println!("Last Access Time: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                        },
+                        0x000c => {
+                            let date = decode_datetime_kdb1(&field_content);
+                            let datetime = Local.from_utc_datetime(&date);
+                            println!("Expiry Time: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                        },
+                        0x000d => {
+                            let name = decode_string_kdb1(field_content);
+                            println!("Binary Description: {}", name);
+                        },
+                        0x000e => {
+                            println!("Binary Data: {:#?}", field_content);
+                        },
+                        _ => {
+                            panic!("Unknown field");
+                        },
+                    };
+                }
+                println!("");
             }
             process::exit(1);
         },
