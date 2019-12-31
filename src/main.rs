@@ -91,13 +91,6 @@ mod tests {
         cursor.into_inner()
     }
 
-    fn make_u64(value: u64) -> Vec<u8> {
-        let out = vec![0; 8];
-        let mut cursor = Cursor::new(out);
-        cursor.write_u64::<LittleEndian>(value).unwrap();
-        cursor.into_inner()
-    }
-
     const ARGON2_HASH : &str = "4eb4d1f66ae3c88d85445fb49ae7c4a8fd51eeaa132c53cb8b37610f02569371";
 
     #[test]
@@ -146,6 +139,13 @@ mod tests {
     fn test_argon2_kdf_secret_and_associative() {
         assert!(false);
     }
+}
+
+fn make_u64(value: u64) -> Vec<u8> {
+    let out = vec![0; 8];
+    let mut cursor = Cursor::new(out);
+    cursor.write_u64::<LittleEndian>(value).unwrap();
+    cursor.into_inner()
 }
 
 fn unmake_u32(value: &[u8]) -> Option<u32> {
@@ -215,6 +215,21 @@ impl Key {
             context.update(&key);
         }
 
+        context.finish().as_ref().to_owned()
+    }
+
+    fn composite_key_kdb1(&self) -> Vec<u8> {
+        if self.user_password == None {
+            return self.keyfile.clone().unwrap();
+        }
+
+        if self.keyfile == None {
+            return self.user_password.clone().unwrap();
+        }
+
+        let mut context = Context::new(&SHA256);
+        context.update(&self.user_password.clone().unwrap());
+        context.update(&self.keyfile.clone().unwrap());
         context.finish().as_ref().to_owned()
     }
 }
@@ -396,6 +411,21 @@ fn main() -> io::Result<()> {
         }
     };
 
+    let mut key = Key::new();
+    let user_password = match env::var("KDBX_PASSWORD") {
+        Ok(password) => password,
+        Err(env::VarError::NotPresent) => read_password().unwrap(),
+        Err(env::VarError::NotUnicode(_)) => {
+            panic!("Invalid password");
+        },
+    };
+    let mut context = Context::new(&SHA256);
+    context.update(user_password.as_ref());
+    println!("User PW: {}", user_password.encode_hex::<String>());
+    key.set_user_password(user_password);
+    let composite_key = key.composite_key();
+    println!("Composite Key: {}", composite_key.encode_hex::<String>());
+
     let mut file = File::open(filename)?;
     let magic = file.read_u32::<LittleEndian>()?;
     let magic_type = file.read_u32::<LittleEndian>()?;
@@ -416,12 +446,113 @@ fn main() -> io::Result<()> {
             file.read_exact(&mut encryption_iv)?;
             let num_groups = file.read_u32::<LittleEndian>()?;
             let num_entries = file.read_u32::<LittleEndian>()?;
-            let mut content_hash = vec![0; 16];
+            let mut content_hash = vec![0; 32];
             file.read_exact(&mut content_hash)?;
-            let mut transform_seed = vec![0; 16];
+            let mut transform_seed = vec![0; 32];
             file.read_exact(&mut transform_seed)?;
+            //let mut transform_round = vec![0; 4];
+            //file.read_exact(&mut transform_round)?;
             let transform_round = file.read_u32::<LittleEndian>()?;
-            println!("flags: {}, version: {}, groups: {}, entries: {}, round: {}", flags, version, num_groups, num_entries, transform_round);
+            println!("flags: {}, version: {}, groups: {}, entries: {}, round: {:?}", flags, version, num_groups, num_entries, transform_round);
+
+            println!("AES");
+
+            println!("TK: {}", transform_seed.len());
+            let mut custom_data = HashMap::<String, Vec<u8>>::new();
+            custom_data.insert("S".to_string(), transform_seed);
+            custom_data.insert("R".to_string(), make_u64(transform_round as u64));
+
+            /*
+            let mut context = Context::new(&SHA256);
+            let header_start = 0;
+            let pos = file.seek(SeekFrom::Current(0))?;
+            file.seek(SeekFrom::Start(header_start))?;
+            let mut header = vec![0; (pos-header_start) as usize];
+            file.read_exact(&mut header)?;
+            file.seek(SeekFrom::Start(pos))?;
+            context.update(&header);
+            let digest = context.finish();
+            let mut expected_hash = [0; 32];
+            file.read_exact(&mut expected_hash)?;
+            if digest.as_ref() != expected_hash {
+                writeln!(stderr, "Possible header corruption\n")?;
+                process::exit(1);
+            }
+            */
+
+            let transform_key = transform_aes_kdf(&key.composite_key_kdb1(), &custom_data)?;
+
+            println!("Key OUT: {:0x?}", transform_key);
+
+            println!("Calculating master key");
+            let mut hmac_context = Context::new(&SHA512);
+
+            let mut master_key = master_seed.to_owned();
+            master_key.extend(transform_key);
+            let mut context = Context::new(&SHA256);
+            context.update(&master_key);
+            hmac_context.update(&master_key);
+            hmac_context.update(&[1u8]);
+            master_key = context.finish().as_ref().to_owned();
+            let hmac_key_base = hmac_context.finish().as_ref().to_owned();
+            println!("Master OUT: {:0x?}", master_key);
+            println!("HMAC OUT: {:0x?}", hmac_key_base);
+
+            let mut hmac_context = Context::new(&SHA512);
+            hmac_context.update(&[0xff; 8]);
+            hmac_context.update(&hmac_key_base);
+            let hmac_key = hmac_context.finish().as_ref().to_owned();
+
+            /*
+            let mut hmac_tag = [0; 32];
+            file.read_exact(&mut hmac_tag)?;
+            //println!("HMAC Tag: {:0x?}", hmac_tag);
+            let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
+            println!("Verifying HMAC");
+            hmac::verify(&hmac_key, &header, &hmac_tag).unwrap();
+            println!("Complete");
+            */
+
+            let mut ciphertext = vec![];
+            /*
+            for idx in 0.. {
+                println!("Block {}", idx);
+                file.read_exact(&mut hmac_tag)?;
+                let block_size = file.read_u32::<LittleEndian>()?;
+                if block_size == 0 {
+                    break;
+                }
+                let mut block = vec![0; block_size as usize];
+                file.read_exact(&mut block)?;
+
+                let mut hmac_context = Context::new(&SHA512);
+                let mut buf = Cursor::new(Vec::new());
+                buf.write_u64::<LittleEndian>(idx)?;
+                hmac_context.update(buf.get_ref());
+                hmac_context.update(&hmac_key_base);
+                let hmac_key = hmac_context.finish().as_ref().to_owned();
+                buf.write_u32::<LittleEndian>(block_size)?;
+                buf.write(&block)?;
+                let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
+                println!("Verifying HMAC");
+                hmac::verify(&hmac_key, buf.get_ref(), &hmac_tag).unwrap();
+                println!("Complete");
+                ciphertext.extend(block);
+            };
+            */
+            file.read_to_end(&mut ciphertext)?;
+
+            println!("MK: {}, IV: {}, CP: {}", master_key.len(), encryption_iv.len(), ciphertext.len());
+            let data = decrypt(Cipher::aes_256_cbc(), &master_key, Some(encryption_iv.as_ref()), &ciphertext).unwrap();
+
+            let mut xml_file = File::create("data.xml")?;
+            xml_file.write(&data);
+            let mut context = Context::new(&SHA256);
+            context.update(&data);
+            let hash = context.finish().as_ref().to_owned();
+            if hash != content_hash {
+                println!("Failed to decode");
+            }
             process::exit(1);
         },
         0xB54BFB66 => {
@@ -543,21 +674,6 @@ fn main() -> io::Result<()> {
         writeln!(stderr, "Possible header corruption\n")?;
         process::exit(1);
     }
-
-    let mut composite_key_intermediate = Vec::<u8>::new();
-
-    let mut key = Key::new();
-    let user_password = match env::var("KDBX_PASSWORD") {
-        Ok(password) => password,
-        Err(env::VarError::NotPresent) => read_password().unwrap(),
-        Err(env::VarError::NotUnicode(_)) => {
-            panic!("Invalid password");
-        },
-    };
-    println!("User PW: {}", user_password.encode_hex::<String>());
-    key.set_user_password(user_password);
-    let composite_key = key.composite_key();
-    println!("Composite Key: {}", composite_key.encode_hex::<String>());
 
     let kdf_id = Builder::from_slice(&custom_data["$UUID"]).unwrap().build();
     println!("KDF: {:?}", kdf_id);
