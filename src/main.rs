@@ -13,6 +13,7 @@ extern crate chrono;
 extern crate argon2;
 #[cfg(feature = "argonautica")]
 extern crate argonautica;
+extern crate chacha20;
 
 use std::io::Cursor;
 use std::env;
@@ -34,12 +35,16 @@ use flate2::read::GzDecoder;
 use sxd_document::parser;
 use sxd_xpath::{evaluate_xpath, Context as XPathContext, Factory, Value};
 use chrono::prelude::*;
+use chacha20::ChaCha20;
+use chacha20::stream_cipher::generic_array::GenericArray;
+use chacha20::stream_cipher::{NewStreamCipher, SyncStreamCipher, SyncStreamCipherSeek};
 
 #[cfg(feature = "rust-argon2")]
 use argon2::{Config, ThreadMode, Variant, Version};
 #[cfg(feature = "argonautica")]
 use argonautica::{Hasher, config::{Variant, Version}};
 
+use hex::FromHex;
 
 #[cfg(test)]
 mod tests {
@@ -539,50 +544,12 @@ fn main() -> io::Result<()> {
             hmac_context.update(&hmac_key_base);
             let hmac_key = hmac_context.finish().as_ref().to_owned();
 
-            /*
-            let mut hmac_tag = [0; 32];
-            file.read_exact(&mut hmac_tag)?;
-            //println!("HMAC Tag: {:0x?}", hmac_tag);
-            let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
-            println!("Verifying HMAC");
-            hmac::verify(&hmac_key, &header, &hmac_tag).unwrap();
-            println!("Complete");
-            */
-
             let mut ciphertext = vec![];
-            /*
-            for idx in 0.. {
-                println!("Block {}", idx);
-                file.read_exact(&mut hmac_tag)?;
-                let block_size = file.read_u32::<LittleEndian>()?;
-                if block_size == 0 {
-                    break;
-                }
-                let mut block = vec![0; block_size as usize];
-                file.read_exact(&mut block)?;
-
-                let mut hmac_context = Context::new(&SHA512);
-                let mut buf = Cursor::new(Vec::new());
-                buf.write_u64::<LittleEndian>(idx)?;
-                hmac_context.update(buf.get_ref());
-                hmac_context.update(&hmac_key_base);
-                let hmac_key = hmac_context.finish().as_ref().to_owned();
-                buf.write_u32::<LittleEndian>(block_size)?;
-                buf.write(&block)?;
-                let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
-                println!("Verifying HMAC");
-                hmac::verify(&hmac_key, buf.get_ref(), &hmac_tag).unwrap();
-                println!("Complete");
-                ciphertext.extend(block);
-            };
-            */
             file.read_to_end(&mut ciphertext)?;
 
             println!("MK: {}, IV: {}, CP: {}", master_key.len(), encryption_iv.len(), ciphertext.len());
             let data = decrypt(Cipher::aes_256_cbc(), &master_key, Some(encryption_iv.as_ref()), &ciphertext).unwrap();
 
-            let mut xml_file = File::create("data.xml")?;
-            xml_file.write(&data);
             let mut context = Context::new(&SHA256);
             context.update(&data);
             let hash = context.finish().as_ref().to_owned();
@@ -959,12 +926,12 @@ fn main() -> io::Result<()> {
         println!("TLV({}, {}): {:?}", tlv_type, tlv_len, tlv_data);
         tlvs.insert(tlv_type, tlv_data);
     };
-    //let mut xml_file = File::create("data.xml")?;
+    let mut xml_file = File::create("data.xml")?;
     //let mut buf = vec![];
     let mut contents = String::new();
     gz.read_to_string(&mut contents)?;
     //gz.read_to_end(&mut buf);
-    //xml_file.write(&buf);
+    xml_file.write(&contents.as_bytes());
     const KDBX4_TIME_OFFSET : i64 = 62135596800;
     let package = parser::parse(&contents).unwrap();
     let document = package.as_document();
@@ -980,6 +947,7 @@ fn main() -> io::Result<()> {
 
     let xpath_username = Factory::new().build("String[Key/text() = 'UserName']/Value/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
     let xpath_last_mod_time = Factory::new().build("Times/LastModificationTime/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
+    let xpath_password = Factory::new().build("String[Key/text() = 'Password']/Value[@Protected = 'True']/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
     let xpath_context = XPathContext::new();
     let entry_nodes = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry").expect("Missing database entries");
     match entry_nodes {
@@ -988,10 +956,29 @@ fn main() -> io::Result<()> {
                 //let n = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry/String[Key/text() = 'UserName']/Value/text()").expect("Missing entry username");
                 let n = xpath_username.evaluate(&xpath_context, entry).expect("Missing entry username");
                 let t = xpath_last_mod_time.evaluate(&xpath_context, entry).expect("Missing entry modification");
+                let p = xpath_password.evaluate(&xpath_context, entry).expect("Missing entry password");
                 println!("Name: {}", n.string());
-                let timestamp = Cursor::new(decode(&t.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - KDBX4_TIME_OFFSET ;
+                let timestamp = Cursor::new(decode(&t.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - KDBX4_TIME_OFFSET;
                 let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
                 println!("Changed: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                println!("P: {:?}, ('{}')", p, p.string());
+                let mut p_ciphertext = decode(&p.string()).expect("Valid base64");
+                let p_algo = unmake_u32(&tlvs[&0x01u8]).unwrap();
+                assert_eq!(p_algo, 3);
+                let p_key = &tlvs[&0x02u8];
+                //let iv = Vec::from_hex("E830094B97205D2A").unwrap();
+                println!("p_key: {}", p_key.len());
+                let mut p_context = Context::new(&SHA512);
+                p_context.update(p_key);
+                let p2_key = p_context.finish().as_ref().to_owned();
+                println!("p2_key: {}", p2_key.len());
+                let key = GenericArray::from_slice(&p2_key[0..32]);
+                let nonce = GenericArray::from_slice(&p2_key[32..32+12]);
+                let mut cipher = ChaCha20::new(&key, &nonce);
+                println!("Password Ciphertext: {:?}", p_ciphertext);
+                cipher.apply_keystream(&mut p_ciphertext);
+                //let data = decrypt(Cipher::chacha20(), &p2_key[0..32], Some(&p2_key[32..32+12]), &p_ciphertext).unwrap();
+                println!("Password: {:?}", String::from_utf8(p_ciphertext).unwrap());
             }
         },
         _ => { panic!("XML corruption"); },
