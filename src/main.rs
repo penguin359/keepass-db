@@ -14,6 +14,8 @@ extern crate argon2;
 #[cfg(feature = "argonautica")]
 extern crate argonautica;
 extern crate chacha20;
+#[macro_use]
+extern crate log;
 
 use std::io::Cursor;
 use std::env;
@@ -23,7 +25,7 @@ use std::io::{self, SeekFrom};
 use std::io::prelude::*;
 use std::collections::HashMap;
 
-use hex::ToHex;
+//use hex::ToHex;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use base64::decode;
 use uuid::{Builder, Uuid};
@@ -37,14 +39,14 @@ use sxd_xpath::{evaluate_xpath, Context as XPathContext, Factory, Value};
 use chrono::prelude::*;
 use chacha20::ChaCha20;
 use chacha20::stream_cipher::generic_array::GenericArray;
-use chacha20::stream_cipher::{NewStreamCipher, SyncStreamCipher, SyncStreamCipherSeek};
+use chacha20::stream_cipher::{NewStreamCipher, SyncStreamCipher};
 
 #[cfg(feature = "rust-argon2")]
 use argon2::{Config, ThreadMode, Variant, Version};
 #[cfg(feature = "argonautica")]
 use argonautica::{Hasher, config::{Variant, Version}};
 
-use hex::FromHex;
+//use hex::FromHex;
 
 #[cfg(test)]
 mod tests {
@@ -199,14 +201,16 @@ impl Key {
             self.user_password = Some(context.finish().as_ref().to_owned());
     }
 
-    fn set_keyfile<T>(&mut self, keyfile: T)
+    /* TODO Use this function */
+    fn _set_keyfile<T>(&mut self, keyfile: T)
         where T : AsRef<[u8]> {
             let mut context = Context::new(&SHA256);
             context.update(keyfile.as_ref());
             self.keyfile = Some(context.finish().as_ref().to_owned());
     }
 
-    fn set_windows_credentials<T>(&mut self, windows_credentials: T)
+    /* TODO Use this function */
+    fn _set_windows_credentials<T>(&mut self, windows_credentials: T)
         where T : AsRef<[u8]> {
             let mut context = Context::new(&SHA256);
             context.update(windows_credentials.as_ref());
@@ -248,8 +252,8 @@ impl Key {
 }
 
 fn transform_aes_kdf(composite_key: &[u8], custom_data: &HashMap<String, Vec<u8>>) -> io::Result<Vec<u8>> {
-    let transform_seed = &custom_data["S"];
-    let mut c = Cursor::new(&custom_data["R"]);
+    let transform_seed = &custom_data[KDF_PARAM_SALT];
+    let mut c = Cursor::new(&custom_data[KDF_PARAM_ROUNDS]);
     let transform_round = c.read_u64::<LittleEndian>()?;
 
     println!("Calculating transformed key ({})", transform_round);
@@ -274,17 +278,20 @@ fn transform_aes_kdf(composite_key: &[u8], custom_data: &HashMap<String, Vec<u8>
     Ok(context.finish().as_ref().to_owned())
 }
 
+const KDF_PARAM_UUID         : &str = "$UUID"; // UUID, KDF used to derive master key
 const KDF_PARAM_SALT         : &str = "S"; // Byte[], Generates 32 bytes, required
+const KDF_PARAM_ROUNDS       : &str = "R"; // Byte[], Generates 32 bytes, required
 const KDF_PARAM_PARALLELISM  : &str = "P"; // UInt32, Default, required
 const KDF_PARAM_MEMORY       : &str = "M"; // UInt64, Default, required
 const KDF_PARAM_ITERATIONS   : &str = "I"; // UInt64, Default, required
 const KDF_PARAM_VERSION      : &str = "V"; // UInt32, Min/Max, Default Max, required
-const KDF_PARAM_SECRET_KEY   : &str = "K"; // Byte[]
-const KDF_PARAM_ASSOC_DATA   : &str = "A"; // Byte[]
+const _KDF_PARAM_SECRET_KEY   : &str = "K"; // Byte[]
+const _KDF_PARAM_ASSOC_DATA   : &str = "A"; // Byte[]
 
-const DEFAULT_ITERATIONS     : u64 = 2;
-const DEFAULT_MEMORY         : u64 = 1024 * 1024;
-const DEFAULT_PARALLELISM    : u32 = 2;
+/* TODO Use these defaults */
+const _DEFAULT_ITERATIONS     : u64 = 2;
+const _DEFAULT_MEMORY         : u64 = 1024 * 1024;
+const _DEFAULT_PARALLELISM    : u32 = 2;
 
 #[cfg(feature = "rust-argon2")]
 fn transform_argon2_lib(composite_key: &[u8], salt: &[u8], version: u32, mem_cost: u32, time_cost: u32, lanes: u32) -> io::Result<Vec<u8>> {
@@ -351,7 +358,7 @@ fn transform_argon2(composite_key: &[u8], custom_data: &HashMap<String, Vec<u8>>
                 },
                 Some(x) if x == 0x13 => 0x13,
                 Some(x) if x >= 0x10 => 0x10,
-                Some(x) => {
+                Some(_) => {
                     return Err(io::Error::new(io::ErrorKind::Other, "Argon2 version too old"));
                 },
                 None => {
@@ -439,7 +446,13 @@ fn decode_datetime_kdb1(content: &[u8]) -> NaiveDateTime {
               .and_hms(hour as u32, minute as u32, second as u32)
 }
 
+const KDF_AES_KDBX3: &str = "c9d9f39a-628a-4460-bf74-0d08c18a4fea";
+const KDF_AES_KDBX4: &str = "7c02bb82-79a7-4ac0-927d-114a00648238";
+const KDF_ARGON2   : &str = "ef636ddf-8c29-444b-91f7-a9a403e30a0c";
+
 fn main() -> io::Result<()> {
+    env_logger::init();
+
     let mut stderr = io::stderr();
 
     println!("Hello, world!");
@@ -447,7 +460,7 @@ fn main() -> io::Result<()> {
     let filename = match env::args().nth(1) {
         Some(f) => f,
         None => {
-            writeln!(stderr, "Invalid database file\n")?;
+            let _ = writeln!(stderr, "Invalid database file\n");
             process::exit(1);
         }
     };
@@ -460,25 +473,25 @@ fn main() -> io::Result<()> {
             panic!("Invalid password");
         },
     };
-    let mut context = Context::new(&SHA256);
-    context.update(user_password.as_ref());
-    println!("User PW: {}", user_password.encode_hex::<String>());
     key.set_user_password(user_password);
     let composite_key = key.composite_key();
-    println!("Composite Key: {}", composite_key.encode_hex::<String>());
 
     let mut file = File::open(filename)?;
     let magic = file.read_u32::<LittleEndian>()?;
     let magic_type = file.read_u32::<LittleEndian>()?;
 
     if magic != 0x9AA2D903 {
-        writeln!(stderr, "Invalid database file\n")?;
+        let _ = writeln!(stderr, "Invalid database file\n");
         process::exit(1);
     }
+
+    let kdf_aes_kdbx3 = Uuid::parse_str(KDF_AES_KDBX3).unwrap();
+    let kdf_aes_kdbx4 = Uuid::parse_str(KDF_AES_KDBX4).unwrap();
+    let kdf_argon2    = Uuid::parse_str(KDF_ARGON2   ).unwrap();
+    let mut custom_data = HashMap::<String, Vec<u8>>::new();
+
     match magic_type {
         0xB54BFB65 => {
-            // XXX Untested
-            writeln!(stderr, "KeePass 1.x files not supported\n")?;
             let flags = file.read_u32::<LittleEndian>()?;
             let version = file.read_u32::<LittleEndian>()?;
             let mut master_seed = vec![0; 16];
@@ -491,35 +504,13 @@ fn main() -> io::Result<()> {
             file.read_exact(&mut content_hash)?;
             let mut transform_seed = vec![0; 32];
             file.read_exact(&mut transform_seed)?;
-            //let mut transform_round = vec![0; 4];
-            //file.read_exact(&mut transform_round)?;
             let transform_round = file.read_u32::<LittleEndian>()?;
             println!("flags: {}, version: {}, groups: {}, entries: {}, round: {:?}", flags, version, num_groups, num_entries, transform_round);
 
             println!("AES");
 
-            println!("TK: {}", transform_seed.len());
-            let mut custom_data = HashMap::<String, Vec<u8>>::new();
-            custom_data.insert("S".to_string(), transform_seed);
-            custom_data.insert("R".to_string(), make_u64(transform_round as u64));
-
-            /*
-            let mut context = Context::new(&SHA256);
-            let header_start = 0;
-            let pos = file.seek(SeekFrom::Current(0))?;
-            file.seek(SeekFrom::Start(header_start))?;
-            let mut header = vec![0; (pos-header_start) as usize];
-            file.read_exact(&mut header)?;
-            file.seek(SeekFrom::Start(pos))?;
-            context.update(&header);
-            let digest = context.finish();
-            let mut expected_hash = [0; 32];
-            file.read_exact(&mut expected_hash)?;
-            if digest.as_ref() != expected_hash {
-                writeln!(stderr, "Possible header corruption\n")?;
-                process::exit(1);
-            }
-            */
+            custom_data.insert(KDF_PARAM_SALT.to_string(), transform_seed);
+            custom_data.insert(KDF_PARAM_ROUNDS.to_string(), make_u64(transform_round as u64));
 
             let transform_key = transform_aes_kdf(&key.composite_key_kdb1(), &custom_data)?;
 
@@ -535,14 +526,7 @@ fn main() -> io::Result<()> {
             hmac_context.update(&master_key);
             hmac_context.update(&[1u8]);
             master_key = context.finish().as_ref().to_owned();
-            let hmac_key_base = hmac_context.finish().as_ref().to_owned();
             println!("Master OUT: {:0x?}", master_key);
-            println!("HMAC OUT: {:0x?}", hmac_key_base);
-
-            let mut hmac_context = Context::new(&SHA512);
-            hmac_context.update(&[0xff; 8]);
-            hmac_context.update(&hmac_key_base);
-            let hmac_key = hmac_context.finish().as_ref().to_owned();
 
             let mut ciphertext = vec![];
             file.read_to_end(&mut ciphertext)?;
@@ -711,11 +695,11 @@ fn main() -> io::Result<()> {
                 }
                 println!("");
             }
-            process::exit(1);
+            return Ok(());
         },
         0xB54BFB66 => {
             // XXX Untested
-            writeln!(stderr, "KeePass 2.x Beta files not supported\n")?;
+            let _ = writeln!(stderr, "KeePass 2.x Beta files not supported\n");
             process::exit(1);
         },
         0xB54BFB67 => {
@@ -723,7 +707,7 @@ fn main() -> io::Result<()> {
         },
         _ => {
             // XXX Untested
-            writeln!(stderr, "Unknown KeePass database format\n")?;
+            let _ = writeln!(stderr, "Unknown KeePass database format\n");
             process::exit(1);
         },
     };
@@ -733,11 +717,18 @@ fn main() -> io::Result<()> {
     // endian, this puts the minor part first.
     let minor_version = file.read_u16::<LittleEndian>()?;
     let major_version = file.read_u16::<LittleEndian>()?;
-    if major_version != 4 {
-        writeln!(stderr,
-                 "Unsupported KeePass 2.x database version ({}.{})\n",
-                 major_version, minor_version)?;
-        process::exit(1);
+    match major_version {
+        3 => {
+            custom_data.insert(KDF_PARAM_UUID.to_string(), kdf_aes_kdbx3.as_bytes().to_vec());
+        },
+        4 => {
+        },
+        _ => {
+            let _ = writeln!(stderr,
+                     "Unsupported KeePass 2.x database version ({}.{})\n",
+                     major_version, minor_version);
+            process::exit(1);
+        },
     };
     let mut tlvs = HashMap::new();
     loop {
@@ -750,11 +741,41 @@ fn main() -> io::Result<()> {
         };
         let mut tlv_data = vec![0; tlv_len as usize];
         file.read_exact(&mut tlv_data)?;
-        if tlv_type == 0 {
-            break;
+        debug!("TLV({}, {}): {:?}", tlv_type, tlv_len, tlv_data);
+        match tlv_type {
+            0 => { break; }
+            5 => { custom_data.insert(KDF_PARAM_SALT.to_string(), tlv_data); },
+            6 => { custom_data.insert(KDF_PARAM_ROUNDS.to_string(), tlv_data); },
+            11 => {
+                let kdf_parameters = &tlv_data;
+                let mut c = Cursor::new(kdf_parameters);
+                let variant_minor = c.read_u8()?;
+                let variant_major = c.read_u8()?;
+                if variant_major != 1 {
+                    let _ = writeln!(stderr,
+                             "Unsupported variant dictionary version ({}.{})\n",
+                             variant_major, variant_minor);
+                    process::exit(1);
+                };
+
+                loop {
+                    let item_type = c.read_u8()?;
+                    if item_type == 0 {
+                        break;
+                    }
+                    let item_key_len = c.read_u32::<LittleEndian>()?;
+                    let mut item_key = vec![0; item_key_len as usize];
+                    c.read_exact(&mut item_key)?;
+                    let item_key_str = String::from_utf8_lossy(&item_key).to_owned();
+                    let item_value_len = c.read_u32::<LittleEndian>()?;
+                    let mut item_value = vec![0; item_value_len as usize];
+                    c.read_exact(&mut item_value)?;
+                    debug!("K: {}, V: {:0x?}", item_key_str, item_value);
+                    custom_data.insert(item_key_str.to_owned().to_string(), item_value);
+                }
+            },
+            _ => { tlvs.insert(tlv_type, tlv_data); },
         }
-        println!("TLV({}, {}): {:?}", tlv_type, tlv_len, tlv_data);
-        tlvs.insert(tlv_type, tlv_data);
     };
 
     //let src = &tlvs[&2u8];
@@ -765,7 +786,7 @@ fn main() -> io::Result<()> {
     let cipher_id = Builder::from_slice(&tlvs[&2u8]).unwrap().build();
     println!("D: {:?}", cipher_id);
     if cipher_id != Uuid::parse_str("31c1f2e6-bf71-4350-be58-05216afc5aff").unwrap() {
-        writeln!(stderr, "Unknown cipher\n")?;
+        let _ = writeln!(stderr, "Unknown cipher\n");
         process::exit(1);
     }
     println!("AES");
@@ -774,7 +795,7 @@ fn main() -> io::Result<()> {
     match compression_flags {
         0 => {
             // XX Untested
-            writeln!(stderr, "Unsupported no compressed file\n")?;
+            let _ = writeln!(stderr, "Unsupported no compressed file\n");
             process::exit(1);
         },
         1 => {
@@ -782,62 +803,34 @@ fn main() -> io::Result<()> {
         },
         _ => {
             // XX Untested
-            writeln!(stderr, "Unsupported compression method\n")?;
+            let _ = writeln!(stderr, "Unsupported compression method\n");
             process::exit(1);
         },
     };
 
     let master_seed = &tlvs[&4u8];
     let encryption_iv = &tlvs[&7u8];
-    let kdf_parameters = &tlvs[&11u8];
-    let mut c = Cursor::new(kdf_parameters);
-    let variant_minor = c.read_u8()?;
-    let variant_major = c.read_u8()?;
-    if variant_major != 1 {
-        writeln!(stderr,
-                 "Unsupported variant dictionary version ({}.{})\n",
-                 variant_major, variant_minor)?;
-        process::exit(1);
-    };
 
-    let mut custom_data = HashMap::<String, Vec<u8>>::new();
-    loop {
-        let item_type = c.read_u8()?;
-        if item_type == 0 {
-            break;
+    let mut header = vec![];
+    if major_version == 4 {
+        let mut context = Context::new(&SHA256);
+        let pos = file.seek(SeekFrom::Current(0))?;
+        file.seek(SeekFrom::Start(0))?;
+        header = vec![0; (pos) as usize];
+        file.read_exact(&mut header)?;
+        file.seek(SeekFrom::Start(pos))?;
+        context.update(&header);
+        let digest = context.finish();
+        let mut expected_hash = [0; 32];
+        file.read_exact(&mut expected_hash)?;
+        if digest.as_ref() != expected_hash {
+            let _ = writeln!(stderr, "Possible header corruption\n");
+            process::exit(1);
         }
-        let item_key_len = c.read_u32::<LittleEndian>()?;
-        let mut item_key = vec![0; item_key_len as usize];
-        c.read_exact(&mut item_key)?;
-        let item_key_str = String::from_utf8_lossy(&item_key).to_owned();
-        let item_value_len = c.read_u32::<LittleEndian>()?;
-        let mut item_value = vec![0; item_value_len as usize];
-        c.read_exact(&mut item_value)?;
-        println!("K: {}, V: {:0x?}", item_key_str, item_value);
-        custom_data.insert(item_key_str.to_owned().to_string(), item_value);
     }
 
-    let mut context = Context::new(&SHA256);
-    let header_start = 0;
-    let pos = file.seek(SeekFrom::Current(0))?;
-    file.seek(SeekFrom::Start(header_start))?;
-    let mut header = vec![0; (pos-header_start) as usize];
-    file.read_exact(&mut header)?;
-    file.seek(SeekFrom::Start(pos))?;
-    context.update(&header);
-    let digest = context.finish();
-    let mut expected_hash = [0; 32];
-    file.read_exact(&mut expected_hash)?;
-    if digest.as_ref() != expected_hash {
-        writeln!(stderr, "Possible header corruption\n")?;
-        process::exit(1);
-    }
-
-    let kdf_id = Builder::from_slice(&custom_data["$UUID"]).unwrap().build();
+    let kdf_id = Builder::from_slice(&custom_data[KDF_PARAM_UUID]).unwrap().build();
     println!("KDF: {:?}", kdf_id);
-    let kdf_aes_kdbx3 = Uuid::parse_str("c9d9f39a-628a-4460-bf74-0d08c18a4fea").unwrap();
-    let kdf_aes_kdbx4 = Uuid::parse_str("7c02bb82-79a7-4ac0-927d-114a00648238").unwrap();
-    let kdf_argon2    = Uuid::parse_str("ef636ddf-8c29-444b-91f7-a9a403e30a0c").unwrap();
 
     let transform_key = match kdf_id {
         x if x == kdf_aes_kdbx3 => {
@@ -878,17 +871,54 @@ fn main() -> io::Result<()> {
     let hmac_key = hmac_context.finish().as_ref().to_owned();
 
     let mut hmac_tag = [0; 32];
-    file.read_exact(&mut hmac_tag)?;
     //println!("HMAC Tag: {:0x?}", hmac_tag);
     let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
-    println!("Verifying HMAC");
-    hmac::verify(&hmac_key, &header, &hmac_tag).unwrap();
-    println!("Complete");
+    if major_version == 4 {
+        file.read_exact(&mut hmac_tag)?;
+        println!("Verifying HMAC");
+        hmac::verify(&hmac_key, &header, &hmac_tag).unwrap();
+        println!("Complete");
+    }
 
     let mut ciphertext = vec![];
     for idx in 0.. {
         println!("Block {}", idx);
-        file.read_exact(&mut hmac_tag)?;
+        if major_version == 4 {
+            file.read_exact(&mut hmac_tag)?;
+        } else {
+            let mut ciphertext = vec![];
+            file.read_to_end(&mut ciphertext)?;
+            println!("CP: {:?}", ciphertext);
+            let data = decrypt(Cipher::aes_256_cbc(), &master_key, Some(encryption_iv), &ciphertext).unwrap();
+            println!("Data: {:?}", data);
+            let mut c = Cursor::new(data);
+            let mut start_stream = vec![0; 32];
+            c.read_exact(&mut start_stream)?;
+            assert_eq!(&start_stream, &tlvs[&9u8]);
+            //let mut gz = GzDecoder::new(c);
+            let block_id = c.read_u32::<LittleEndian>()?;
+            assert_eq!(idx as u32, block_id);
+            println!("ID: {}", block_id);
+            let mut block_hash_expected = vec![0; 32];
+            c.read_exact(&mut block_hash_expected)?;
+            println!("Hash: {:?}", block_hash_expected);
+            let block_size = c.read_u32::<LittleEndian>()?;
+            println!("Size: {}", block_size);
+            let mut block_data = vec![0; block_size as usize];
+            c.read_exact(&mut block_data)?;
+            println!("Read");
+            let mut context = Context::new(&SHA256);
+            context.update(&block_data);
+            let block_hash = context.finish().as_ref().to_owned();
+            assert_eq!(block_hash_expected, block_hash, "Failed hash");
+            println!("Hash passed");
+            let mut gz = GzDecoder::new(Cursor::new(block_data));
+            let mut xml_file = File::create("data2.xml")?;
+            let mut contents = String::new();
+            gz.read_to_string(&mut contents)?;
+            let _ = xml_file.write(&contents.as_bytes());
+            return Ok(());
+        }
         let block_size = file.read_u32::<LittleEndian>()?;
         if block_size == 0 {
             break;
@@ -923,7 +953,7 @@ fn main() -> io::Result<()> {
         if tlv_type == 0 {
             break;
         }
-        println!("TLV({}, {}): {:?}", tlv_type, tlv_len, tlv_data);
+        debug!("TLV({}, {}): {:?}", tlv_type, tlv_len, tlv_data);
         tlvs.insert(tlv_type, tlv_data);
     };
     let mut xml_file = File::create("data.xml")?;
@@ -931,7 +961,7 @@ fn main() -> io::Result<()> {
     let mut contents = String::new();
     gz.read_to_string(&mut contents)?;
     //gz.read_to_end(&mut buf);
-    xml_file.write(&contents.as_bytes());
+    let _ = xml_file.write(&contents.as_bytes());
     const KDBX4_TIME_OFFSET : i64 = 62135596800;
     let package = parser::parse(&contents).unwrap();
     let document = package.as_document();
