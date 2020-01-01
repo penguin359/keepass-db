@@ -812,15 +812,15 @@ fn main() -> io::Result<()> {
     let encryption_iv = &tlvs[&7u8];
 
     let mut header = vec![];
+    let mut context = Context::new(&SHA256);
+    let pos = file.seek(SeekFrom::Current(0))?;
+    file.seek(SeekFrom::Start(0))?;
+    header = vec![0; (pos) as usize];
+    file.read_exact(&mut header)?;
+    file.seek(SeekFrom::Start(pos))?;
+    context.update(&header);
+    let digest = context.finish();
     if major_version == 4 {
-        let mut context = Context::new(&SHA256);
-        let pos = file.seek(SeekFrom::Current(0))?;
-        file.seek(SeekFrom::Start(0))?;
-        header = vec![0; (pos) as usize];
-        file.read_exact(&mut header)?;
-        file.seek(SeekFrom::Start(pos))?;
-        context.update(&header);
-        let digest = context.finish();
         let mut expected_hash = [0; 32];
         file.read_exact(&mut expected_hash)?;
         if digest.as_ref() != expected_hash {
@@ -923,6 +923,15 @@ fn main() -> io::Result<()> {
             let mut contents = String::new();
             gz.read_to_string(&mut contents)?;
             let _ = xml_file.write(&contents.as_bytes());
+            let package = parser::parse(&contents).unwrap();
+            let document = package.as_document();
+            let header_hash = evaluate_xpath(&document, "/KeePassFile/Meta/HeaderHash/text()").expect("Missing header hash");
+            println!("Header Hash: {}", header_hash.string());
+            let expected_hash = decode(&header_hash.string()).expect("Valid base64");
+            if digest.as_ref().to_owned() != expected_hash {
+                let _ = writeln!(stderr, "Possible header corruption\n");
+                process::exit(1);
+            }
             return Ok(());
         }
         let block_size = file.read_u32::<LittleEndian>()?;
@@ -975,7 +984,7 @@ fn main() -> io::Result<()> {
     let database_name_node = evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseName/text()").expect("Missing database name");
     println!("Database Name: {}", database_name_node.string());
     let database_name_changed_node = evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseNameChanged/text()").expect("Missing database name changed");
-    let timestamp = Cursor::new(decode(&database_name_changed_node.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - KDBX4_TIME_OFFSET ;
+    let timestamp = Cursor::new(decode(&database_name_changed_node.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - KDBX4_TIME_OFFSET;
     //let naive = NaiveDateTime::from_timestamp(timestamp, 0);
     //let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
     let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
