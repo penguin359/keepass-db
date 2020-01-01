@@ -886,33 +886,39 @@ fn main() -> io::Result<()> {
         if major_version == 4 {
             file.read_exact(&mut hmac_tag)?;
         } else {
+            /* KDBX 3.x format encrypts the database after breaking
+             * the stream into blocks */
             let mut ciphertext = vec![];
             file.read_to_end(&mut ciphertext)?;
-            println!("CP: {:?}", ciphertext);
             let data = decrypt(Cipher::aes_256_cbc(), &master_key, Some(encryption_iv), &ciphertext).unwrap();
-            println!("Data: {:?}", data);
             let mut c = Cursor::new(data);
+            
+            /* Start stream header is used to verify successful decrypt */
             let mut start_stream = vec![0; 32];
             c.read_exact(&mut start_stream)?;
             assert_eq!(&start_stream, &tlvs[&9u8]);
-            //let mut gz = GzDecoder::new(c);
-            let block_id = c.read_u32::<LittleEndian>()?;
-            assert_eq!(idx as u32, block_id);
-            println!("ID: {}", block_id);
-            let mut block_hash_expected = vec![0; 32];
-            c.read_exact(&mut block_hash_expected)?;
-            println!("Hash: {:?}", block_hash_expected);
-            let block_size = c.read_u32::<LittleEndian>()?;
-            println!("Size: {}", block_size);
-            let mut block_data = vec![0; block_size as usize];
-            c.read_exact(&mut block_data)?;
-            println!("Read");
-            let mut context = Context::new(&SHA256);
-            context.update(&block_data);
-            let block_hash = context.finish().as_ref().to_owned();
-            assert_eq!(block_hash_expected, block_hash, "Failed hash");
-            println!("Hash passed");
-            let mut gz = GzDecoder::new(Cursor::new(block_data));
+            println!("Master Key appears valid");
+
+            let mut buf = vec![];
+            for idx in 0.. {
+                println!("Block {}", idx);
+                let block_id = c.read_u32::<LittleEndian>()?;
+                assert_eq!(idx as u32, block_id);
+                let mut block_hash_expected = vec![0; 32];
+                c.read_exact(&mut block_hash_expected)?;
+                let block_size = c.read_u32::<LittleEndian>()?;
+                let mut block_data = vec![0; block_size as usize];
+                c.read_exact(&mut block_data)?;
+                let mut context = Context::new(&SHA256);
+                context.update(&block_data);
+                let block_hash = context.finish().as_ref().to_owned();
+                if block_size == 0 {
+                    break;
+                }
+                assert_eq!(block_hash_expected, block_hash, "Failed hash");
+                buf.extend(block_data);
+            }
+            let mut gz = GzDecoder::new(Cursor::new(buf));
             let mut xml_file = File::create("data2.xml")?;
             let mut contents = String::new();
             gz.read_to_string(&mut contents)?;
