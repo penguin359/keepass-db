@@ -928,7 +928,7 @@ fn main() -> io::Result<()> {
             let header_hash = evaluate_xpath(&document, "/KeePassFile/Meta/HeaderHash/text()").expect("Missing header hash");
             println!("Header Hash: {}", header_hash.string());
             let expected_hash = decode(&header_hash.string()).expect("Valid base64");
-            if digest.as_ref().to_owned() != expected_hash {
+            if expected_hash != digest.as_ref() {
                 let _ = writeln!(stderr, "Possible header corruption\n");
                 process::exit(1);
             }
