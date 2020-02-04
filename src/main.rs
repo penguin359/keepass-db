@@ -16,6 +16,7 @@ extern crate argonautica;
 extern crate chacha20;
 #[macro_use]
 extern crate log;
+extern crate rand;
 
 use std::io::Cursor;
 use std::env;
@@ -24,6 +25,8 @@ use std::fs::File;
 use std::io::{self, SeekFrom};
 use std::io::prelude::*;
 use std::collections::HashMap;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 //use hex::ToHex;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -45,6 +48,8 @@ use chacha20::stream_cipher::{NewStreamCipher, SyncStreamCipher};
 use argon2::{Config, ThreadMode, Variant, Version};
 #[cfg(feature = "argonautica")]
 use argonautica::{Hasher, config::{Variant, Version}};
+
+use rand::Rng;
 
 //use hex::FromHex;
 
@@ -542,9 +547,49 @@ fn main() -> io::Result<()> {
                 process::exit(1);
             }
 
+            let mut uuid_map = HashMap::new();
+            let mut items = Vec::new();
+            let mut rng = rand::thread_rng();
+            struct KdbGroup {//<'a> {
+                uuid: u32,
+                parent: u32,
+                name: String,
+                creation_time: DateTime<Local>,
+                modification_time: DateTime<Local>,
+                access_time: DateTime<Local>,
+                expiry_time: DateTime<Local>,
+                icon: u32,
+                flags: u32,
+                //groups: Vec<&'a KdbGroup>,
+            }
+
+            let now = Local::now();
+            let root_group = KdbGroup {
+                uuid: rng.gen(),
+                parent: 0,
+                name: "Root".to_string(),
+                creation_time: now,
+                modification_time: now,
+                access_time: now,
+                expiry_time: now,
+                icon: 1,
+                flags: 0,
+            };
+
             let mut c = Cursor::new(data);
             println!("Groups:");
             for _ in 0..num_groups {
+                let mut group = KdbGroup {
+                    uuid: rng.gen(),
+                    parent: root_group.uuid,
+                    name: "".to_string(),
+                    creation_time: now,
+                    modification_time: now,
+                    access_time: now,
+                    expiry_time: now,
+                    icon: 1,
+                    flags: 0,
+                };
                 loop {
                     let field_type = c.read_u16::<LittleEndian>()?;
                     let field_len = c.read_u32::<LittleEndian>()?;
@@ -561,35 +606,42 @@ fn main() -> io::Result<()> {
                         0x0001 => {
                             let mut c = Cursor::new(field_content);
                             let uuid = c.read_u32::<LittleEndian>()?;
+                            group.uuid = uuid;
                             println!("UUID: {}", uuid);
                         },
                         0x0002 => {
                             let name = decode_string_kdb1(field_content);
-                            println!("Name: {}", name);
+                            group.name = name;
+                            println!("Name: {}", group.name);
                         },
                         0x0003 => {
                             let date = decode_datetime_kdb1(&field_content);
                             let datetime = Local.from_utc_datetime(&date);
-                            println!("Creation Time: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                            group.creation_time = datetime;
+                            println!("Creation Time: {}", group.creation_time.format("%Y-%m-%d %l:%M:%S %p %Z"));
                         },
                         0x0004 => {
                             let date = decode_datetime_kdb1(&field_content);
                             let datetime = Local.from_utc_datetime(&date);
-                            println!("Last Modification Time: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                            group.modification_time = datetime;
+                            println!("Last Modification Time: {}", group.modification_time.format("%Y-%m-%d %l:%M:%S %p %Z"));
                         },
                         0x0005 => {
                             let date = decode_datetime_kdb1(&field_content);
                             let datetime = Local.from_utc_datetime(&date);
-                            println!("Last Access Time: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                            group.access_time = datetime;
+                            println!("Last Access Time: {}", group.access_time.format("%Y-%m-%d %l:%M:%S %p %Z"));
                         },
                         0x0006 => {
                             let date = decode_datetime_kdb1(&field_content);
                             let datetime = Local.from_utc_datetime(&date);
-                            println!("Expiry Time: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                            group.expiry_time = datetime;
+                            println!("Expiry Time: {}", group.expiry_time.format("%Y-%m-%d %l:%M:%S %p %Z"));
                         },
                         0x0007 => {
                             let mut c = Cursor::new(field_content);
                             let icon = c.read_u32::<LittleEndian>()?;
+                            group.icon = icon;
                             println!("Icon: {}", icon);
                         },
                         0x0008 => {
@@ -602,6 +654,7 @@ fn main() -> io::Result<()> {
                         0x0009 => {
                             let mut c = Cursor::new(field_content);
                             let flags = c.read_u32::<LittleEndian>()?;
+                            group.flags = flags;
                             println!("Flags: 0x{:08x}", flags);
                         },
                         _ => {
@@ -610,6 +663,10 @@ fn main() -> io::Result<()> {
                     };
                 }
                 println!("");
+                let g = Rc::new(RefCell::new(group));
+                items.push(Rc::clone(&g));
+                let u = g.borrow().uuid;
+                uuid_map.insert(u, g);
             }
             println!("Entries:");
             for _ in 0..num_entries {
