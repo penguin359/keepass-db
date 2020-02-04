@@ -17,6 +17,7 @@ extern crate chacha20;
 #[macro_use]
 extern crate log;
 extern crate rand;
+extern crate clap;
 
 use std::io::Cursor;
 use std::env;
@@ -50,6 +51,7 @@ use argon2::{Config, ThreadMode, Variant, Version};
 use argonautica::{Hasher, config::{Variant, Version}};
 
 use rand::Rng;
+use clap::{Arg, App};
 
 //use hex::FromHex;
 
@@ -207,7 +209,7 @@ impl Key {
     }
 
     /* TODO Use this function */
-    fn _set_keyfile<T>(&mut self, keyfile: T)
+    fn set_keyfile<T>(&mut self, keyfile: T)
         where T : AsRef<[u8]> {
             let mut context = Context::new(&SHA256);
             context.update(keyfile.as_ref());
@@ -462,13 +464,22 @@ fn main() -> io::Result<()> {
 
     println!("Hello, world!");
 
-    let filename = match env::args().nth(1) {
-        Some(f) => f,
-        None => {
-            let _ = writeln!(stderr, "Invalid database file\n");
-            process::exit(1);
-        }
-    };
+    let options = App::new("KDBX Dump")
+        .version("0.1.0")
+        .author("Loren M. Lang <lorenl@north-winds.org>")
+        .about("Dumping KDBX Password files")
+        .arg(Arg::with_name("key")
+            .short("k")
+            .long("key-file")
+            .takes_value(true)
+            .help("Key file for unlocking database"))
+        .arg(Arg::with_name("file")
+            .help("Password database")
+            .required(true)
+            .index(1))
+        .get_matches();
+
+    let filename = options.value_of("file").expect("missing filename");
 
     let mut key = Key::new();
     let user_password = match env::var("KDBX_PASSWORD") {
@@ -479,6 +490,13 @@ fn main() -> io::Result<()> {
         },
     };
     key.set_user_password(user_password);
+
+    if let Some(filename) = options.value_of("key") {
+        let mut contents = vec![];
+        File::open(filename)?.read_to_end(&mut contents)?;
+        key.set_keyfile(contents);
+    }
+
     let composite_key = key.composite_key();
 
     let mut file = File::open(filename)?;
