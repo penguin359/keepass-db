@@ -565,8 +565,8 @@ fn main() -> io::Result<()> {
                 process::exit(1);
             }
 
-            let mut uuid_map = HashMap::new();
-            let mut items = Vec::new();
+            //let mut uuid_map = HashMap::new();
+            //let mut items = Vec::new();
             let mut rng = rand::thread_rng();
             struct KdbGroup {//<'a> {
                 uuid: u32,
@@ -579,11 +579,31 @@ fn main() -> io::Result<()> {
                 icon: u32,
                 flags: u32,
                 //groups: Vec<&'a KdbGroup>,
+                groups: Vec<u32>,
+                entries: Vec<Uuid>,
+            }
+
+            struct KdbEntry {
+                uuid: Uuid,
+                parent: u32,
+                icon: u32,
+                title: String,
+                url: String,
+                username: String,
+                password: String,
+                notes: String,
+                creation_time: DateTime<Local>,
+                modification_time: DateTime<Local>,
+                access_time: DateTime<Local>,
+                expiry_time: DateTime<Local>,
+                binary_description: String,
+                binary_data: Vec<u8>,
             }
 
             let now = Local::now();
+            let root_group_uuid = rng.gen();
             let root_group = KdbGroup {
-                uuid: rng.gen(),
+                uuid: root_group_uuid,
                 parent: 0,
                 name: "Root".to_string(),
                 creation_time: now,
@@ -592,14 +612,22 @@ fn main() -> io::Result<()> {
                 expiry_time: now,
                 icon: 1,
                 flags: 0,
+                groups: vec![],
+                entries: vec![],
             };
+
+            let mut all_groups = HashMap::new();
+            let mut all_entries = HashMap::new();
+            let mut groups_level = HashMap::new();
+            all_groups.insert(root_group.uuid, root_group);
+            groups_level.insert(0u16, root_group_uuid);
 
             let mut c = Cursor::new(data);
             println!("Groups:");
             for _ in 0..num_groups {
                 let mut group = KdbGroup {
                     uuid: rng.gen(),
-                    parent: root_group.uuid,
+                    parent: root_group_uuid,
                     name: "".to_string(),
                     creation_time: now,
                     modification_time: now,
@@ -607,7 +635,10 @@ fn main() -> io::Result<()> {
                     expiry_time: now,
                     icon: 1,
                     flags: 0,
+                    groups: vec![],
+                    entries: vec![],
                 };
+                let mut level = 0;
                 loop {
                     let field_type = c.read_u16::<LittleEndian>()?;
                     let field_len = c.read_u32::<LittleEndian>()?;
@@ -620,11 +651,13 @@ fn main() -> io::Result<()> {
                     match field_type {
                         0x0000 => {
                             //readExtData(dataInput);
+                            assert!(false);
                         },
                         0x0001 => {
                             let mut c = Cursor::new(field_content);
                             let uuid = c.read_u32::<LittleEndian>()?;
                             group.uuid = uuid;
+                            assert_eq!(c.position(), field_len as u64);
                             println!("UUID: {}", uuid);
                         },
                         0x0002 => {
@@ -660,19 +693,22 @@ fn main() -> io::Result<()> {
                             let mut c = Cursor::new(field_content);
                             let icon = c.read_u32::<LittleEndian>()?;
                             group.icon = icon;
+                            assert_eq!(c.position(), field_len as u64);
                             println!("Icon: {}", icon);
                         },
                         0x0008 => {
                             //int level = readShort(dataInput);
                             //group.setParent(computeParentGroup(lastGroup, level));
                             let mut c = Cursor::new(field_content);
-                            let level = c.read_u16::<LittleEndian>()?;
+                            level = c.read_u16::<LittleEndian>()?;
+                            assert_eq!(c.position(), field_len as u64);
                             println!("Level: {}", level);
                         },
                         0x0009 => {
                             let mut c = Cursor::new(field_content);
                             let flags = c.read_u32::<LittleEndian>()?;
                             group.flags = flags;
+                            assert_eq!(c.position(), field_len as u64);
                             println!("Flags: 0x{:08x}", flags);
                         },
                         _ => {
@@ -681,13 +717,35 @@ fn main() -> io::Result<()> {
                     };
                 }
                 println!("");
-                let g = Rc::new(RefCell::new(group));
-                items.push(Rc::clone(&g));
-                let u = g.borrow().uuid;
-                uuid_map.insert(u, g);
+                //root_group.groups.push(group.uuid);
+                group.parent = *groups_level.get(&level).unwrap_or(&root_group_uuid);
+                all_groups.get_mut(&group.parent).unwrap().groups.push(group.uuid);
+                groups_level.insert(level, group.uuid);
+                all_groups.insert(group.uuid, group);
+                //groups_level.get_mut(&2).unwrap().groups.push(group.uuid);
+                //let g = Rc::new(RefCell::new(group));
+                //items.push(Rc::clone(&g));
+                //let u = g.borrow().uuid;
+                //uuid_map.insert(u, g);
             }
             println!("Entries:");
             for _ in 0..num_entries {
+                let mut entry = KdbEntry {
+                    uuid: Uuid::default(),
+                    parent: 0,
+                    icon: 0,
+                    title: "".to_string(),
+                    url: "".to_string(),
+                    username: "".to_string(),
+                    password: "".to_string(),
+                    notes: "".to_string(),
+                    creation_time: now,
+                    modification_time: now,
+                    access_time: now,
+                    expiry_time: now,
+                    binary_description: "".to_string(),
+                    binary_data: vec![],
+                };
                 loop {
                     let field_type = c.read_u16::<LittleEndian>()?;
                     let field_len = c.read_u32::<LittleEndian>()?;
@@ -700,68 +758,87 @@ fn main() -> io::Result<()> {
                     match field_type {
                         0x0000 => {
                             //readExtData(dataInput);
+                            assert!(false);
                         },
                         0x0001 => {
-                            let mut c = Cursor::new(field_content);
-                            let uuid = c.read_u32::<LittleEndian>()?;
-                            println!("UUID: {}", uuid);
+                            //let mut c = Cursor::new(field_content);
+                            //let uuid = c.read_u32::<LittleEndian>()?;
+                            //assert_eq!(c.position(), field_len as u64);
+                            let uuid = Uuid::from_slice(&field_content).unwrap();
+                            entry.uuid = uuid;
+                            println!("UUID: {}", entry.uuid);
                         },
                         0x0002 => {
                             let mut c = Cursor::new(field_content);
                             let group_id = c.read_u32::<LittleEndian>()?;
-                            println!("Group: {}", group_id);
+                            entry.parent = group_id;
+                            assert_eq!(c.position(), field_len as u64);
+                            println!("Group: {}", entry.parent);
                         },
                         0x0003 => {
                             let mut c = Cursor::new(field_content);
                             let icon = c.read_u32::<LittleEndian>()?;
-                            println!("Icon: {}", icon);
+                            entry.icon = icon;
+                            assert_eq!(c.position(), field_len as u64);
+                            println!("Icon: {}", entry.icon);
                         },
                         0x0004 => {
                             let name = decode_string_kdb1(field_content);
-                            println!("Title: {}", name);
+                            entry.title = name;
+                            println!("Title: {}", entry.title);
                         },
                         0x0005 => {
                             let name = decode_string_kdb1(field_content);
-                            println!("Url: {}", name);
+                            entry.url = name;
+                            println!("Url: {}", entry.url);
                         },
                         0x0006 => {
                             let name = decode_string_kdb1(field_content);
-                            println!("Username: {}", name);
+                            entry.username = name;
+                            println!("Username: {}", entry.username);
                         },
                         0x0007 => {
                             let name = decode_string_kdb1(field_content);
-                            println!("Password: {}", name);
+                            entry.password = name;
+                            println!("Password: {}", entry.password);
                         },
                         0x0008 => {
                             let name = decode_string_kdb1(field_content);
-                            println!("Notes: {}", name);
+                            entry.notes = name;
+                            println!("Notes: {}", entry.notes);
                         },
                         0x0009 => {
                             let date = decode_datetime_kdb1(&field_content);
                             let datetime = Local.from_utc_datetime(&date);
-                            println!("Creation Time: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                            entry.creation_time = datetime;
+                            println!("Creation Time: {}", entry.creation_time.format("%Y-%m-%d %l:%M:%S %p %Z"));
                         },
                         0x000a => {
                             let date = decode_datetime_kdb1(&field_content);
                             let datetime = Local.from_utc_datetime(&date);
-                            println!("Last Modification Time: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                            entry.modification_time = datetime;
+                            println!("Last Modification Time: {}", entry.modification_time.format("%Y-%m-%d %l:%M:%S %p %Z"));
                         },
                         0x000b => {
                             let date = decode_datetime_kdb1(&field_content);
                             let datetime = Local.from_utc_datetime(&date);
-                            println!("Last Access Time: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                            entry.access_time = datetime;
+                            println!("Last Access Time: {}", entry.access_time.format("%Y-%m-%d %l:%M:%S %p %Z"));
                         },
                         0x000c => {
                             let date = decode_datetime_kdb1(&field_content);
                             let datetime = Local.from_utc_datetime(&date);
-                            println!("Expiry Time: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                            entry.expiry_time = datetime;
+                            println!("Expiry Time: {}", entry.expiry_time.format("%Y-%m-%d %l:%M:%S %p %Z"));
                         },
                         0x000d => {
                             let name = decode_string_kdb1(field_content);
-                            println!("Binary Description: {}", name);
+                            entry.binary_description = name;
+                            println!("Binary Description: {}", entry.binary_description);
                         },
                         0x000e => {
-                            println!("Binary Data: {:#?}", field_content);
+                            entry.binary_data = field_content;
+                            println!("Binary Data: {:#?}", entry.binary_data);
                         },
                         _ => {
                             panic!("Unknown field");
@@ -769,7 +846,39 @@ fn main() -> io::Result<()> {
                     };
                 }
                 println!("");
+                //let parent_group = all_groups.get_mut(&entry.parent).unwrap_or_else(|| all_groups.get_mut(&root_group_uuid).unwrap());
+                let parent_group = match all_groups.get_mut(&entry.parent) {
+                    Some(group) => group,
+                    None => all_groups.get_mut(&root_group_uuid).unwrap(),
+                };
+                parent_group.entries.push(entry.uuid);
+                entry.parent = parent_group.uuid;
+                all_entries.insert(entry.uuid, entry);
             }
+
+            struct KdbDatabase {
+                groups: HashMap<u32, KdbGroup>,
+                entries: HashMap<Uuid, KdbEntry>,
+            }
+
+            let database = KdbDatabase {
+                groups: all_groups,
+                entries: all_entries,
+            };
+
+            fn dump_group(database: &KdbDatabase, uuid: u32, depth: u16) {
+                let group = database.groups.get(&uuid).unwrap();
+                println!("{0:1$}>{2}", "", 2*depth as usize, group.name);
+                for child in &group.groups {
+                    dump_group(database, *child, depth+1);
+                }
+                for child in &group.entries {
+                    let entry = database.entries.get(&child).unwrap();
+                    println!("{0:1$}  -{2}", "", 2*depth as usize, entry.title);
+                }
+            }
+            dump_group(&database, root_group_uuid, 0);
+
             return Ok(());
         },
         0xB54BFB66 => {
