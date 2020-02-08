@@ -18,6 +18,12 @@ extern crate chacha20;
 extern crate log;
 extern crate rand;
 extern crate clap;
+extern crate xml;
+extern crate serde;
+extern crate serde_xml_rs;
+
+#[macro_use]
+extern crate serde_derive;
 
 use std::io::Cursor;
 use std::env;
@@ -52,6 +58,8 @@ use argonautica::{Hasher, config::{Variant, Version}};
 
 use rand::Rng;
 use clap::{Arg, App};
+use xml::reader::{ParserConfig, XmlEvent};
+use serde_xml_rs::{from_str, to_string};
 
 //use hex::FromHex;
 
@@ -1212,6 +1220,70 @@ fn main() -> io::Result<()> {
         },
         _ => { panic!("XML corruption"); },
     };
+
+    let content_cursor = Cursor::new(&contents);
+    let mut reader = ParserConfig::new()
+        .cdata_to_characters(true)
+        .create_reader(content_cursor);
+    while let event = reader.next().unwrap() {
+        match event {
+            XmlEvent::StartDocument { .. } => { println!("Start"); },
+            XmlEvent::EndDocument => { println!("End"); break; },
+            _ => {},
+        }
+    }
+
+    #[derive(Debug, Serialize, Deserialize, PartialEq)]
+    #[serde(rename_all = "PascalCase")]
+    struct KeePassFile {
+        meta: Meta,
+    }
+
+    #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
+    #[serde(rename_all = "PascalCase", default)]
+    struct Meta {
+        generator: String,
+        database_name: String,
+        database_name_changed: String,
+        database_description: String,
+        database_description_changed: String,
+        default_user_name: String,
+        default_user_name_changed: String,
+        maintenance_history_days: String,
+        color: String,
+        master_key_changed: String,
+        master_key_change_rec: String,
+        master_key_change_force: String,
+        memory_protection: MemoryProtection,
+        custom_icons: String,
+        recycle_bin_enabled: String,
+        #[serde(rename = "RecycleBinUUID")]
+        recycle_bin_uuid: Option<String>,
+        recycle_bin_changed: String,
+        entry_templates_group: String,
+        entry_templates_group_changed: String,
+        last_selected_group: String,
+        last_top_visible_group: String,
+        history_max_items: String,
+        history_max_size: String,
+        settings_changed: String,
+        //custom_data: CustomData
+    }
+
+    #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
+    #[serde(rename_all = "PascalCase", default)]
+    struct MemoryProtection {
+        protect_title: String,
+        protect_user_name: String,
+        protect_password: String,
+        protect_url: String,
+        protect_notes: String,
+    }
+
+    let database: KeePassFile = from_str(&contents).unwrap();
+    println!("Database Generator: '{}'", database.meta.generator);
+    println!("Database: {:?}", database);
+    println!("XML: {:?}", to_string(&database).unwrap());
 
     Ok(())
 }
