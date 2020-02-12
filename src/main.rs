@@ -21,9 +21,13 @@ extern crate clap;
 extern crate xml;
 extern crate serde;
 extern crate serde_xml_rs;
+extern crate yaserde;
 
 #[macro_use]
 extern crate serde_derive;
+
+#[macro_use]
+extern crate yaserde_derive;
 
 use std::io::Cursor;
 use std::env;
@@ -60,6 +64,7 @@ use rand::Rng;
 use clap::{Arg, App};
 use xml::reader::{ParserConfig, XmlEvent};
 use serde_xml_rs::{from_str, to_string};
+use yaserde::{YaDeserialize, YaSerialize};
 
 //use hex::FromHex;
 
@@ -1233,57 +1238,97 @@ fn main() -> io::Result<()> {
         }
     }
 
-    #[derive(Debug, Serialize, Deserialize, PartialEq)]
+    #[derive(Debug, Serialize, Deserialize, YaSerialize, YaDeserialize, PartialEq)]
     #[serde(rename_all = "PascalCase")]
     struct KeePassFile {
+        #[serde(rename = "Meta")]
         meta: Meta,
     }
 
-    #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
+    #[derive(Debug, Default, Serialize, Deserialize, YaSerialize, YaDeserialize, PartialEq)]
     #[serde(rename_all = "PascalCase", default)]
     struct Meta {
+        #[yaserde(rename = "Generator")]
         generator: String,
+        #[yaserde(rename = "DatabaseName")]
         database_name: String,
+        #[yaserde(rename = "DatabaseNameChanged")]
         database_name_changed: String,
+        #[yaserde(rename = "DatabaseDescription")]
         database_description: String,
+        #[yaserde(rename = "DatabaseDescriptionChanged")]
         database_description_changed: String,
+        #[yaserde(rename = "DefaultUserName")]
         default_user_name: String,
+        #[yaserde(rename = "DefaultUserNameChanged")]
         default_user_name_changed: String,
+        #[yaserde(rename = "MaintenanceHistoryDays")]
         maintenance_history_days: String,
+        #[yaserde(rename = "Color")]
         color: String,
+        #[yaserde(rename = "MasterKeyChanged")]
         master_key_changed: String,
+        #[yaserde(rename = "MasterKeyChangeRec")]
         master_key_change_rec: String,
+        #[yaserde(rename = "MasterKeyChangeForce")]
         master_key_change_force: String,
+        #[yaserde(rename = "MemoryProtection")]
         memory_protection: MemoryProtection,
+        #[yaserde(rename = "CustomIcons")]
         custom_icons: String,
+        #[yaserde(rename = "RecycleBinEnabled")]
         recycle_bin_enabled: String,
         #[serde(rename = "RecycleBinUUID")]
         recycle_bin_uuid: Option<String>,
+        #[yaserde(rename = "RecycleBinChanged")]
         recycle_bin_changed: String,
+        #[yaserde(rename = "EntryTemplatesGroup")]
         entry_templates_group: String,
+        #[yaserde(rename = "EntryTemplatesGroupChanged")]
         entry_templates_group_changed: String,
+        #[yaserde(rename = "LastSelectedGroup")]
         last_selected_group: String,
+        #[yaserde(rename = "LastTopVisibleGroup")]
         last_top_visible_group: String,
+        #[yaserde(rename = "HistoryMaxItems")]
         history_max_items: String,
+        #[yaserde(rename = "HistoryMaxSize")]
         history_max_size: String,
+        #[yaserde(rename = "SettingsChanged")]
         settings_changed: String,
         //custom_data: CustomData
     }
 
-    #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
+    #[derive(Debug, Default, Serialize, Deserialize, YaSerialize, YaDeserialize, PartialEq)]
     #[serde(rename_all = "PascalCase", default)]
+    #[yaserde(rename_all = "PascalCase", default)]
     struct MemoryProtection {
+        #[yaserde(rename = "ProtectTitle")]
         protect_title: String,
+        #[yaserde(rename = "ProtectUserName")]
         protect_user_name: String,
+        #[yaserde(rename = "ProtectPassword")]
         protect_password: String,
+        #[yaserde(rename = "ProtectUrl")]
         protect_url: String,
+        #[yaserde(rename = "ProtectNotes")]
         protect_notes: String,
     }
 
-    let database: KeePassFile = from_str(&contents).unwrap();
+    let mut database: KeePassFile = from_str(&contents).unwrap();
     println!("Database Generator: '{}'", database.meta.generator);
     println!("Database: {:?}", database);
+    database.meta.generator = "<Funny>".to_string();
     println!("XML: {:?}", to_string(&database).unwrap());
+
+    let content_cursor = Cursor::new(&contents);
+    let mut reader = ParserConfig::new()
+        .cdata_to_characters(true)
+        .create_reader(content_cursor);
+    let de = yaserde::de::Deserializer::new(reader);
+    let mut database: KeePassFile = yaserde::de::from_str(&contents).unwrap();
+    database.meta.generator = "<Funny>".to_string();
+    println!("XML: {:?}", yaserde::ser::to_string(&database).unwrap());
 
     Ok(())
 }
