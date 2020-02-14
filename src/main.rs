@@ -1238,15 +1238,169 @@ fn main() -> io::Result<()> {
         }
     }
 
-    #[derive(Debug, Serialize, Deserialize, YaSerialize, YaDeserialize, PartialEq)]
-    #[serde(rename_all = "PascalCase")]
+    //#[derive(Debug, Serialize, Deserialize, YaSerialize, YaDeserialize, PartialEq)]
+    #[derive(Debug, YaSerialize, YaDeserialize, PartialEq)]
+    //#[serde(rename_all = "PascalCase")]
     struct KeePassFile {
-        #[serde(rename = "Meta")]
+        //#[serde(rename = "Meta")]
+        #[yaserde(rename = "Meta")]
         meta: Meta,
+        #[yaserde(rename = "Root")]
+        root: Vec<Group>,
     }
 
-    #[derive(Debug, Default, Serialize, Deserialize, YaSerialize, YaDeserialize, PartialEq)]
-    #[serde(rename_all = "PascalCase", default)]
+    #[derive(Debug, Default, PartialEq)]
+    struct CustomData(HashMap<String, String>);
+
+    fn consume_element<R: Read>(reader: &mut yaserde::de::Deserializer<R>, mut event: XmlEvent) -> Result<(), String> {
+        let mut elements = vec![];
+
+        loop {
+            match event {
+                XmlEvent::StartDocument { .. } => {
+                    return Err("Malformed XML document".to_string());
+                },
+                XmlEvent::EndDocument { .. } => {
+                    return Err("Malformed XML document".to_string());
+                },
+                XmlEvent::StartElement { name, .. } => {
+                    elements.push(name);
+                },
+                XmlEvent::EndElement { name, .. } => {
+                    let start_tag = elements.pop().expect("Can't consume a bare end element");
+                    if start_tag != name {
+                        return Err(format!("Start tag <{}> mismatches end tag </{}>", start_tag, name));
+                    }
+                },
+                _ => {
+                    // Consume any PI, text, comment, or cdata node
+                    return Ok(());
+                },
+            };
+            if elements.len() == 0 {
+                return Ok(());
+            }
+            event = reader.next_event()?;
+        }
+    }
+
+    impl YaDeserialize for CustomData {
+        fn deserialize<R: Read>(reader: &mut yaserde::de::Deserializer<R>) -> Result<Self, String> {
+            let name = match reader.next_event()? {
+                XmlEvent::StartElement { name, .. } => name,
+                _ => { return Err("No element next".to_string()); },
+            };
+            println!("Starting event");
+
+            let mut data = HashMap::new();
+
+            loop {
+                //println!("Event: {:?}", reader.next_event());
+                if let next = reader.peek()? {
+                    match next {
+                        XmlEvent::EndElement { .. } => {
+                            return Ok(CustomData(data))
+                        }
+                        _ => {}
+                    }
+                }
+                match dbg!(reader.next_event()?) {
+                    XmlEvent::StartDocument { .. } => { return Err("Malformed XML document".to_string()); },
+                    XmlEvent::EndDocument => { return Err("Malformed XML document".to_string()); },
+                    XmlEvent::StartElement { name, .. }
+                      if name.local_name == "Item" => {
+                        let mut key = String::new();
+                        let mut value = String::new();
+                        loop {
+                            match reader.next_event()? {
+                                XmlEvent::StartElement { name, .. }
+                                  if name.local_name == "Key" => {
+                                    loop {
+                                        match reader.next_event()? {
+                                            XmlEvent::Characters(k) => {
+                                                key = k;
+                                            },
+                                            XmlEvent::EndElement { name }
+                                              if name.local_name == "Key" => {
+                                                break;
+                                            },
+                                            XmlEvent::EndElement { .. } => {
+                                                return Err("Malformed XML document".to_string());
+                                            },
+                                            _ => { panic!("Bad document parsing"); },
+                                        }
+                                    }
+                                },
+                                XmlEvent::StartElement { name, .. }
+                                  if name.local_name == "Value" => {
+                                    loop {
+                                        match reader.next_event()? {
+                                            XmlEvent::Characters(k) => {
+                                                value = k;
+                                            },
+                                            XmlEvent::EndElement { name }
+                                              if name.local_name == "Value" => {
+                                                break;
+                                            },
+                                            XmlEvent::EndElement { .. } => {
+                                                return Err("Malformed XML document".to_string());
+                                            },
+                                            _ => { panic!("Bad document parsing"); },
+                                        }
+                                    }
+                                },
+                                XmlEvent::EndElement { name }
+                                  if name.local_name == "Item" => {
+                                    data.insert(key, value);
+                                    break;
+                                },
+                                XmlEvent::EndElement { .. } => {
+                                    return Err("Malformed XML document".to_string());
+                                },
+                                _ => { panic!("Bad document parsing"); },
+                            }
+                        }
+                    },
+                    XmlEvent::StartElement { name, .. } => {
+                        // TODO Consume this
+                    },
+                    XmlEvent::EndElement { name }
+                      if name.local_name == "CustomData" => {
+                        break;
+                    },
+                    XmlEvent::EndElement { .. } => {
+                        return Err("Malformed XML document".to_string());
+                    },
+                    _ => { panic!("Bad document parsing"); },
+                }
+            }
+            //Err("Fail De".to_string())
+            Ok(CustomData(data))
+        }
+    }
+
+    impl YaSerialize for CustomData {
+        fn serialize<W: Write>(&self, writer: &mut yaserde::ser::Serializer<W>) -> Result<(), String> {
+            //Err("Fail Ser".to_string())
+            //writer.write(xml::writer::events::XmlEvent::comment("A comment"));
+            for (key, value) in &self.0 {
+                //writer.write(xml::writer::events::XmlEvent::comment("A comment"));
+                writer.write(xml::writer::events::XmlEvent::start_element("Item"));
+                writer.write(xml::writer::events::XmlEvent::start_element("Key"));
+                writer.write(xml::writer::events::XmlEvent::characters(key));
+                writer.write(xml::writer::events::XmlEvent::end_element());
+                writer.write(xml::writer::events::XmlEvent::start_element("Value"));
+                writer.write(xml::writer::events::XmlEvent::characters(value));
+                writer.write(xml::writer::events::XmlEvent::end_element());
+                writer.write(xml::writer::events::XmlEvent::end_element());
+            }
+            Ok(())
+        }
+    }
+
+    //#[derive(Debug, Default, Serialize, Deserialize, YaSerialize, YaDeserialize, PartialEq)]
+    #[derive(Debug, Default, YaSerialize, YaDeserialize, PartialEq)]
+    //#[serde(rename_all = "PascalCase", default)]
     struct Meta {
         #[yaserde(rename = "Generator")]
         generator: String,
@@ -1278,7 +1432,8 @@ fn main() -> io::Result<()> {
         custom_icons: String,
         #[yaserde(rename = "RecycleBinEnabled")]
         recycle_bin_enabled: String,
-        #[serde(rename = "RecycleBinUUID")]
+        //#[serde(rename = "RecycleBinUUID")]
+        #[yaserde(rename = "RecycleBinUUID")]
         recycle_bin_uuid: Option<String>,
         #[yaserde(rename = "RecycleBinChanged")]
         recycle_bin_changed: String,
@@ -1296,12 +1451,73 @@ fn main() -> io::Result<()> {
         history_max_size: String,
         #[yaserde(rename = "SettingsChanged")]
         settings_changed: String,
-        //custom_data: CustomData
+        #[yaserde(rename = "CustomData")]
+        custom_data: CustomData,
     }
 
-    #[derive(Debug, Default, Serialize, Deserialize, YaSerialize, YaDeserialize, PartialEq)]
-    #[serde(rename_all = "PascalCase", default)]
-    #[yaserde(rename_all = "PascalCase", default)]
+    #[derive(Debug, Default, YaSerialize, YaDeserialize, PartialEq)]
+    struct Times {
+        #[yaserde(rename = "LastModificationTime")]
+        last_modification_time: String,
+        #[yaserde(rename = "CreationTime")]
+        creation_time: String,
+        #[yaserde(rename = "LastAccessTime")]
+        last_access_time: String,
+        #[yaserde(rename = "ExpiryTime")]
+        expiry_time: String,
+        #[yaserde(rename = "Expires")]
+        expires: String,
+        #[yaserde(rename = "UsageCount")]
+        usage_count: String,
+        #[yaserde(rename = "LocationChanged")]
+        location_changed: String,
+    }
+
+    #[derive(Debug, Default, YaSerialize, YaDeserialize, PartialEq)]
+    struct Group {
+        #[yaserde(rename = "UUID")]
+        uuid: String,
+        #[yaserde(rename = "Name")]
+        name: String,
+        #[yaserde(rename = "Notes")]
+        notes: String,
+        #[yaserde(rename = "IconID")]
+        icon_id: u32,
+        #[yaserde(rename = "Times")]
+        times: Times,
+        #[yaserde(rename = "IsExpanded")]
+        is_expanded: String,
+        //<DefaultAutoTypeSequence/>
+        #[yaserde(rename = "EnableAutoType")]
+        enable_auto_type: String,
+        #[yaserde(rename = "EnableSearching")]
+        enable_searching: String,
+        #[yaserde(rename = "LastTopVisibleEntry")]
+        last_top_visible_entry: String,
+        #[yaserde(rename = "CustomData")]
+        custom_data: CustomData,
+        //#[yaserde(rename = "Group")]
+        group: Vec<Group>,
+        #[yaserde(rename = "Entry")]
+        entry: Vec<Entry>,
+    }
+
+    #[derive(Debug, Default, YaSerialize, YaDeserialize, PartialEq)]
+    struct Entry {
+        #[yaserde(rename = "UUID")]
+        uuid: String,
+        #[yaserde(rename = "IconID")]
+        icon_id: u32,
+        #[yaserde(rename = "Times")]
+        times: Times,
+        #[yaserde(rename = "CustomData")]
+        custom_data: CustomData,
+    }
+
+    //#[derive(Debug, Default, Serialize, Deserialize, YaSerialize, YaDeserialize, PartialEq)]
+    #[derive(Debug, Default, YaSerialize, YaDeserialize, PartialEq)]
+    //#[serde(rename_all = "PascalCase", default)]
+    #[yaserde(default)]
     struct MemoryProtection {
         #[yaserde(rename = "ProtectTitle")]
         protect_title: String,
@@ -1315,11 +1531,13 @@ fn main() -> io::Result<()> {
         protect_notes: String,
     }
 
+    /*
     let mut database: KeePassFile = from_str(&contents).unwrap();
     println!("Database Generator: '{}'", database.meta.generator);
     println!("Database: {:?}", database);
     database.meta.generator = "<Funny>".to_string();
     println!("XML: {:?}", to_string(&database).unwrap());
+    */
 
     let content_cursor = Cursor::new(&contents);
     let mut reader = ParserConfig::new()
@@ -1328,6 +1546,7 @@ fn main() -> io::Result<()> {
     let de = yaserde::de::Deserializer::new(reader);
     let mut database: KeePassFile = yaserde::de::from_str(&contents).unwrap();
     database.meta.generator = "<Funny>".to_string();
+    println!("Parsed: {:?}", database);
     println!("XML: {:?}", yaserde::ser::to_string(&database).unwrap());
 
     Ok(())
