@@ -1398,6 +1398,37 @@ fn main() -> io::Result<()> {
         }
     }
 
+    #[derive(Debug, PartialEq)]
+    struct KdbDate(DateTime<Local>);
+
+    impl Default for KdbDate {
+        fn default() -> Self {
+            KdbDate(Local::now())
+        }
+    }
+
+    impl YaDeserialize for KdbDate {
+        fn deserialize<R: Read>(reader: &mut yaserde::de::Deserializer<R>) -> Result<Self, String> {
+            reader.next_event()?;
+            let name = match reader.next_event()? {
+                //XmlEvent::StartElement { name, .. } => name,
+                XmlEvent::Characters(text) => text,
+                _ => "AAAAAAAAAAA=".to_string(),
+            };
+                //_ => { return Err("No element next".to_string()) }
+            println!("Decode: {:?}", name);
+            let timestamp = Cursor::new(decode(&name).expect("Valid base64")).read_i64::<LittleEndian>().unwrap() - KDBX4_TIME_OFFSET;
+            let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
+            Ok(KdbDate(datetime))
+        }
+    }
+
+    impl YaSerialize for KdbDate {
+        fn serialize<W: Write>(&self, writer: &mut yaserde::ser::Serializer<W>) -> Result<(), String> {
+            Ok(())
+        }
+    }
+
     //#[derive(Debug, Default, Serialize, Deserialize, YaSerialize, YaDeserialize, PartialEq)]
     #[derive(Debug, Default, YaSerialize, YaDeserialize, PartialEq)]
     //#[serde(rename_all = "PascalCase", default)]
@@ -1450,7 +1481,7 @@ fn main() -> io::Result<()> {
         #[yaserde(rename = "HistoryMaxSize")]
         history_max_size: String,
         #[yaserde(rename = "SettingsChanged")]
-        settings_changed: String,
+        settings_changed: KdbDate,
         #[yaserde(rename = "CustomData")]
         custom_data: CustomData,
     }
@@ -1460,7 +1491,7 @@ fn main() -> io::Result<()> {
         #[yaserde(rename = "LastModificationTime")]
         last_modification_time: String,
         #[yaserde(rename = "CreationTime")]
-        creation_time: String,
+        creation_time: KdbDate,
         #[yaserde(rename = "LastAccessTime")]
         last_access_time: String,
         #[yaserde(rename = "ExpiryTime")]
