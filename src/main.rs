@@ -41,7 +41,7 @@ use std::rc::Rc;
 
 //use hex::ToHex;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
-use base64::decode;
+use base64::{decode, encode};
 use uuid::{Builder, Uuid};
 use ring::digest::{Context, SHA256, SHA512};
 use ring::hmac;
@@ -1425,6 +1425,13 @@ fn main() -> io::Result<()> {
 
     impl YaSerialize for KdbDate {
         fn serialize<W: Write>(&self, writer: &mut yaserde::ser::Serializer<W>) -> Result<(), String> {
+            let mut data = vec![];
+            data.write_i64::<LittleEndian>(self.0.timestamp() + KDBX4_TIME_OFFSET);
+            //let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
+            //let timestamp = Cursor::new(decode(&name).expect("Valid base64")).read_i64::<LittleEndian>().unwrap() - KDBX4_TIME_OFFSET;
+            writer.write(xml::writer::events::XmlEvent::start_element("CreationTime"));
+            writer.write(xml::writer::events::XmlEvent::characters(&encode(&data)));
+            writer.write(xml::writer::events::XmlEvent::end_element());
             Ok(())
         }
     }
