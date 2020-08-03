@@ -62,7 +62,9 @@ use argonautica::{Hasher, config::{Variant, Version}};
 
 use rand::Rng;
 use clap::{Arg, App};
-use xml::reader::{ParserConfig, XmlEvent};
+use xml::reader::{EventReader, ParserConfig, XmlEvent};
+use xml::attribute::{OwnedAttribute};
+use xml::name::{OwnedName};
 use serde_xml_rs::{from_str, to_string};
 use yaserde::{YaDeserialize, YaSerialize};
 
@@ -469,6 +471,424 @@ fn decode_datetime_kdb1(content: &[u8]) -> NaiveDateTime {
 const KDF_AES_KDBX3: &str = "c9d9f39a-628a-4460-bf74-0d08c18a4fea";
 const KDF_AES_KDBX4: &str = "7c02bb82-79a7-4ac0-927d-114a00648238";
 const KDF_ARGON2   : &str = "ef636ddf-8c29-444b-91f7-a9a403e30a0c";
+
+fn decode_optional_string<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<String>, String> {
+    let mut elements = vec![];
+    println!("A tag: {}", &name);
+    elements.push(name);
+
+    let mut string = None;
+
+    let mut event = reader.next().map_err(|_|"")?;
+    loop {
+        match event {
+            XmlEvent::StartDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::EndDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::StartElement { name, .. } => {
+                elements.push(name);
+            },
+            XmlEvent::Characters(k) => {
+                string = Some(k);
+            },
+            XmlEvent::EndElement { name, .. } => {
+                let start_tag = elements.pop().expect("Can't consume a bare end element");
+                if start_tag != name {
+                    return Err(format!("Start tag <{}> mismatches end tag </{}>", start_tag, name));
+                }
+            },
+            _ => {
+                // Consume any PI, text, comment, or cdata node
+                //return Ok(());
+            },
+        };
+        if elements.len() == 0 {
+            return Ok(string);
+        }
+        event = reader.next().map_err(|_|"")?;
+    }
+}
+
+fn decode_string<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<String, String> {
+    decode_optional_string(reader, name, attributes).map(|x| x.unwrap_or_else(|| "".into()))
+}
+
+fn decode_optional_bool<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<bool>, String> {
+    decode_optional_string(reader, name, attributes).map(|x| x.map(|y| y.eq_ignore_ascii_case("true")))
+}
+
+fn decode_bool<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<bool, String> {
+    decode_optional_bool(reader, name, attributes).map(|x| x.unwrap_or(false))
+}
+
+fn decode_optional_i64<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<i64>, String> {
+    decode_optional_string(reader, name, attributes).map(|x| x.map(|y| y.parse().unwrap_or(0)))
+}
+
+fn decode_i64<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<i64, String> {
+    decode_optional_i64(reader, name, attributes).map(|x| x.unwrap_or(0))
+}
+
+const KDBX4_TIME_OFFSET : i64 = 62135596800;
+fn decode_optional_datetime<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<DateTime<Local>>, String> {
+    decode_optional_string(reader, name, attributes).map(|x| x.map(|y| Local.timestamp(Cursor::new(decode(&y).expect("Valid base64")).read_i64::<LittleEndian>().unwrap() - KDBX4_TIME_OFFSET, 0)))
+}
+
+//fn decode_i64<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<DateTime<Local>, String> {
+    //decode_optional_i64(reader, name, attributes).map(|x| x.unwrap_or(0))
+//}
+
+fn decode_optional_uuid<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<Uuid>, String> {
+    decode_optional_string(reader, name, attributes).map(|x| x.map(|y| Uuid::from_slice(&decode(&y).expect("Valid base64")).unwrap()))
+}
+
+#[derive(Debug, Default)]
+struct MemoryProtection {
+    protect_title: bool,
+    protect_user_name: bool,
+    protect_password: bool,
+    protect_url: bool,
+    protect_notes: bool,
+}
+
+#[derive(Debug)]
+struct Meta {
+    generator: String,
+    database_name: String,
+    database_name_changed: Option<DateTime<Local>>,
+    database_description: String,
+    database_description_changed: Option<DateTime<Local>>,
+    default_user_name: String,
+    default_user_name_changed: Option<DateTime<Local>>,
+    maintenance_history_days: u32,
+    color: String,
+    master_key_changed: Option<DateTime<Local>>,
+    master_key_change_rec: i64,
+    master_key_change_force: i64,
+    memory_protection: MemoryProtection,
+    custom_icons: String,
+    recycle_bin_enabled: bool,
+    recycle_bin_uuid: Option<Uuid>,
+    recycle_bin_changed: String,
+    entry_templates_group: String,
+    entry_templates_group_changed: String,
+    last_selected_group: String,
+    last_top_visible_group: String,
+    history_max_items: String,
+    history_max_size: String,
+    settings_changed: Option<DateTime<Local>>,
+    custom_data: HashMap<String, String>,
+}
+
+fn decode_memory_protection<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<MemoryProtection, String> {
+    let mut elements = vec![name];
+    //elements.push(name);
+
+    let mut protect_title = false;
+    let mut protect_user_name = false;
+    let mut protect_password = false;
+    let mut protect_url = false;
+    let mut protect_notes = false;
+    while elements.len() > 0 {
+        let mut event = reader.next().map_err(|_|"")?;
+        println!("Decode meta...");
+        match event {
+            XmlEvent::StartDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::EndDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "ProtectTitle" => {
+                protect_title = decode_bool(reader, name, attributes)?;
+                println!("ProtectTitle: {:?}", protect_title);
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "ProtectUserName" => {
+                protect_user_name = decode_bool(reader, name, attributes)?;
+                println!("ProtectUserName: {:?}", protect_user_name);
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "ProtectPassword" => {
+                protect_password = decode_bool(reader, name, attributes)?;
+                println!("ProtectPassword: {:?}", protect_password);
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "ProtectURL" => {
+                protect_url = decode_bool(reader, name, attributes)?;
+                println!("ProtectURL: {:?}", protect_url);
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "ProtectNotes" => {
+                protect_notes = decode_bool(reader, name, attributes)?;
+                println!("ProtectNotes: {:?}", protect_notes);
+            },
+            XmlEvent::StartElement { name, .. } => {
+                elements.push(name);
+            },
+            XmlEvent::EndElement { name, .. } => {
+                let start_tag = elements.pop().expect("Can't consume a bare end element");
+                if start_tag != name {
+                    return Err(format!("Start tag <{}> mismatches end tag </{}>", start_tag, name));
+                }
+            },
+            _ => {
+                // Consume any PI, text, comment, or cdata node
+                //return Ok(());
+            },
+        };
+    }
+    Ok(MemoryProtection {
+        protect_title,
+        protect_user_name,
+        protect_password,
+        protect_url,
+        protect_notes,
+    })
+}
+
+fn decode_meta<R: Read>(mut reader: &mut EventReader<R>) -> Result<Meta, String> {
+    //let mut elements: Vec<::xml::name::OwnedName> = vec![];
+    //elements.push("Foo".into());
+    let mut elements = vec![];
+    elements.push(::xml::name::OwnedName::local("Meta"));
+    //let mut elements: Vec<::xml::name::OwnedName> = vec![];
+    //elements.push(::xml::name::Name::from("Foo").to_owned());
+    //elements.push(::xml::name::Name::from("Foo").into());
+    //let mut elements = vec![];
+    //elements.push(::xml::name::OwnedName::from_str("Foo").unwrap());
+
+
+    let mut generator = String::new();
+    let mut database_name = String::new();
+    let mut database_name_changed = None;
+    let mut database_description = String::new();
+    let mut database_description_changed = None;
+    let mut default_user_name = String::new();
+    let mut default_user_name_changed = None;
+    let mut maintenance_history_days = 0;
+    let mut color = String::new();
+    let mut master_key_changed = None;
+    let mut master_key_change_rec = 0;
+    let mut master_key_change_force = 0;
+    let mut memory_protection = MemoryProtection::default();
+    let mut custom_icons = String::new();
+    let mut recycle_bin_enabled = false;
+    let mut recycle_bin_uuid = None;
+    let mut recycle_bin_changed = String::new();
+    let mut entry_templates_group = String::new();
+    let mut entry_templates_group_changed = String::new();
+    let mut last_selected_group = String::new();
+    let mut last_top_visible_group = String::new();
+    let mut history_max_items = String::new();
+    let mut history_max_size = String::new();
+    let mut settings_changed = None;
+    let mut custom_data = HashMap::new();
+    while elements.len() > 0 {
+        let mut event = reader.next().map_err(|_|"")?;
+        println!("Decode meta...");
+        match event {
+            XmlEvent::StartDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::EndDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::StartElement { name, attributes, .. }
+              if name.local_name == "Generator" => {
+                generator = decode_string(reader, name, attributes)?;
+                println!("Generator: {:?}", generator);
+            },
+            XmlEvent::StartElement { name, attributes, .. }
+              if name.local_name == "DatabaseName" => {
+                database_name = decode_string(reader, name, attributes)?;
+                println!("DatabaseName: {:?}", database_name);
+            },
+            XmlEvent::StartElement { name, attributes, .. }
+              if name.local_name == "DatabaseNameChanged" => {
+                database_name_changed = decode_optional_datetime(reader, name, attributes)?;
+                println!("DatabaseNameChanged: {:?}", database_name_changed);
+            },
+            XmlEvent::StartElement { name, attributes, .. }
+              if name.local_name == "DatabaseDescription" => {
+                database_description = decode_string(reader, name, attributes)?;
+                println!("DatabaseDescription: {:?}", database_description);
+            },
+            XmlEvent::StartElement { name, attributes, .. }
+              if name.local_name == "DefaultUserName" => {
+                default_user_name = decode_string(reader, name, attributes)?;
+                println!("DefaultUserName: {:?}", default_user_name);
+            },
+            XmlEvent::StartElement { name, attributes, .. }
+              if name.local_name == "MaintenanceHistoryDays" => {
+                maintenance_history_days = decode_i64(reader, name, attributes)? as u32;
+                println!("MaintenanceHistoryDays: {:?}", maintenance_history_days);
+            },
+            XmlEvent::StartElement { name, attributes, .. }
+              if name.local_name == "MasterKeyChangeRec" => {
+                master_key_change_rec = decode_i64(reader, name, attributes)?;
+                println!("MasterKeyChangeRec: {:?}", master_key_change_rec);
+            },
+            XmlEvent::StartElement { name, attributes, .. }
+              if name.local_name == "MasterKeyChangeForce" => {
+                master_key_change_force = decode_i64(reader, name, attributes)?;
+                println!("MasterKeyChangeForce: {:?}", master_key_change_force);
+            },
+            XmlEvent::StartElement { name, attributes, .. }
+              if name.local_name == "MemoryProtection" => {
+                memory_protection = decode_memory_protection(reader, name, attributes)?;
+                println!("MemoryProtection: {:?}", memory_protection);
+            },
+            XmlEvent::StartElement { name, attributes, .. }
+              if name.local_name == "RecycleBinEnabled" => {
+                recycle_bin_enabled = decode_bool(reader, name, attributes)?;
+                println!("RecycleBinEnabled: {:?}", recycle_bin_enabled);
+            },
+            XmlEvent::StartElement { name, attributes, .. }
+              if name.local_name == "RecycleBinUUID" => {
+                recycle_bin_uuid = decode_optional_uuid(reader, name, attributes)?;
+                println!("RecycleBinUUID: {:?}", recycle_bin_uuid);
+            },
+            /*
+                #[yaserde(rename = "DatabaseNameChanged")]
+                database_name_changed: String,
+                #[yaserde(rename = "DatabaseDescription")]
+                database_description: String,
+                #[yaserde(rename = "DatabaseDescriptionChanged")]
+                database_description_changed: String,
+                #[yaserde(rename = "DefaultUserName")]
+                default_user_name: String,
+                #[yaserde(rename = "DefaultUserNameChanged")]
+                default_user_name_changed: String,
+                #[yaserde(rename = "MaintenanceHistoryDays")]
+                maintenance_history_days: String,
+                #[yaserde(rename = "Color")]
+                color: String,
+                #[yaserde(rename = "MasterKeyChanged")]
+                master_key_changed: String,
+                #[yaserde(rename = "MasterKeyChangeRec")]
+                master_key_change_rec: String,
+                #[yaserde(rename = "MasterKeyChangeForce")]
+                master_key_change_force: String,
+                #[yaserde(rename = "MemoryProtection")]
+                memory_protection: MemoryProtection,
+                #[yaserde(rename = "CustomIcons")]
+                custom_icons: String,
+                #[yaserde(rename = "RecycleBinEnabled")]
+                recycle_bin_enabled: String,
+                //#[serde(rename = "RecycleBinUUID")]
+                #[yaserde(rename = "RecycleBinUUID")]
+                recycle_bin_uuid: Option<String>,
+                #[yaserde(rename = "RecycleBinChanged")]
+                recycle_bin_changed: String,
+                #[yaserde(rename = "EntryTemplatesGroup")]
+                entry_templates_group: String,
+                #[yaserde(rename = "EntryTemplatesGroupChanged")]
+                entry_templates_group_changed: String,
+                #[yaserde(rename = "LastSelectedGroup")]
+                last_selected_group: String,
+                #[yaserde(rename = "LastTopVisibleGroup")]
+                last_top_visible_group: String,
+                #[yaserde(rename = "HistoryMaxItems")]
+                history_max_items: String,
+                #[yaserde(rename = "HistoryMaxSize")]
+                history_max_size: String,
+                #[yaserde(rename = "SettingsChanged")]
+                settings_changed: KdbDate,
+                #[yaserde(rename = "CustomData")]
+                custom_data: CustomData,
+            */
+            XmlEvent::StartElement { name, .. } => {
+                elements.push(name);
+            },
+            XmlEvent::EndElement { name, .. } => {
+                let start_tag = elements.pop().expect("Can't consume a bare end element");
+                if start_tag != name {
+                    return Err(format!("Start tag <{}> mismatches end tag </{}>", start_tag, name));
+                }
+            },
+            _ => {
+                // Consume any PI, text, comment, or cdata node
+                //return Ok(());
+            },
+        };
+    }
+    Ok(Meta {
+        generator,
+        database_name,
+        database_name_changed,
+        database_description,
+        database_description_changed,
+        default_user_name,
+        default_user_name_changed,
+        maintenance_history_days,
+        color,
+        master_key_changed,
+        master_key_change_rec,
+        master_key_change_force,
+        memory_protection,
+        custom_icons,
+        recycle_bin_enabled,
+        recycle_bin_uuid,
+        recycle_bin_changed,
+        entry_templates_group,
+        entry_templates_group_changed,
+        last_selected_group,
+        last_top_visible_group,
+        history_max_items,
+        history_max_size,
+        settings_changed,
+        custom_data,
+    })
+}
+
+//fn consume_element<R: Read>(reader: &mut yaserde::de::Deserializer<R>, mut event: XmlEvent) -> Result<(), String> {
+fn decode_document<R: Read>(mut reader: &mut EventReader<R>) -> Result<(), String> {
+    //let mut elements: Vec<::xml::name::OwnedName> = vec![];
+    //elements.push("Foo".into());
+    let mut elements = vec![];
+    elements.push(::xml::name::OwnedName::local("Foo"));
+    //let mut elements: Vec<::xml::name::OwnedName> = vec![];
+    //elements.push(::xml::name::Name::from("Foo").to_owned());
+    //elements.push(::xml::name::Name::from("Foo").into());
+    //let mut elements = vec![];
+    //elements.push(::xml::name::OwnedName::from_str("Foo").unwrap());
+
+
+    let mut event = reader.next().map_err(|_|"")?;
+    loop {
+        println!("Decode document...");
+        match event {
+            XmlEvent::StartDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::EndDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::StartElement { name, .. } if name.local_name == "Meta" => {
+                let meta = decode_meta(&mut reader);
+                println!("Meta: {:?}", meta);
+            },
+            XmlEvent::StartElement { name, .. } => {
+                println!("Document Tag: {}", name);
+                elements.push(name);
+            },
+            XmlEvent::EndElement { name, .. } => {
+                let start_tag = elements.pop().expect("Can't consume a bare end element");
+                if start_tag != name {
+                    return Err(format!("Start tag <{}> mismatches end tag </{}>", start_tag, name));
+                }
+            },
+            _ => {
+                // Consume any PI, text, comment, or cdata node
+                //return Ok(());
+            },
+        };
+        if elements.len() == 0 {
+            return Ok(());
+        }
+        event = reader.next().map_err(|_|"")?;
+    }
+}
 
 fn main() -> io::Result<()> {
     env_logger::init();
@@ -1233,6 +1653,7 @@ fn main() -> io::Result<()> {
     while let event = reader.next().unwrap() {
         match event {
             XmlEvent::StartDocument { .. } => { println!("Start"); },
+            XmlEvent::StartElement { name, .. } => { decode_document(&mut reader); },
             XmlEvent::EndDocument => { println!("End"); break; },
             _ => {},
         }
