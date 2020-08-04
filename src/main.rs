@@ -472,6 +472,42 @@ const KDF_AES_KDBX3: &str = "c9d9f39a-628a-4460-bf74-0d08c18a4fea";
 const KDF_AES_KDBX4: &str = "7c02bb82-79a7-4ac0-927d-114a00648238";
 const KDF_ARGON2   : &str = "ef636ddf-8c29-444b-91f7-a9a403e30a0c";
 
+#[cfg(test)]
+mod tests2 {
+    use super::*;
+
+    #[test]
+    fn test_decoding_empty_document() {
+        let content = "";
+        let mut reader = ParserConfig::new()
+            .create_reader(Cursor::new(content));
+        let event = reader.next().unwrap();
+        match event {
+            XmlEvent::StartDocument { .. } => { println!("Start"); },
+            //XmlEvent::StartElement { name, .. } => { decode_document(&mut reader); },
+            //XmlEvent::EndDocument => { println!("End"); break; },
+            _ => { panic!("d{}", "1"); },
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn test_decoding_optional_string() {
+        let content_cursor = Cursor::new("");
+        let mut reader = ParserConfig::new()
+            .cdata_to_characters(true)
+            .create_reader(content_cursor);
+        while let event = reader.next().unwrap() {
+            match event {
+                XmlEvent::StartDocument { .. } => { println!("Start"); },
+                XmlEvent::StartElement { name, .. } => { decode_document(&mut reader); },
+                XmlEvent::EndDocument => { println!("End"); break; },
+                _ => {},
+            }
+        }
+    }
+}
+
 fn decode_optional_string<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<String>, String> {
     let mut elements = vec![];
     println!("A tag: {}", &name);
