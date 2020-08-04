@@ -23,8 +23,8 @@ extern crate serde;
 extern crate serde_xml_rs;
 extern crate yaserde;
 
-#[macro_use]
-extern crate serde_derive;
+//#[macro_use]
+//extern crate serde_derive;
 
 #[macro_use]
 extern crate yaserde_derive;
@@ -36,8 +36,8 @@ use std::fs::File;
 use std::io::{self, SeekFrom};
 use std::io::prelude::*;
 use std::collections::HashMap;
-use std::cell::RefCell;
-use std::rc::Rc;
+//use std::cell::RefCell;
+//use std::rc::Rc;
 
 //use hex::ToHex;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -65,7 +65,7 @@ use clap::{Arg, App};
 use xml::reader::{EventReader, ParserConfig, XmlEvent};
 use xml::attribute::{OwnedAttribute};
 use xml::name::{OwnedName};
-use serde_xml_rs::{from_str, to_string};
+//use serde_xml_rs::{from_str, to_string};
 use yaserde::{YaDeserialize, YaSerialize};
 
 //use hex::FromHex;
@@ -120,7 +120,7 @@ mod tests {
         cursor.into_inner()
     }
 
-    const ARGON2_HASH : &str = "4eb4d1f66ae3c88d85445fb49ae7c4a8fd51eeaa132c53cb8b37610f02569371";
+    //const ARGON2_HASH : &str = "4eb4d1f66ae3c88d85445fb49ae7c4a8fd51eeaa132c53cb8b37610f02569371";
 
     #[test]
     #[ignore]
@@ -497,10 +497,11 @@ mod tests2 {
         let mut reader = ParserConfig::new()
             .cdata_to_characters(true)
             .create_reader(content_cursor);
-        while let event = reader.next().unwrap() {
+        loop {
+            let event = reader.next().unwrap();
             match event {
                 XmlEvent::StartDocument { .. } => { println!("Start"); },
-                XmlEvent::StartElement { name, .. } => { decode_document(&mut reader); },
+                XmlEvent::StartElement { name: _, .. } => { decode_document(&mut reader).expect("Good stuff"); },
                 XmlEvent::EndDocument => { println!("End"); break; },
                 _ => {},
             }
@@ -508,7 +509,7 @@ mod tests2 {
     }
 }
 
-fn decode_optional_string<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<String>, String> {
+fn decode_optional_string<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<Option<String>, String> {
     let mut elements = vec![];
     println!("A tag: {}", &name);
     elements.push(name);
@@ -581,14 +582,14 @@ fn decode_optional_uuid<R: Read>(reader: &mut EventReader<R>, name: OwnedName, a
     decode_optional_string(reader, name, attributes).map(|x| x.map(|y| Uuid::from_slice(&decode(&y).expect("Valid base64")).unwrap()))
 }
 
-fn decode_custom_data<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<HashMap<String, String>, String> {
+fn decode_custom_data<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<HashMap<String, String>, String> {
     let mut elements = vec![];
     elements.push(name);
 
-    let mut data = HashMap::new();
+    let data = HashMap::new();
 
     while elements.len() > 0 {
-        let mut event = reader.next().map_err(|_|"")?;
+        let event = reader.next().map_err(|_|"")?;
         println!("Decode custom...");
         match event {
             XmlEvent::StartDocument { .. } => {
@@ -597,7 +598,7 @@ fn decode_custom_data<R: Read>(reader: &mut EventReader<R>, name: OwnedName, att
             XmlEvent::EndDocument { .. } => {
                 return Err("Malformed XML document".to_string());
             },
-            XmlEvent::StartElement { name, attributes, .. }
+            XmlEvent::StartElement { name, attributes: _, .. }
               if name.local_name == "Item" => {
                 //generator = decode_string(reader, name, attributes)?;
                 //println!("Generator: {:?}", generator);
@@ -726,7 +727,7 @@ struct Meta {
     custom_data: HashMap<String, String>,
 }
 
-fn decode_memory_protection<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<MemoryProtection, String> {
+fn decode_memory_protection<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<MemoryProtection, String> {
     let mut elements = vec![name];
     //elements.push(name);
 
@@ -736,7 +737,7 @@ fn decode_memory_protection<R: Read>(reader: &mut EventReader<R>, name: OwnedNam
     let mut protect_url = false;
     let mut protect_notes = false;
     while elements.len() > 0 {
-        let mut event = reader.next().map_err(|_|"")?;
+        let event = reader.next().map_err(|_|"")?;
         println!("Decode meta...");
         match event {
             XmlEvent::StartDocument { .. } => {
@@ -789,7 +790,7 @@ fn decode_memory_protection<R: Read>(reader: &mut EventReader<R>, name: OwnedNam
     })
 }
 
-fn decode_meta<R: Read>(mut reader: &mut EventReader<R>) -> Result<Meta, String> {
+fn decode_meta<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String> {
     //let mut elements: Vec<::xml::name::OwnedName> = vec![];
     //elements.push("Foo".into());
     let mut elements = vec![];
@@ -805,29 +806,29 @@ fn decode_meta<R: Read>(mut reader: &mut EventReader<R>) -> Result<Meta, String>
     let mut database_name = String::new();
     let mut database_name_changed = None;
     let mut database_description = String::new();
-    let mut database_description_changed = None;
+    let database_description_changed = None;
     let mut default_user_name = String::new();
-    let mut default_user_name_changed = None;
+    let default_user_name_changed = None;
     let mut maintenance_history_days = 0;
-    let mut color = String::new();
-    let mut master_key_changed = None;
+    let color = String::new();
+    let master_key_changed = None;
     let mut master_key_change_rec = 0;
     let mut master_key_change_force = 0;
     let mut memory_protection = MemoryProtection::default();
-    let mut custom_icons = String::new();
+    let custom_icons = String::new();
     let mut recycle_bin_enabled = false;
     let mut recycle_bin_uuid = None;
-    let mut recycle_bin_changed = String::new();
-    let mut entry_templates_group = String::new();
-    let mut entry_templates_group_changed = String::new();
-    let mut last_selected_group = String::new();
-    let mut last_top_visible_group = String::new();
-    let mut history_max_items = String::new();
-    let mut history_max_size = String::new();
-    let mut settings_changed = None;
+    let recycle_bin_changed = String::new();
+    let entry_templates_group = String::new();
+    let entry_templates_group_changed = String::new();
+    let last_selected_group = String::new();
+    let last_top_visible_group = String::new();
+    let history_max_items = String::new();
+    let history_max_size = String::new();
+    let settings_changed = None;
     let mut custom_data = HashMap::new();
     while elements.len() > 0 {
-        let mut event = reader.next().map_err(|_|"")?;
+        let event = reader.next().map_err(|_|"")?;
         println!("Decode meta...");
         match event {
             XmlEvent::StartDocument { .. } => {
@@ -1576,11 +1577,11 @@ fn main() -> io::Result<()> {
     let master_seed = &tlvs[&4u8];
     let encryption_iv = &tlvs[&7u8];
 
-    let mut header = vec![];
+    //let mut header = vec![];
     let mut context = Context::new(&SHA256);
     let pos = file.seek(SeekFrom::Current(0))?;
     file.seek(SeekFrom::Start(0))?;
-    header = vec![0; (pos) as usize];
+    let mut header = vec![0; (pos) as usize];
     file.read_exact(&mut header)?;
     file.seek(SeekFrom::Start(pos))?;
     context.update(&header);
@@ -1798,10 +1799,11 @@ fn main() -> io::Result<()> {
     let mut reader = ParserConfig::new()
         .cdata_to_characters(true)
         .create_reader(content_cursor);
-    while let event = reader.next().unwrap() {
+    loop {
+        let event = reader.next().unwrap();
         match event {
             XmlEvent::StartDocument { .. } => { println!("Start"); },
-            XmlEvent::StartElement { name, .. } => { decode_document(&mut reader); },
+            XmlEvent::StartElement { name: _, .. } => { decode_document(&mut reader).map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?; },
             XmlEvent::EndDocument => { println!("End"); break; },
             _ => {},
         }
@@ -1821,6 +1823,7 @@ fn main() -> io::Result<()> {
     #[derive(Debug, Default, PartialEq)]
     struct CustomData(HashMap<String, String>);
 
+    /*
     fn consume_element<R: Read>(reader: &mut yaserde::de::Deserializer<R>, mut event: XmlEvent) -> Result<(), String> {
         let mut elements = vec![];
 
@@ -1852,10 +1855,11 @@ fn main() -> io::Result<()> {
             event = reader.next_event()?;
         }
     }
+    */
 
     impl YaDeserialize for CustomData {
         fn deserialize<R: Read>(reader: &mut yaserde::de::Deserializer<R>) -> Result<Self, String> {
-            let name = match reader.next_event()? {
+            let _name = match reader.next_event()? {
                 XmlEvent::StartElement { name, .. } => name,
                 _ => { return Err("No element next".to_string()); },
             };
@@ -1865,13 +1869,12 @@ fn main() -> io::Result<()> {
 
             loop {
                 //println!("Event: {:?}", reader.next_event());
-                if let next = reader.peek()? {
-                    match next {
-                        XmlEvent::EndElement { .. } => {
-                            return Ok(CustomData(data))
-                        }
-                        _ => {}
+                let next = reader.peek()?;
+                match next {
+                    XmlEvent::EndElement { .. } => {
+                        return Ok(CustomData(data))
                     }
+                    _ => {}
                 }
                 match dbg!(reader.next_event()?) {
                     XmlEvent::StartDocument { .. } => { return Err("Malformed XML document".to_string()); },
@@ -1930,7 +1933,7 @@ fn main() -> io::Result<()> {
                             }
                         }
                     },
-                    XmlEvent::StartElement { name, .. } => {
+                    XmlEvent::StartElement { name: _, .. } => {
                         // TODO Consume this
                     },
                     XmlEvent::EndElement { name }
@@ -1954,14 +1957,14 @@ fn main() -> io::Result<()> {
             //writer.write(xml::writer::events::XmlEvent::comment("A comment"));
             for (key, value) in &self.0 {
                 //writer.write(xml::writer::events::XmlEvent::comment("A comment"));
-                writer.write(xml::writer::events::XmlEvent::start_element("Item"));
-                writer.write(xml::writer::events::XmlEvent::start_element("Key"));
-                writer.write(xml::writer::events::XmlEvent::characters(key));
-                writer.write(xml::writer::events::XmlEvent::end_element());
-                writer.write(xml::writer::events::XmlEvent::start_element("Value"));
-                writer.write(xml::writer::events::XmlEvent::characters(value));
-                writer.write(xml::writer::events::XmlEvent::end_element());
-                writer.write(xml::writer::events::XmlEvent::end_element());
+                writer.write(xml::writer::events::XmlEvent::start_element("Item")).map_err(|x| format!("{}", x))?;
+                writer.write(xml::writer::events::XmlEvent::start_element("Key")).map_err(|x| format!("{}", x))?;
+                writer.write(xml::writer::events::XmlEvent::characters(key)).map_err(|x| format!("{}", x))?;
+                writer.write(xml::writer::events::XmlEvent::end_element()).map_err(|x| format!("{}", x))?;
+                writer.write(xml::writer::events::XmlEvent::start_element("Value")).map_err(|x| format!("{}", x))?;
+                writer.write(xml::writer::events::XmlEvent::characters(value)).map_err(|x| format!("{}", x))?;
+                writer.write(xml::writer::events::XmlEvent::end_element()).map_err(|x| format!("{}", x))?;
+                writer.write(xml::writer::events::XmlEvent::end_element()).map_err(|x| format!("{}", x))?;
             }
             Ok(())
         }
@@ -1995,12 +1998,12 @@ fn main() -> io::Result<()> {
     impl YaSerialize for KdbDate {
         fn serialize<W: Write>(&self, writer: &mut yaserde::ser::Serializer<W>) -> Result<(), String> {
             let mut data = vec![];
-            data.write_i64::<LittleEndian>(self.0.timestamp() + KDBX4_TIME_OFFSET);
+            data.write_i64::<LittleEndian>(self.0.timestamp() + KDBX4_TIME_OFFSET).expect("to succeed");
             //let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
             //let timestamp = Cursor::new(decode(&name).expect("Valid base64")).read_i64::<LittleEndian>().unwrap() - KDBX4_TIME_OFFSET;
-            writer.write(xml::writer::events::XmlEvent::start_element("CreationTime"));
-            writer.write(xml::writer::events::XmlEvent::characters(&encode(&data)));
-            writer.write(xml::writer::events::XmlEvent::end_element());
+            writer.write(xml::writer::events::XmlEvent::start_element("CreationTime")).map_err(|x| format!("{}", x))?;
+            writer.write(xml::writer::events::XmlEvent::characters(&encode(&data))).map_err(|x| format!("{}", x))?;
+            writer.write(xml::writer::events::XmlEvent::end_element()).map_err(|x| format!("{}", x))?;
             Ok(())
         }
     }
@@ -2146,11 +2149,11 @@ fn main() -> io::Result<()> {
     println!("XML: {:?}", to_string(&database).unwrap());
     */
 
-    let content_cursor = Cursor::new(&contents);
-    let mut reader = ParserConfig::new()
-        .cdata_to_characters(true)
-        .create_reader(content_cursor);
-    let de = yaserde::de::Deserializer::new(reader);
+    //let content_cursor = Cursor::new(&contents);
+    //let mut reader = ParserConfig::new()
+    //    .cdata_to_characters(true)
+    //    .create_reader(content_cursor);
+    //let de = yaserde::de::Deserializer::new(reader);
     let mut database: KeePassFile = yaserde::de::from_str(&contents).unwrap();
     database.meta.generator = "<Funny>".to_string();
     println!("Parsed: {:?}", database);
