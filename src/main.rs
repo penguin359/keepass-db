@@ -545,6 +545,113 @@ fn decode_optional_uuid<R: Read>(reader: &mut EventReader<R>, name: OwnedName, a
     decode_optional_string(reader, name, attributes).map(|x| x.map(|y| Uuid::from_slice(&decode(&y).expect("Valid base64")).unwrap()))
 }
 
+fn decode_custom_data<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<HashMap<String, String>, String> {
+    let mut elements = vec![];
+    elements.push(name);
+
+    let mut data = HashMap::new();
+
+    while elements.len() > 0 {
+        let mut event = reader.next().map_err(|_|"")?;
+        println!("Decode custom...");
+        match event {
+            XmlEvent::StartDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::EndDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::StartElement { name, attributes, .. }
+              if name.local_name == "Item" => {
+                //generator = decode_string(reader, name, attributes)?;
+                //println!("Generator: {:?}", generator);
+            },
+            XmlEvent::StartElement { name, .. } => {
+                elements.push(name);
+            },
+            XmlEvent::EndElement { name, .. } => {
+                let start_tag = elements.pop().expect("Can't consume a bare end element");
+                if start_tag != name {
+                    return Err(format!("Start tag <{}> mismatches end tag </{}>", start_tag, name));
+                }
+            },
+            _ => {
+                // Consume any PI, text, comment, or cdata node
+                //return Ok(());
+            },
+            /*
+            XmlEvent::StartElement { name, .. }
+              if name.local_name == "Item" => {
+                let mut key = String::new();
+                let mut value = String::new();
+                loop {
+                    match reader.next_event()? {
+                        XmlEvent::StartElement { name, .. }
+                          if name.local_name == "Key" => {
+                            loop {
+                                match reader.next_event()? {
+                                    XmlEvent::Characters(k) => {
+                                        key = k;
+                                    },
+                                    XmlEvent::EndElement { name }
+                                      if name.local_name == "Key" => {
+                                        break;
+                                    },
+                                    XmlEvent::EndElement { .. } => {
+                                        return Err("Malformed XML document".to_string());
+                                    },
+                                    _ => { panic!("Bad document parsing"); },
+                                }
+                            }
+                        },
+                        XmlEvent::StartElement { name, .. }
+                          if name.local_name == "Value" => {
+                            loop {
+                                match reader.next_event()? {
+                                    XmlEvent::Characters(k) => {
+                                        value = k;
+                                    },
+                                    XmlEvent::EndElement { name }
+                                      if name.local_name == "Value" => {
+                                        break;
+                                    },
+                                    XmlEvent::EndElement { .. } => {
+                                        return Err("Malformed XML document".to_string());
+                                    },
+                                    _ => { panic!("Bad document parsing"); },
+                                }
+                            }
+                        },
+                        XmlEvent::EndElement { name }
+                          if name.local_name == "Item" => {
+                            data.insert(key, value);
+                            break;
+                        },
+                        XmlEvent::EndElement { .. } => {
+                            return Err("Malformed XML document".to_string());
+                        },
+                        _ => { panic!("Bad document parsing"); },
+                    }
+                }
+            },
+            XmlEvent::StartElement { name, .. } => {
+                // TODO Consume this
+            },
+            XmlEvent::EndElement { name }
+              if name.local_name == "CustomData" => {
+                break;
+            },
+            XmlEvent::EndElement { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            _ => { panic!("Bad document parsing"); },
+            */
+        }
+    }
+    //Err("Fail De".to_string())
+    Ok(data)
+}
+
 #[derive(Debug, Default)]
 struct MemoryProtection {
     protect_title: bool,
@@ -747,6 +854,11 @@ fn decode_meta<R: Read>(mut reader: &mut EventReader<R>) -> Result<Meta, String>
               if name.local_name == "RecycleBinUUID" => {
                 recycle_bin_uuid = decode_optional_uuid(reader, name, attributes)?;
                 println!("RecycleBinUUID: {:?}", recycle_bin_uuid);
+            },
+            XmlEvent::StartElement { name, attributes, .. }
+              if name.local_name == "CustomData" => {
+                custom_data = decode_custom_data(reader, name, attributes)?;
+                println!("CustomData: {:?}", custom_data);
             },
             /*
                 #[yaserde(rename = "DatabaseNameChanged")]
