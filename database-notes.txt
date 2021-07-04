@@ -1,0 +1,19 @@
+1.00 - Initial Beta release (2.00 Alpha)
+1.01 - Added Recycle Bin (2.07 Beta)
+  m_pwDatabase.RecycleBinEnabled = ReadBool(xmlChild,
+  m_pwDatabase.RecycleBinUuid = ReadUuid(xmlChild
+  WriteHeaderField(bw, Kdb4HeaderFieldID.InnerRandomStreamID, MemUtil.UInt32ToBytes(uIrsID));
+1.02 - Added (2.08)
+ElemEntryTemplatesGroup
+ElemCustomData
+ElemEnableAutoType
+ElemEnableSearching
+WriteObject(ElemAutoTypeItem, ElemWindow, ElemKeystrokeSequence,
+Bump magic to release
+2.00 - Added (2.09)
+  ElemDbNameChanged
+  ElemDbDescChanged
+  ElemDbDefaultUserChanged
+  ElemRecycleBinChanged
+  ElemEntryTemplatesGroupChanged
+  ElemLocationChanged
