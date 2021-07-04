@@ -509,6 +509,49 @@ mod tests2 {
     }
 }
 
+#[cfg(test)]
+mod test {
+}
+
+fn consume_element<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<Option<String>, String> {
+    let mut elements = vec![];
+    println!("A tag: {}", &name);
+    elements.push(name);
+
+    let mut string = None;
+
+    let mut event = reader.next().map_err(|_|"")?;
+    loop {
+        match event {
+            XmlEvent::StartDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::EndDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::StartElement { name, .. } => {
+                elements.push(name);
+            },
+            XmlEvent::Characters(k) => {
+                string = Some(k);
+            },
+            XmlEvent::EndElement { name, .. } => {
+                let start_tag = elements.pop().expect("Can't consume a bare end element");
+                if start_tag != name {
+                    return Err(format!("Start tag <{}> mismatches end tag </{}>", start_tag, name));
+                }
+            },
+            _ => {
+                // Consume any PI, text, comment, or cdata node
+                //return Ok(());
+            },
+        };
+        if elements.len() == 0 {
+            return Ok(string);
+        }
+        event = reader.next().map_err(|_|"")?;
+    }
+}
 fn decode_optional_string<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<Option<String>, String> {
     let mut elements = vec![];
     println!("A tag: {}", &name);
