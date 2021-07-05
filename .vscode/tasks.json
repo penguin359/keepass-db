@@ -15,10 +15,7 @@
 				}
 			},
 			"label": "Rust: cargo run - kdbx",
-			"group": {
-				"kind": "build",
-				"isDefault": false
-			},
+			"group": "build",
 			"detail": "Run KDBX Dummy"
 		},
 		{
@@ -26,6 +23,9 @@
 			"subcommand": "test",
 			"label": "Rust Full Test",
 			"detail": "Test all the KDBX",
+			"problemMatcher": [
+				"$rustc"
+			],
 			"group": {
 				"kind": "build",
 				"isDefault": true

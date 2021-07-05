@@ -563,22 +563,116 @@ mod tests2 {
         };
     }
 
-    #[test]
-    #[ignore]
-    fn test_decoding_optional_string() {
-        let content_cursor = Cursor::new("");
+    fn start_document(contents: &'static str, root: &str) -> EventReader<Cursor<&'static str>> {
         let mut reader = ParserConfig::new()
-            .cdata_to_characters(true)
-            .create_reader(content_cursor);
-        loop {
-            let event = reader.next().unwrap();
-            match event {
-                XmlEvent::StartDocument { .. } => { println!("Start"); },
-                XmlEvent::StartElement { name: _, .. } => { decode_document(&mut reader).expect("Good stuff"); },
-                XmlEvent::EndDocument => { println!("End"); break; },
-                _ => {},
-            }
+            .create_reader(Cursor::new(contents));
+        match reader.next().unwrap() {
+            XmlEvent::StartDocument { .. } => {},
+            _ => { panic!("Missing document start"); },
+        };
+        match reader.next().unwrap() {
+            XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, root); },
+            _ => { panic!("Missing root element start"); },
         }
+        return reader;
+    }
+
+    fn end_document(mut reader: EventReader<Cursor<&'static str>>) {
+        match reader.next().unwrap() {
+            XmlEvent::EndDocument => {},
+            _ => { panic!("Missing document end"); },
+        };
+    }
+
+    #[test]
+    fn test_decoding_optional_empty_string() {
+        let mut reader = start_document("<root/>", "root");
+        assert_eq!(decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+            None);
+        end_document(reader);
+    }
+
+    #[test]
+    fn test_decoding_optional_basic_string() {
+        let mut reader = start_document("<root>  This is a test of it 1   </root>", "root");
+        assert_eq!(decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+            Some(String::from("  This is a test of it 1   ")));
+        end_document(reader);
+    }
+
+    #[test]
+    fn test_decoding_optional_whitespace_string() {
+        let mut reader = start_document("<root>     </root>", "root");
+        assert_eq!(decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+            Some(String::from("     ")));
+        end_document(reader);
+    }
+
+    #[test]
+    fn test_decoding_optional_cdata_string() {
+        let mut reader = start_document("<root><![CDATA[This is a test of it 3]]></root>", "root");
+        assert_eq!(decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+            Some(String::from("This is a test of it 3")));
+        end_document(reader);
+    }
+
+    #[test]
+    fn test_decoding_optional_full_string() {
+        let mut reader = start_document("<root>  This is <![CDATA[ Test ]]> of it 4   </root>", "root");
+        assert_eq!(decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+            Some(String::from("  This is  Test  of it 4   ")));
+        end_document(reader);
+    }
+
+    #[test]
+    fn test_decode_memory_protection_empty() {
+        let mut reader = start_document("<MemoryProtection/>", "MemoryProtection");
+        //assert_eq!(decode_memory_protection(&mut reader).expect("No error"), Some(String::from("  This is  Test  of it 4   ")));
+        let mp = decode_memory_protection(&mut reader, OwnedName::local("MemoryProtection"), vec![]).expect("No error");
+        end_document(reader);
+        assert_eq!(mp.protect_notes, false);
+        assert_eq!(mp.protect_password, false);
+        assert_eq!(mp.protect_title, false);
+        assert_eq!(mp.protect_url, false);
+        assert_eq!(mp.protect_user_name, false);
+    }
+
+    #[test]
+    fn test_decode_memory_protection_some() {
+        let mut reader = start_document(r#"		<MemoryProtection>
+        <ProtectTitle>False</ProtectTitle>
+        <ProtectUserName>False</ProtectUserName>
+        <ProtectPassword>True</ProtectPassword>
+        <ProtectURL>False</ProtectURL>
+        <ProtectNotes>False</ProtectNotes>
+    </MemoryProtection>
+"#, "MemoryProtection");
+        let mp = decode_memory_protection(&mut reader, OwnedName::local("MemoryProtection"), vec![]).expect("No error");
+        end_document(reader);
+        assert_eq!(mp.protect_notes, false);
+        assert_eq!(mp.protect_password, true);
+        assert_eq!(mp.protect_title, false);
+        assert_eq!(mp.protect_url, false);
+        assert_eq!(mp.protect_user_name, false);
+    }
+
+    #[test]
+    fn test_decode_memory_protection_all() {
+        let mut reader = start_document(r#"		<MemoryProtection>
+        <ProtectTitle>True</ProtectTitle>
+        <ProtectUserName>True</ProtectUserName>
+        <ProtectPassword>True</ProtectPassword>
+        <ProtectURL>True</ProtectURL>
+        <ProtectNotes>True</ProtectNotes>
+    </MemoryProtection>
+"#, "MemoryProtection");
+        let mp = decode_memory_protection(&mut reader, OwnedName::local("MemoryProtection"), vec![]).expect("No error");
+        end_document(reader);
+        assert_eq!(mp.protect_notes, true);
+        assert_eq!(mp.protect_password, true);
+        assert_eq!(mp.protect_title, true);
+        assert_eq!(mp.protect_url, true);
+        assert_eq!(mp.protect_user_name, true);
     }
 }
 
@@ -649,7 +743,7 @@ fn decode_optional_string<R: Read>(reader: &mut EventReader<R>, name: OwnedName,
     println!("A tag: {}", &name);
     elements.push(name);
 
-    let mut string = None;
+    let mut string = String::new();
 
     let mut event = reader.next().map_err(|_|"")?;
     loop {
@@ -664,7 +758,13 @@ fn decode_optional_string<R: Read>(reader: &mut EventReader<R>, name: OwnedName,
                 elements.push(name);
             },
             XmlEvent::Characters(k) => {
-                string = Some(k);
+                string.push_str(&k);
+            },
+            XmlEvent::Whitespace(k) => {
+                string.push_str(&k);
+            },
+            XmlEvent::CData(k) => {
+                string.push_str(&k);
             },
             XmlEvent::EndElement { name, .. } => {
                 let start_tag = elements.pop().expect("Can't consume a bare end element");
@@ -678,8 +778,12 @@ fn decode_optional_string<R: Read>(reader: &mut EventReader<R>, name: OwnedName,
             },
         };
         if elements.len() == 0 {
-            return Ok(string);
+            if string.len() == 0 {
+                return Ok(None);
+            } else {
+                return Ok(Some(string));
         }
+    }
         event = reader.next().map_err(|_|"")?;
     }
 }
