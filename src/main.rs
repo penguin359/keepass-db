@@ -563,6 +563,61 @@ mod tests2 {
         };
     }
 
+    #[test]
+    fn test_find_next_element_document() {
+        let content = "<root>  <consumed>   <child1>  <!-- Comment --> <grandchild/>Test</child1> <child2>More</child2></consumed> </root>";
+        let mut reader = ParserConfig::new()
+            .create_reader(Cursor::new(content));
+        match reader.next().unwrap() {
+            XmlEvent::StartDocument { .. } => {},
+            _ => { panic!("Missing document start"); },
+        };
+        match find_next_element(&mut reader).expect("Valid element") {
+            ElementEvent::StartElement { name, .. } => { assert_eq!(name.local_name, "root", "Need root element"); },
+            _ => { panic!("Missing root element start"); },
+        };
+        match find_next_element(&mut reader).expect("Valid element") {
+            ElementEvent::StartElement { name, .. } => { assert_eq!(name.local_name, "consumed"); },
+            _ => { panic!("Missing consumed element start"); },
+        };
+        match find_next_element(&mut reader).expect("Valid element") {
+            ElementEvent::StartElement { name, .. } => { assert_eq!(name.local_name, "child1"); },
+            _ => { panic!("Missing child1 element start"); },
+        };
+        match find_next_element(&mut reader).expect("Valid element") {
+            ElementEvent::StartElement { name, .. } => { assert_eq!(name.local_name, "grandchild"); },
+            _ => { panic!("Missing grandchild element start"); },
+        };
+        match find_next_element(&mut reader).expect("Valid element") {
+            ElementEvent::EndElement { name, .. } => { assert_eq!(name.local_name, "grandchild"); },
+            _ => { panic!("Missing grandchild element end"); },
+        };
+        match find_next_element(&mut reader).expect("Valid element") {
+            ElementEvent::EndElement { name, .. } => { assert_eq!(name.local_name, "child1"); },
+            _ => { panic!("Missing child1 element end"); },
+        };
+        match find_next_element(&mut reader).expect("Valid element") {
+            ElementEvent::StartElement { name, .. } => { assert_eq!(name.local_name, "child2"); },
+            _ => { panic!("Missing child2 element start"); },
+        };
+        match find_next_element(&mut reader).expect("Valid element") {
+            ElementEvent::EndElement { name, .. } => { assert_eq!(name.local_name, "child2"); },
+            _ => { panic!("Missing child2 element end"); },
+        };
+        match find_next_element(&mut reader).expect("Valid element") {
+            ElementEvent::EndElement { name, .. } => { assert_eq!(name.local_name, "consumed"); },
+            _ => { panic!("Missing root element end"); },
+        };
+        match find_next_element(&mut reader).expect("Valid element") {
+            ElementEvent::EndElement { name, .. } => { assert_eq!(name.local_name, "root"); },
+            _ => { panic!("Missing root element end"); },
+        };
+        match reader.next().unwrap() {
+            XmlEvent::EndDocument => {},
+            _ => { panic!("Missing document end"); },
+        };
+    }
+
     fn start_document(contents: &'static str, root: &str) -> EventReader<Cursor<&'static str>> {
         let mut reader = ParserConfig::new()
             .create_reader(Cursor::new(contents));
@@ -674,6 +729,124 @@ mod tests2 {
         assert_eq!(mp.protect_url, true);
         assert_eq!(mp.protect_user_name, true);
     }
+
+    #[test]
+    fn test_decode_item_empty() {
+        let mut reader = start_document("<Item/>", "Item");
+        let item = decode_item(&mut reader, OwnedName::local("Item"), vec![]).expect("No error");
+        end_document(reader);
+        assert_eq!(item.0, "");
+        assert_eq!(item.1, "");
+    }
+
+    #[test]
+    fn test_decode_item_pair() {
+        let mut reader = start_document("  <Item>  <Value>mexican</Value>  <Key>food</Key>   </Item>  ", "Item");
+        let result = decode_item(&mut reader, OwnedName::local("Item"), vec![]);
+        if result.is_err() {
+            assert!(false, "Decoding returned error: {:?}", result.unwrap_err());
+        }
+        let item = result.unwrap();
+        end_document(reader);
+        assert_eq!(item.0, "food");
+        assert_eq!(item.1, "mexican");
+    }
+
+    #[test]
+    fn test_decode_custom_data_empty() {
+        let mut reader = start_document("<CustomData/>", "CustomData");
+        let custom_data = decode_custom_data(&mut reader, OwnedName::local("CustomData"), vec![]).expect("No error");
+        end_document(reader);
+        assert_eq!(custom_data.len(), 0);
+    }
+
+    #[test]
+    fn test_decode_custom_data_simple() {
+        let mut reader = start_document("<CustomData><Item><Key>one</Key><Value>1</Value></Item></CustomData>", "CustomData");
+        let custom_data = decode_custom_data(&mut reader, OwnedName::local("CustomData"), vec![]).expect("No error");
+        end_document(reader);
+        assert_eq!(custom_data.len(), 1);
+        assert!(custom_data.contains_key("one"), "Has appropriate key");
+        assert_eq!(custom_data["one"], "1");
+    }
+
+    #[test]
+    fn test_decode_meta_empty() {
+        let mut reader = start_document("<Meta/>", "Meta");
+        let meta = decode_meta(&mut reader).expect("No error");
+        end_document(reader);
+        assert_eq!(meta.database_name, "");
+        assert_eq!(meta.default_user_name, "");
+        assert_eq!(meta.memory_protection.protect_notes, false);
+        assert_eq!(meta.memory_protection.protect_password, false);
+        assert_eq!(meta.memory_protection.protect_title, false);
+        assert_eq!(meta.memory_protection.protect_url, false);
+        assert_eq!(meta.memory_protection.protect_user_name, false);
+    }
+
+    #[test]
+    fn test_decode_meta_filled() {
+        let mut reader = start_document(r#"
+        <Meta>
+		<Generator>KeePassXC</Generator>
+		<DatabaseName>Dummy</DatabaseName>
+		<DatabaseNameChanged>3BmO1Q4AAAA=</DatabaseNameChanged>
+		<DatabaseDescription>Empty KDBX 4.x Database</DatabaseDescription>
+		<DatabaseDescriptionChanged>3BmO1Q4AAAA=</DatabaseDescriptionChanged>
+		<DefaultUserName>someone</DefaultUserName>
+		<DefaultUserNameChanged>I6fN1Q4AAAA=</DefaultUserNameChanged>
+		<MaintenanceHistoryDays>365</MaintenanceHistoryDays>
+		<Color/>
+		<MasterKeyChanged>4xqO1Q4AAAA=</MasterKeyChanged>
+		<MasterKeyChangeRec>-1</MasterKeyChangeRec>
+		<MasterKeyChangeForce>-1</MasterKeyChangeForce>
+		<MemoryProtection>
+			<ProtectTitle>False</ProtectTitle>
+			<ProtectUserName>False</ProtectUserName>
+			<ProtectPassword>True</ProtectPassword>
+			<ProtectURL>False</ProtectURL>
+			<ProtectNotes>False</ProtectNotes>
+		</MemoryProtection>
+		<CustomIcons/>
+		<RecycleBinEnabled>True</RecycleBinEnabled>
+		<RecycleBinUUID>AAAAAAAAAAAAAAAAAAAAAA==</RecycleBinUUID>
+		<RecycleBinChanged>zRmO1Q4AAAA=</RecycleBinChanged>
+		<EntryTemplatesGroup>AAAAAAAAAAAAAAAAAAAAAA==</EntryTemplatesGroup>
+		<EntryTemplatesGroupChanged>zRmO1Q4AAAA=</EntryTemplatesGroupChanged>
+		<LastSelectedGroup>AAAAAAAAAAAAAAAAAAAAAA==</LastSelectedGroup>
+		<LastTopVisibleGroup>AAAAAAAAAAAAAAAAAAAAAA==</LastTopVisibleGroup>
+		<HistoryMaxItems>10</HistoryMaxItems>
+		<HistoryMaxSize>6291456</HistoryMaxSize>
+		<SettingsChanged>I6fN1Q4AAAA=</SettingsChanged>
+		<CustomData>
+			<Item>
+				<Key>FDO_SECRETS_EXPOSED_GROUP</Key>
+				<Value>{00000000-0000-0000-0000-000000000000}</Value>
+			</Item>
+			<Item>
+				<Key>KPXC_DECRYPTION_TIME_PREFERENCE</Key>
+				<Value>100</Value>
+			</Item>
+			<Item>
+				<Key>_LAST_MODIFIED</Key>
+				<Value>Thu Feb 6 06:08:06 2020 GMT</Value>
+			</Item>
+		</CustomData>
+	</Meta>
+"#, "Meta");
+        let meta = decode_meta(&mut reader).expect("No error");
+        end_document(reader);
+        assert_eq!(meta.database_name, "Dummy");
+        assert_eq!(meta.default_user_name, "someone");
+        assert_eq!(meta.memory_protection.protect_notes, false);
+        assert_eq!(meta.memory_protection.protect_password, true);
+        assert_eq!(meta.memory_protection.protect_title, false);
+        assert_eq!(meta.memory_protection.protect_url, false);
+        assert_eq!(meta.memory_protection.protect_user_name, false);
+        assert_eq!(meta.custom_data.len(), 3, "Correct number of custom data fields");
+        assert!(meta.custom_data.contains_key("KPXC_DECRYPTION_TIME_PREFERENCE"), "Missing a custom data field");
+        assert_eq!(meta.custom_data["KPXC_DECRYPTION_TIME_PREFERENCE"], "100", "Custom data field has wrong value");
+    }
 }
 
 #[cfg(test)]
@@ -705,7 +878,7 @@ fn consume_element<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attri
 
     let mut string = None;
 
-    let mut event = reader.next().map_err(|_|"")?;
+    let mut event = reader.next().map_err(|_|"Failed to retrieve next XML event")?;
     loop {
         match event {
             XmlEvent::StartDocument { .. } => {
@@ -734,7 +907,49 @@ fn consume_element<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attri
         if elements.len() == 0 {
             return Ok(string);
         }
-        event = reader.next().map_err(|_|"")?;
+        event = reader.next().map_err(|_|"Failed to retrieve next XML event")?;
+    }
+}
+
+pub enum ElementEvent {
+    StartElement {
+        name: OwnedName,
+        attributes: Vec<OwnedAttribute>,
+    },
+    EndElement {
+        name: OwnedName,
+    },
+}
+
+fn find_next_element<R: Read>(reader: &mut EventReader<R>) -> Result<ElementEvent, String> {
+    loop {
+        match reader.next().map_err(|_|"Failed to retrieve next XML event")? {
+            XmlEvent::StartDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::EndDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::StartElement { name, attributes, .. } => {
+                return Ok(ElementEvent::StartElement {
+                    name,
+                    attributes,
+                });
+            },
+            XmlEvent::Characters(k) => {},
+            XmlEvent::CData(k) => {},
+            XmlEvent::Whitespace(k) => {},
+            XmlEvent::ProcessingInstruction { .. } => {},
+            XmlEvent::EndElement { name, .. } => {
+                return Ok(ElementEvent::EndElement {
+                    name,
+                });
+            },
+            _ => {
+                // Consume any PI, text, comment, or cdata node
+                //return Ok(());
+            },
+        };
     }
 }
 
@@ -745,7 +960,7 @@ fn decode_optional_string<R: Read>(reader: &mut EventReader<R>, name: OwnedName,
 
     let mut string = String::new();
 
-    let mut event = reader.next().map_err(|_|"")?;
+    let mut event = reader.next().map_err(|_|"Failed to retrieve next XML event")?;
     loop {
         match event {
             XmlEvent::StartDocument { .. } => {
@@ -821,111 +1036,55 @@ fn decode_optional_uuid<R: Read>(reader: &mut EventReader<R>, name: OwnedName, a
     decode_optional_string(reader, name, attributes).map(|x| x.map(|y| Uuid::from_slice(&decode(&y).expect("Valid base64")).unwrap()))
 }
 
-fn decode_custom_data<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<HashMap<String, String>, String> {
-    let mut elements = vec![];
-    elements.push(name);
+fn decode_item<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<(String, String), String> {
+    let mut key = String::new();
+    let mut value = String::new();
 
-    let data = HashMap::new();
-
-    while elements.len() > 0 {
-        let event = reader.next().map_err(|_|"")?;
-        println!("Decode custom...");
-        match event {
-            XmlEvent::StartDocument { .. } => {
-                return Err("Malformed XML document".to_string());
+    loop {
+        match find_next_element(reader)? {
+            ElementEvent::StartElement { name, .. } if name.local_name == "Key" => {
+                key = decode_string(reader, name, vec![])?;
             },
-            XmlEvent::EndDocument { .. } => {
-                return Err("Malformed XML document".to_string());
+            ElementEvent::StartElement { name, .. } if name.local_name == "Value" => {
+                value = decode_string(reader, name, vec![])?;
             },
-            XmlEvent::StartElement { name, attributes: _, .. }
-              if name.local_name == "Item" => {
-                //generator = decode_string(reader, name, attributes)?;
-                //println!("Generator: {:?}", generator);
+            ElementEvent::StartElement { name, .. } => {
+                consume_element(reader, name, vec![])?;
             },
-            XmlEvent::StartElement { name, .. } => {
-                elements.push(name);
+            ElementEvent::EndElement { name, .. } if name.local_name == "Item" => {
+                return Ok((key, value));
             },
-            XmlEvent::EndElement { name, .. } => {
-                let start_tag = elements.pop().expect("Can't consume a bare end element");
-                if start_tag != name {
-                    return Err(format!("Start tag <{}> mismatches end tag </{}>", start_tag, name));
-                }
+            ElementEvent::EndElement { name, .. } => {
+                return Err("Wrong ending".to_string());
             },
-            _ => {
-                // Consume any PI, text, comment, or cdata node
-                //return Ok(());
-            },
-            /*
-            XmlEvent::StartElement { name, .. }
-              if name.local_name == "Item" => {
-                let mut key = String::new();
-                let mut value = String::new();
-                loop {
-                    match reader.next_event()? {
-                        XmlEvent::StartElement { name, .. }
-                          if name.local_name == "Key" => {
-                            loop {
-                                match reader.next_event()? {
-                                    XmlEvent::Characters(k) => {
-                                        key = k;
-                                    },
-                                    XmlEvent::EndElement { name }
-                                      if name.local_name == "Key" => {
-                                        break;
-                                    },
-                                    XmlEvent::EndElement { .. } => {
-                                        return Err("Malformed XML document".to_string());
-                                    },
-                                    _ => { panic!("Bad document parsing"); },
-                                }
-                            }
-                        },
-                        XmlEvent::StartElement { name, .. }
-                          if name.local_name == "Value" => {
-                            loop {
-                                match reader.next_event()? {
-                                    XmlEvent::Characters(k) => {
-                                        value = k;
-                                    },
-                                    XmlEvent::EndElement { name }
-                                      if name.local_name == "Value" => {
-                                        break;
-                                    },
-                                    XmlEvent::EndElement { .. } => {
-                                        return Err("Malformed XML document".to_string());
-                                    },
-                                    _ => { panic!("Bad document parsing"); },
-                                }
-                            }
-                        },
-                        XmlEvent::EndElement { name }
-                          if name.local_name == "Item" => {
-                            data.insert(key, value);
-                            break;
-                        },
-                        XmlEvent::EndElement { .. } => {
-                            return Err("Malformed XML document".to_string());
-                        },
-                        _ => { panic!("Bad document parsing"); },
-                    }
-                }
-            },
-            XmlEvent::StartElement { name, .. } => {
-                // TODO Consume this
-            },
-            XmlEvent::EndElement { name }
-              if name.local_name == "CustomData" => {
-                break;
-            },
-            XmlEvent::EndElement { .. } => {
-                return Err("Malformed XML document".to_string());
-            },
-            _ => { panic!("Bad document parsing"); },
-            */
         }
     }
-    //Err("Fail De".to_string())
-    Ok(data)
+}
+
+fn decode_custom_data<R: Read>(reader: &mut EventReader<R>, pname: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<HashMap<String, String>, String> {
+    //let mut elements = vec![];
+    //elements.push(name);
+
+    let mut data = HashMap::new();
+
+    loop {
+        match find_next_element(reader)? {
+            ElementEvent::StartElement { name, .. } if name.local_name == "Item" => {
+                let (key, value) = decode_item(reader, name, vec![])?;
+                //data[key] = value;
+                data.insert(key, value);
+            },
+            ElementEvent::StartElement { name, .. } => {
+                consume_element(reader, name, vec![])?;
+            },
+            ElementEvent::EndElement { name, .. } if name == pname => {
+                return Ok(data);
+            },
+            ElementEvent::EndElement { name, .. } => {
+                return Err("Wrong ending".to_string());
+            },
+        }
+    }
 }
 
 #[derive(Debug, Default)]

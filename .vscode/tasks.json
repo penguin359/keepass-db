@@ -26,6 +26,11 @@
 			"problemMatcher": [
 				"$rustc"
 			],
+			"options": {
+				"env": {
+					"RUST_BACKTRACE": "1"
+				}
+			},
 			"group": {
 				"kind": "build",
 				"isDefault": true
