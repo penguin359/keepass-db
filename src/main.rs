@@ -520,7 +520,11 @@ mod tests2 {
             XmlEvent::StartDocument { .. } => {},
             _ => { panic!("Missing document start"); },
         }
-        consume_element(&mut reader, OwnedName::local("root"), vec![]);
+        let element = match reader.next().unwrap() {
+            XmlEvent::StartElement { name, .. } => name,
+            _ => { panic!("Missing document element"); },
+        };
+        consume_element(&mut reader, element, vec![]).expect("Failed to consume");
         match reader.next().unwrap() {
             XmlEvent::EndDocument => {},
             _ => { panic!("Missing document end"); },
@@ -548,7 +552,7 @@ mod tests2 {
             XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, "consumed"); },
             _ => { panic!("Missing consumed element start"); },
         };
-        consume_element(&mut reader, OwnedName::local("consumed"), vec![]);
+        consume_element(&mut reader, OwnedName::local("consumed"), vec![]).expect("Failed to consume");
         match reader.next().unwrap() {
             XmlEvent::Whitespace(_) => {},
             _ => { panic!("Missing whitespace"); },
@@ -847,14 +851,50 @@ mod tests2 {
         assert!(meta.custom_data.contains_key("KPXC_DECRYPTION_TIME_PREFERENCE"), "Missing a custom data field");
         assert_eq!(meta.custom_data["KPXC_DECRYPTION_TIME_PREFERENCE"], "100", "Custom data field has wrong value");
     }
+
+    #[test]
+    fn test_decode_document_empty() {
+        let mut reader = start_document("<KeePassFile/>", "KeePassFile");
+        let document = decode_document(&mut reader).expect("No error");
+        end_document(reader);
+        assert_eq!(document.meta.database_name, "");
+        assert_eq!(document.meta.default_user_name, "");
+        assert_eq!(document.meta.memory_protection.protect_notes, false);
+        assert_eq!(document.meta.memory_protection.protect_password, false);
+        assert_eq!(document.meta.memory_protection.protect_title, false);
+        assert_eq!(document.meta.memory_protection.protect_url, false);
+        assert_eq!(document.meta.memory_protection.protect_user_name, false);
+    }
+
+    #[test]
+    fn test_decode_document_filled() {
+        // let mut file = File::open("dummy.xml").expect("Missing test data dummy.xml");
+        // let mut contents = Vec::new();
+        // let mut Cursor::new(contents);
+        // file.read_to_end(&mut contents);
+        let contents = include_str!("../dummy.xml");
+        let mut reader = start_document(contents, "KeePassFile");
+        let document = decode_document(&mut reader).expect("No error");
+        end_document(reader);
+        assert_eq!(document.meta.database_name, "Dummy");
+        assert_eq!(document.meta.default_user_name, "someone");
+        assert_eq!(document.meta.memory_protection.protect_notes, false);
+        assert_eq!(document.meta.memory_protection.protect_password, true);
+        assert_eq!(document.meta.memory_protection.protect_title, false);
+        assert_eq!(document.meta.memory_protection.protect_url, false);
+        assert_eq!(document.meta.memory_protection.protect_user_name, false);
+        assert_eq!(document.meta.custom_data.len(), 3, "Correct number of custom data fields");
+        assert!(document.meta.custom_data.contains_key("KPXC_DECRYPTION_TIME_PREFERENCE"), "Missing a custom data field");
+        assert_eq!(document.meta.custom_data["KPXC_DECRYPTION_TIME_PREFERENCE"], "100", "Custom data field has wrong value");
+    }
 }
 
 #[cfg(test)]
 mod test3 {
+    /*
     use super::Cursor;
     use super::{EventReader, XmlEvent};
 
-    /*
     #[test]
     fn test_basic_document() {
         let mut cursor = Cursor::new(b"");
@@ -882,10 +922,10 @@ fn consume_element<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attri
     loop {
         match event {
             XmlEvent::StartDocument { .. } => {
-                return Err("Malformed XML document".to_string());
+                return Err("Malformed XML document, start of document".to_string());
             },
             XmlEvent::EndDocument { .. } => {
-                return Err("Malformed XML document".to_string());
+                return Err("Malformed XML document, end of document".to_string());
             },
             XmlEvent::StartElement { name, .. } => {
                 elements.push(name);
@@ -936,9 +976,9 @@ fn find_next_element<R: Read>(reader: &mut EventReader<R>) -> Result<ElementEven
                     attributes,
                 });
             },
-            XmlEvent::Characters(k) => {},
-            XmlEvent::CData(k) => {},
-            XmlEvent::Whitespace(k) => {},
+            XmlEvent::Characters(_) => {},
+            XmlEvent::CData(_) => {},
+            XmlEvent::Whitespace(_) => {},
             XmlEvent::ProcessingInstruction { .. } => {},
             XmlEvent::EndElement { name, .. } => {
                 return Ok(ElementEvent::EndElement {
@@ -1036,7 +1076,7 @@ fn decode_optional_uuid<R: Read>(reader: &mut EventReader<R>, name: OwnedName, a
     decode_optional_string(reader, name, attributes).map(|x| x.map(|y| Uuid::from_slice(&decode(&y).expect("Valid base64")).unwrap()))
 }
 
-fn decode_item<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<(String, String), String> {
+fn decode_item<R: Read>(reader: &mut EventReader<R>, _name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<(String, String), String> {
     let mut key = String::new();
     let mut value = String::new();
 
@@ -1054,7 +1094,7 @@ fn decode_item<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attribute
             ElementEvent::EndElement { name, .. } if name.local_name == "Item" => {
                 return Ok((key, value));
             },
-            ElementEvent::EndElement { name, .. } => {
+            ElementEvent::EndElement { .. } => {
                 return Err("Wrong ending".to_string());
             },
         }
@@ -1080,7 +1120,7 @@ fn decode_custom_data<R: Read>(reader: &mut EventReader<R>, pname: OwnedName, _a
             ElementEvent::EndElement { name, .. } if name == pname => {
                 return Ok(data);
             },
-            ElementEvent::EndElement { name, .. } => {
+            ElementEvent::EndElement { .. } => {
                 return Err("Wrong ending".to_string());
             },
         }
@@ -1096,7 +1136,7 @@ struct MemoryProtection {
     protect_notes: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct Meta {
     generator: String,
     database_name: String,
@@ -1123,6 +1163,36 @@ struct Meta {
     history_max_size: String,
     settings_changed: Option<DateTime<Local>>,
     custom_data: HashMap<String, String>,
+}
+
+struct Group {
+    _uuid: String,
+    _name: String,
+    _notes: String,
+    _icon_id: u32,
+    //times: Times,
+    _is_expanded: String,
+    //<DefaultAutoTypeSequence/>
+    _enable_auto_type: String,
+    _enable_searching: String,
+    _last_top_visible_entry: String,
+    //custom_data: CustomData,
+    _group: Vec<Group>,
+    _entry: Vec<Entry>,
+}
+
+#[derive(Debug, Default, PartialEq)]
+struct Entry {
+    _uuid: String,
+    _icon_id: u32,
+    // times: Times,
+    // custom_data: CustomData,
+}
+
+#[derive(Default)]
+struct KeePassFile {
+    meta: Meta,
+    _root: Vec<Group>,
 }
 
 fn decode_memory_protection<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<MemoryProtection, String> {
@@ -1389,17 +1459,17 @@ fn decode_meta<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String> {
 }
 
 //fn consume_element<R: Read>(reader: &mut yaserde::de::Deserializer<R>, mut event: XmlEvent) -> Result<(), String> {
-fn decode_document<R: Read>(mut reader: &mut EventReader<R>) -> Result<(), String> {
+fn decode_document<R: Read>(mut reader: &mut EventReader<R>) -> Result<KeePassFile, String> {
     //let mut elements: Vec<::xml::name::OwnedName> = vec![];
     //elements.push("Foo".into());
     let mut elements = vec![];
-    elements.push(::xml::name::OwnedName::local("Foo"));
+    elements.push(::xml::name::OwnedName::local("KeePassFile"));
     //let mut elements: Vec<::xml::name::OwnedName> = vec![];
     //elements.push(::xml::name::Name::from("Foo").to_owned());
     //elements.push(::xml::name::Name::from("Foo").into());
     //let mut elements = vec![];
     //elements.push(::xml::name::OwnedName::from_str("Foo").unwrap());
-
+    let mut meta = Meta::default();
 
     let mut event = reader.next().map_err(|_|"")?;
     loop {
@@ -1412,7 +1482,7 @@ fn decode_document<R: Read>(mut reader: &mut EventReader<R>) -> Result<(), Strin
                 return Err("Malformed XML document".to_string());
             },
             XmlEvent::StartElement { name, .. } if name.local_name == "Meta" => {
-                let meta = decode_meta(&mut reader);
+                meta = decode_meta(&mut reader)?;
                 println!("Meta: {:?}", meta);
             },
             XmlEvent::StartElement { name, .. } => {
@@ -1431,7 +1501,7 @@ fn decode_document<R: Read>(mut reader: &mut EventReader<R>) -> Result<(), Strin
             },
         };
         if elements.len() == 0 {
-            return Ok(());
+            return Ok(KeePassFile { meta, ..KeePassFile::default() });
         }
         event = reader.next().map_err(|_|"")?;
     }
@@ -2056,7 +2126,7 @@ fn main() -> io::Result<()> {
             file.read_to_end(&mut ciphertext)?;
             let data = decrypt(Cipher::aes_256_cbc(), &master_key, Some(encryption_iv), &ciphertext).unwrap();
             let mut c = Cursor::new(data);
-            
+
             /* Start stream header is used to verify successful decrypt */
             let mut start_stream = vec![0; 32];
             c.read_exact(&mut start_stream)?;

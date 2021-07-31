@@ -2,39 +2,40 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"type": "shell",
-			"command": "cargo",
-			"args": [ "run", "--", "dummy.kdbx" ],
+			"type": "cargo",
+			"command": "test",
 			"problemMatcher": [
 				"$rustc"
 			],
-			"options": {
-				"cwd": "${workspaceFolder}",
-				"env": {
-					"KDBX_PASSWORD": "asdf"
-				}
-			},
-			"label": "Rust: cargo run - kdbx",
 			"group": "build",
-			"detail": "Run KDBX Dummy"
+			"label": "rust: cargo test"
 		},
 		{
 			"type": "cargo",
-			"subcommand": "test",
-			"label": "Rust Full Test",
-			"detail": "Test all the KDBX",
+			"command": "check",
 			"problemMatcher": [
 				"$rustc"
 			],
-			"options": {
-				"env": {
-					"RUST_BACKTRACE": "1"
-				}
+			"group": "build",
+			"label": "rust: cargo check"
+		},
+		{
+			"type": "cargo",
+			"command": "run",
+			"env": {
+				"KDBX_PASSWORD": "asdf"
 			},
+			"args": [
+				"dummy.kdbx"
+			],
+			"problemMatcher": [
+				"$rustc"
+			],
+			"label": "rust: cargo run",
 			"group": {
 				"kind": "build",
 				"isDefault": true
-			},
+			}
 		}
 	]
 }
