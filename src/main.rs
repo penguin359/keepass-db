@@ -887,6 +887,27 @@ mod tests2 {
         assert!(document.meta.custom_data.contains_key("KPXC_DECRYPTION_TIME_PREFERENCE"), "Missing a custom data field");
         assert_eq!(document.meta.custom_data["KPXC_DECRYPTION_TIME_PREFERENCE"], "100", "Custom data field has wrong value");
     }
+
+    #[test]
+    fn test_decode_document_kdbx41() {
+        // let mut file = File::open("dummy.xml").expect("Missing test data dummy.xml");
+        // let mut contents = Vec::new();
+        // let mut Cursor::new(contents);
+        // file.read_to_end(&mut contents);
+        let contents = include_str!("../testdata/dummy-kdbx41.xml");
+        let mut reader = start_document(contents, "KeePassFile");
+        let document = decode_document(&mut reader).expect("No error");
+        end_document(reader);
+        assert_eq!(document.meta.generator, "KeePass");
+        assert_eq!(document.meta.database_name, "MyDatabase");
+        assert_eq!(document.meta.default_user_name, "user");
+        assert_eq!(document.meta.memory_protection.protect_notes, false);
+        assert_eq!(document.meta.memory_protection.protect_password, true);
+        assert_eq!(document.meta.memory_protection.protect_title, false);
+        assert_eq!(document.meta.memory_protection.protect_url, false);
+        assert_eq!(document.meta.memory_protection.protect_user_name, false);
+        assert_eq!(document.meta.custom_data.len(), 0, "Correct number of custom data fields");
+    }
 }
 
 #[cfg(test)]
@@ -1931,12 +1952,12 @@ fn main() -> io::Result<()> {
 
             return Ok(());
         },
-        0xB54BFB66 => {
-            // XXX Untested
-            let _ = writeln!(stderr, "KeePass 2.x Beta files not supported\n");
-            process::exit(1);
-        },
-        0xB54BFB67 => {
+        // 0xB54BFB66 => {
+        //     // XXX Untested
+        //     let _ = writeln!(stderr, "KeePass 2.x Beta files not supported\n");
+        //     process::exit(1);
+        // },
+        0xB54BFB67 | 0xB54BFB66 => {
             println!("Opening KeePass 2.x database");
         },
         _ => {
@@ -1956,6 +1977,9 @@ fn main() -> io::Result<()> {
             custom_data.insert(KDF_PARAM_UUID.to_string(), kdf_aes_kdbx3.as_bytes().to_vec());
         },
         4 => {
+        },
+        1 => {
+            custom_data.insert(KDF_PARAM_UUID.to_string(), kdf_aes_kdbx3.as_bytes().to_vec());
         },
         _ => {
             let _ = writeln!(stderr,
@@ -2026,14 +2050,20 @@ fn main() -> io::Result<()> {
     println!("AES");
     let mut c = Cursor::new(&tlvs[&3u8]);
     let compression_flags = c.read_u32::<LittleEndian>()?;
-    match compression_flags {
+    enum Compression {
+        None,
+        Gzip,
+    }
+    let compress = match compression_flags {
         0 => {
             // XX Untested
             let _ = writeln!(stderr, "Unsupported no compressed file\n");
-            process::exit(1);
+            //process::exit(1);
+            Compression::None
         },
         1 => {
             println!("Gzip compression");
+            Compression::Gzip
         },
         _ => {
             // XX Untested
@@ -2152,19 +2182,28 @@ fn main() -> io::Result<()> {
                 assert_eq!(block_hash_expected, block_hash, "Failed hash");
                 buf.extend(block_data);
             }
-            let mut gz = GzDecoder::new(Cursor::new(buf));
+            let mut gz:Box<dyn Read> = match compress {
+                Compression::Gzip => Box::new(GzDecoder::new(Cursor::new(buf))),
+                Compression::None => Box::new(Cursor::new(buf)),
+            };
             let mut xml_file = File::create("data2.xml")?;
             let mut contents = String::new();
             gz.read_to_string(&mut contents)?;
             let _ = xml_file.write(&contents.as_bytes());
+            // println!("{:#?}", &contents);
+            if &contents[0..3] == "\u{feff}" {
+                contents = contents[3..].to_string();
+            }
             let package = parser::parse(&contents).unwrap();
             let document = package.as_document();
             let header_hash = evaluate_xpath(&document, "/KeePassFile/Meta/HeaderHash/text()").expect("Missing header hash");
-            println!("Header Hash: {}", header_hash.string());
-            let expected_hash = decode(&header_hash.string()).expect("Valid base64");
-            if expected_hash != digest.as_ref() {
-                let _ = writeln!(stderr, "Possible header corruption\n");
-                process::exit(1);
+            if header_hash.string() != "" {
+                println!("Header Hash: '{}'", header_hash.string());
+                let expected_hash = decode(&header_hash.string()).expect("Valid base64");
+                if expected_hash != digest.as_ref() {
+                    let _ = writeln!(stderr, "Possible header corruption\n");
+                    process::exit(1);
+                }
             }
             return Ok(());
         }

@@ -19,7 +19,8 @@
                     "kind": "bin"
                 }
             },
-            "args": ["dummy.kdbx"],
+            //"args": ["dummy.kdbx"],
+            "args": ["testdata\\dummy-keepass2.08-gz.kdbx"],
             "env": {
                 "KDBX_PASSWORD": "asdf"
             },
