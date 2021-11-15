@@ -641,7 +641,7 @@ struct Group {
     _last_top_visible_entry: String,
     //custom_data: CustomData,
     group: Vec<Group>,
-    _entry: Vec<Entry>,
+    entry: Vec<Entry>,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -650,6 +650,7 @@ struct Entry {
     _icon_id: u32,
     // times: Times,
     // custom_data: CustomData,
+    history: Vec<Entry>,
 }
 
 #[derive(Default)]
@@ -921,10 +922,91 @@ fn decode_meta<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String> {
     })
 }
 
+fn decode_history<R: Read>(reader: &mut EventReader<R>) -> Result<Vec<Entry>, String> {
+    let mut elements = vec![];
+    elements.push(::xml::name::OwnedName::local("History"));
+
+    let mut entries = Vec::<Entry>::new();
+    while elements.len() > 0 {
+        let event = reader.next().map_err(|_|"")?;
+        println!("Decode history...");
+        match event {
+            XmlEvent::StartDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::EndDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::StartElement { name, attributes: _, .. }
+              if name.local_name == "Entry" => {
+                let entry = decode_entry(reader)?; //, name, attributes)?;
+                println!("Entry: {:?}", entry);
+                entries.push(entry);
+            },
+            XmlEvent::StartElement { name, .. } => {
+                elements.push(name);
+            },
+            XmlEvent::EndElement { name, .. } => {
+                let start_tag = elements.pop().expect("Can't consume a bare end element");
+                if start_tag != name {
+                    return Err(format!("Start tag <{}> mismatches end tag </{}>", start_tag, name));
+                }
+            },
+            _ => {
+                // Consume any PI, text, comment, or cdata node
+                //return Ok(());
+            },
+        };
+    }
+    Ok(entries)
+}
+
+fn decode_entry<R: Read>(reader: &mut EventReader<R>) -> Result<Entry, String> {
+    let mut elements = vec![];
+    elements.push(::xml::name::OwnedName::local("Entry"));
+
+    let mut history = Vec::new();
+    while elements.len() > 0 {
+        let event = reader.next().map_err(|_|"")?;
+        println!("Decode entry...");
+        match event {
+            XmlEvent::StartDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::EndDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::StartElement { name, attributes: _, .. }
+              if name.local_name == "History" => {
+                history = decode_history(reader)?; //, name, attributes)?;
+                println!("History: {:?}", history);
+            },
+            XmlEvent::StartElement { name, .. } => {
+                elements.push(name);
+            },
+            XmlEvent::EndElement { name, .. } => {
+                let start_tag = elements.pop().expect("Can't consume a bare end element");
+                if start_tag != name {
+                    return Err(format!("Start tag <{}> mismatches end tag </{}>", start_tag, name));
+                }
+            },
+            _ => {
+                // Consume any PI, text, comment, or cdata node
+                //return Ok(());
+            },
+        };
+    }
+    Ok(Entry {
+        history,
+        ..Entry::default()
+    })
+}
+
 fn decode_group<R: Read>(reader: &mut EventReader<R>) -> Result<Group, String> {
     let mut elements = vec![];
     elements.push(::xml::name::OwnedName::local("Group"));
 
+    let mut entries = Vec::<Entry>::new();
     let mut groups = Vec::<Group>::new();
     while elements.len() > 0 {
         let event = reader.next().map_err(|_|"")?;
@@ -935,6 +1017,12 @@ fn decode_group<R: Read>(reader: &mut EventReader<R>) -> Result<Group, String> {
             },
             XmlEvent::EndDocument { .. } => {
                 return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::StartElement { name, attributes: _, .. }
+              if name.local_name == "Entry" => {
+                let entry = decode_entry(reader)?; //, name, attributes)?;
+                println!("Entry: {:?}", entry);
+                entries.push(entry);
             },
             XmlEvent::StartElement { name, attributes: _, .. }
               if name.local_name == "Group" => {
@@ -970,7 +1058,7 @@ fn decode_group<R: Read>(reader: &mut EventReader<R>) -> Result<Group, String> {
         _last_top_visible_entry: "".to_string(),
         //custom_data: CustomData,
         group: groups,
-        _entry: Vec::new(),
+        entry: entries,
     })
 }
 

@@ -566,9 +566,17 @@ fn test_decode_document_filled_contents() {
     //assert!(document.meta.custom_data.contains_key("KPXC_DECRYPTION_TIME_PREFERENCE"), "Missing a custom data field");
     //assert_eq!(document.meta.custom_data["KPXC_DECRYPTION_TIME_PREFERENCE"], "100", "Custom data field has wrong value");
     assert_eq!(document.root.len(), 1);
+    assert_eq!(document.root[0].entry.len(), 0);
     assert_eq!(document.root[0].group.len(), 1);
+    assert_eq!(document.root[0].group[0].entry.len(), 1);
+    assert_eq!(document.root[0].group[0].entry[0].history.len(), 2);
     assert_eq!(document.root[0].group[0].group.len(), 2);
+    assert_eq!(document.root[0].group[0].group[0].entry.len(), 1);
+    assert_eq!(document.root[0].group[0].group[0].entry[0].history.len(), 2);
     assert_eq!(document.root[0].group[0].group[0].group.len(), 1);
+    assert_eq!(document.root[0].group[0].group[0].group[0].entry.len(), 1);
+    assert_eq!(document.root[0].group[0].group[0].group[0].entry[0].history.len(), 0);
     assert_eq!(document.root[0].group[0].group[0].group[0].group.len(), 0);
+    assert_eq!(document.root[0].group[0].group[1].entry.len(), 0);
     assert_eq!(document.root[0].group[0].group[1].group.len(), 0);
 }
