@@ -493,7 +493,7 @@ fn test_decode_document_filled() {
     // let mut contents = Vec::new();
     // let mut Cursor::new(contents);
     // file.read_to_end(&mut contents);
-    let contents = include_str!("../dummy.xml");
+    let contents = include_str!("../testdata/dummy.xml");
     let mut reader = start_document(contents, "KeePassFile");
     let document = decode_document(&mut reader).expect("No error");
     end_document(reader);
