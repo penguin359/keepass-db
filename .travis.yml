@@ -1,0 +1,11 @@
+os: linux
+dist: xenial
+language: rust
+rust:
+  - stable
+  - nightly
+cache: cargo
+jobs:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
