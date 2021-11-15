@@ -98,7 +98,7 @@ fn test_argon2_kdf_secret_and_associative() {
     assert!(false);
 }
 
-use super::*;
+//use super::*;
 
 #[test]
 fn test_decoding_empty_document() {
@@ -548,3 +548,27 @@ fn test_basic_document() {
     };
 }
 */
+
+#[test]
+fn test_decode_document_filled_contents() {
+    let contents = include_str!("../testdata/dummy.xml");
+    let mut reader = start_document(contents, "KeePassFile");
+    let document = decode_document(&mut reader).expect("No error");
+    end_document(reader);
+    //assert_eq!(document.meta.database_name, "Dummy");
+    //assert_eq!(document.meta.default_user_name, "someone");
+    //assert_eq!(document.meta.memory_protection.protect_notes, false);
+    //assert_eq!(document.meta.memory_protection.protect_password, true);
+    //assert_eq!(document.meta.memory_protection.protect_title, false);
+    //assert_eq!(document.meta.memory_protection.protect_url, false);
+    //assert_eq!(document.meta.memory_protection.protect_user_name, false);
+    //assert_eq!(document.meta.custom_data.len(), 3, "Correct number of custom data fields");
+    //assert!(document.meta.custom_data.contains_key("KPXC_DECRYPTION_TIME_PREFERENCE"), "Missing a custom data field");
+    //assert_eq!(document.meta.custom_data["KPXC_DECRYPTION_TIME_PREFERENCE"], "100", "Custom data field has wrong value");
+    assert_eq!(document.root.len(), 1);
+    assert_eq!(document.root[0].group.len(), 1);
+    assert_eq!(document.root[0].group[0].group.len(), 2);
+    assert_eq!(document.root[0].group[0].group[0].group.len(), 1);
+    assert_eq!(document.root[0].group[0].group[0].group[0].group.len(), 0);
+    assert_eq!(document.root[0].group[0].group[1].group.len(), 0);
+}

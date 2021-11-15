@@ -627,6 +627,7 @@ struct Meta {
     custom_data: HashMap<String, String>,
 }
 
+#[derive(Debug)]
 struct Group {
     _uuid: String,
     _name: String,
@@ -639,7 +640,7 @@ struct Group {
     _enable_searching: String,
     _last_top_visible_entry: String,
     //custom_data: CustomData,
-    _group: Vec<Group>,
+    group: Vec<Group>,
     _entry: Vec<Entry>,
 }
 
@@ -654,7 +655,7 @@ struct Entry {
 #[derive(Default)]
 struct KeePassFile {
     meta: Meta,
-    _root: Vec<Group>,
+    root: Vec<Group>,
 }
 
 fn decode_memory_protection<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<MemoryProtection, String> {
@@ -920,6 +921,106 @@ fn decode_meta<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String> {
     })
 }
 
+fn decode_group<R: Read>(reader: &mut EventReader<R>) -> Result<Group, String> {
+    let mut elements = vec![];
+    elements.push(::xml::name::OwnedName::local("Group"));
+
+    let mut groups = Vec::<Group>::new();
+    while elements.len() > 0 {
+        let event = reader.next().map_err(|_|"")?;
+        println!("Decode group...");
+        match event {
+            XmlEvent::StartDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::EndDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::StartElement { name, attributes: _, .. }
+              if name.local_name == "Group" => {
+                let group = decode_group(reader)?; //, name, attributes)?;
+                println!("Group: {:?}", group);
+                groups.push(group);
+            },
+            XmlEvent::StartElement { name, .. } => {
+                elements.push(name);
+            },
+            XmlEvent::EndElement { name, .. } => {
+                let start_tag = elements.pop().expect("Can't consume a bare end element");
+                if start_tag != name {
+                    return Err(format!("Start tag <{}> mismatches end tag </{}>", start_tag, name));
+                }
+            },
+            _ => {
+                // Consume any PI, text, comment, or cdata node
+                //return Ok(());
+            },
+        };
+    }
+    Ok(Group {
+        _uuid: "".to_string(),
+        _name: "".to_string(),
+        _notes: "".to_string(),
+        _icon_id: 0,
+        //times: Times,
+        _is_expanded: "".to_string(),
+        //<DefaultAutoTypeSequence/>
+        _enable_auto_type: "".to_string(),
+        _enable_searching: "".to_string(),
+        _last_top_visible_entry: "".to_string(),
+        //custom_data: CustomData,
+        group: groups,
+        _entry: Vec::new(),
+    })
+}
+
+fn decode_root<R: Read>(reader: &mut EventReader<R>) -> Result<Vec<Group>, String> {
+    //let mut elements: Vec<::xml::name::OwnedName> = vec![];
+    //elements.push("Foo".into());
+    let mut elements = vec![];
+    elements.push(::xml::name::OwnedName::local("Root"));
+    //let mut elements: Vec<::xml::name::OwnedName> = vec![];
+    //elements.push(::xml::name::Name::from("Foo").to_owned());
+    //elements.push(::xml::name::Name::from("Foo").into());
+    //let mut elements = vec![];
+    //elements.push(::xml::name::OwnedName::from_str("Foo").unwrap());
+
+
+    let mut groups = Vec::<Group>::new();
+    while elements.len() > 0 {
+        let event = reader.next().map_err(|_|"")?;
+        println!("Decode root...");
+        match event {
+            XmlEvent::StartDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::EndDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::StartElement { name, attributes: _, .. }
+              if name.local_name == "Group" => {
+                let group = decode_group(reader)?; //, name, attributes)?;
+                println!("Group: {:?}", group);
+                groups.push(group);
+            },
+            XmlEvent::StartElement { name, .. } => {
+                elements.push(name);
+            },
+            XmlEvent::EndElement { name, .. } => {
+                let start_tag = elements.pop().expect("Can't consume a bare end element");
+                if start_tag != name {
+                    return Err(format!("Start tag <{}> mismatches end tag </{}>", start_tag, name));
+                }
+            },
+            _ => {
+                // Consume any PI, text, comment, or cdata node
+                //return Ok(());
+            },
+        };
+    }
+    Ok(groups)
+}
+
 //fn consume_element<R: Read>(reader: &mut yaserde::de::Deserializer<R>, mut event: XmlEvent) -> Result<(), String> {
 fn decode_document<R: Read>(mut reader: &mut EventReader<R>) -> Result<KeePassFile, String> {
     //let mut elements: Vec<::xml::name::OwnedName> = vec![];
@@ -932,6 +1033,7 @@ fn decode_document<R: Read>(mut reader: &mut EventReader<R>) -> Result<KeePassFi
     //let mut elements = vec![];
     //elements.push(::xml::name::OwnedName::from_str("Foo").unwrap());
     let mut meta = Meta::default();
+    let mut root = Vec::<Group>::default();
 
     let mut event = reader.next().map_err(|_|"")?;
     loop {
@@ -946,6 +1048,10 @@ fn decode_document<R: Read>(mut reader: &mut EventReader<R>) -> Result<KeePassFi
             XmlEvent::StartElement { name, .. } if name.local_name == "Meta" => {
                 meta = decode_meta(&mut reader)?;
                 println!("Meta: {:?}", meta);
+            },
+            XmlEvent::StartElement { name, .. } if name.local_name == "Root" => {
+                root = decode_root(&mut reader)?;
+                println!("Root: {:?}", root);
             },
             XmlEvent::StartElement { name, .. } => {
                 println!("Document Tag: {}", name);
@@ -963,7 +1069,8 @@ fn decode_document<R: Read>(mut reader: &mut EventReader<R>) -> Result<KeePassFi
             },
         };
         if elements.len() == 0 {
-            return Ok(KeePassFile { meta, ..KeePassFile::default() });
+            return Ok(KeePassFile { meta, root });
+            //return Ok(KeePassFile { meta, ..KeePassFile::default() });
         }
         event = reader.next().map_err(|_|"")?;
     }
