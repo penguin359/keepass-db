@@ -580,3 +580,32 @@ fn test_decode_document_filled_contents() {
     assert_eq!(document.root[0].group[0].group[1].entry.len(), 0);
     assert_eq!(document.root[0].group[0].group[1].group.len(), 0);
 }
+
+#[test]
+fn test_decode_document_filled_group() {
+    let contents = include_str!("../testdata/dummy.xml");
+    let mut reader = start_document(contents, "KeePassFile");
+    let document = decode_document(&mut reader).expect("No error");
+    end_document(reader);
+    assert_eq!(document.root.len(), 1);
+    assert_eq!(document.root[0].entry.len(), 0);
+    let group = &document.root[0];
+    let expected_uuid = Uuid::parse_str("5a1c21b4-b663-4efb-ba79-9dea57a393eb").unwrap();
+    assert_eq!(group.uuid, expected_uuid);
+    assert_eq!(group.name, "Root");
+    assert_eq!(group.notes, "");
+    assert_eq!(group.icon_id, 48);
+    assert_eq!(group.times.last_modification_time, DateTime::parse_from_rfc3339("2019-12-20T01:24:29+00:00").unwrap());
+    assert_eq!(group.times.creation_time, DateTime::parse_from_rfc3339("2019-12-20T01:24:29+00:00").unwrap());
+    assert_eq!(group.times.last_access_time, DateTime::parse_from_rfc3339("2019-12-20T01:24:29+00:00").unwrap());
+    assert_eq!(group.times.expiry_time, DateTime::parse_from_rfc3339("2019-12-20T01:24:29+00:00").unwrap());
+    assert_eq!(group.times.expires, false);
+    assert_eq!(group.times.usage_count, 0);
+    assert_eq!(group.times.location_changed, DateTime::parse_from_rfc3339("2019-12-20T01:24:29+00:00").unwrap());
+    assert_eq!(group.is_expanded, true);
+    //<DefaultAutoTypeSequence/>
+    //<EnableAutoType>null</EnableAutoType>
+    //<EnableSearching>null</EnableSearching>
+    let expected_uuid = Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap();
+    assert_eq!(group.last_top_visible_entry, expected_uuid);
+}

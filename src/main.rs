@@ -530,12 +530,20 @@ fn decode_optional_datetime<R: Read>(reader: &mut EventReader<R>, name: OwnedNam
     decode_optional_string(reader, name, attributes).map(|x| x.map(|y| Local.timestamp(Cursor::new(decode(&y).expect("Valid base64")).read_i64::<LittleEndian>().unwrap() - KDBX4_TIME_OFFSET, 0)))
 }
 
+fn decode_datetime<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<DateTime<Local>, String> {
+    decode_optional_datetime(reader, name, attributes).map(|x| x.expect("missing date"))
+}
+
 //fn decode_i64<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<DateTime<Local>, String> {
     //decode_optional_i64(reader, name, attributes).map(|x| x.unwrap_or(0))
 //}
 
 fn decode_optional_uuid<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<Uuid>, String> {
     decode_optional_string(reader, name, attributes).map(|x| x.map(|y| Uuid::from_slice(&decode(&y).expect("Valid base64")).unwrap()))
+}
+
+fn decode_uuid<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Uuid, String> {
+    decode_optional_uuid(reader, name, attributes).map(|x| x.unwrap_or_else(|| Uuid::default()))
 }
 
 fn decode_item<R: Read>(reader: &mut EventReader<R>, _name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<(String, String), String> {
@@ -628,17 +636,28 @@ struct Meta {
 }
 
 #[derive(Debug)]
+struct Times {
+    last_modification_time: DateTime<Utc>,
+    creation_time: DateTime<Utc>,
+    last_access_time: DateTime<Utc>,
+    expiry_time: DateTime<Utc>,
+    expires: bool,
+    usage_count: i32,
+    location_changed: DateTime<Utc>,
+}
+
+#[derive(Debug)]
 struct Group {
-    _uuid: String,
-    _name: String,
-    _notes: String,
-    _icon_id: u32,
-    //times: Times,
-    _is_expanded: String,
+    uuid: Uuid,
+    name: String,
+    notes: String,
+    icon_id: u32,
+    times: Times,
+    is_expanded: bool,
     //<DefaultAutoTypeSequence/>
-    _enable_auto_type: String,
-    _enable_searching: String,
-    _last_top_visible_entry: String,
+    //_enable_auto_type: String,
+    //_enable_searching: String,
+    last_top_visible_entry: Uuid,
     //custom_data: CustomData,
     group: Vec<Group>,
     entry: Vec<Entry>,
@@ -1002,10 +1021,97 @@ fn decode_entry<R: Read>(reader: &mut EventReader<R>) -> Result<Entry, String> {
     })
 }
 
+fn decode_times<R: Read>(reader: &mut EventReader<R>) -> Result<Times, String> {
+    let mut elements = vec![];
+    elements.push(::xml::name::OwnedName::local("Times"));
+
+    let default_date = DateTime::parse_from_rfc3339("1970-01-01T00:00:00+00:00").unwrap().with_timezone(&Utc);
+    let mut times = Times {
+        creation_time: default_date,
+        last_access_time: default_date,
+        last_modification_time: default_date,
+        location_changed: default_date,
+        expiry_time: default_date,
+        expires: false,
+        usage_count: 0,
+    };
+    while elements.len() > 0 {
+        let event = reader.next().map_err(|_|"")?;
+        println!("Decode times...");
+        match event {
+            XmlEvent::StartDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::EndDocument { .. } => {
+                return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "CreationTime" => {
+                times.creation_time = DateTime::from(decode_datetime(reader, name, attributes)?);
+                println!("CreationTime: {:?}", times.creation_time);
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "LastAccessTime" => {
+                times.last_access_time = DateTime::from(decode_datetime(reader, name, attributes)?);
+                println!("LastAccessTime: {:?}", times.last_access_time);
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "LastModificationTime" => {
+                times.last_modification_time = DateTime::from(decode_datetime(reader, name, attributes)?);
+                println!("LastModificationTime: {:?}", times.last_modification_time);
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "ExpiryTime" => {
+                times.expiry_time = DateTime::from(decode_datetime(reader, name, attributes)?);
+                println!("ExpiryTime: {:?}", times.expiry_time);
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "LocationChanged" => {
+                times.location_changed = DateTime::from(decode_datetime(reader, name, attributes)?);
+                println!("LocationChanged: {:?}", times.location_changed);
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "Expires" => {
+                times.expires = decode_bool(reader, name, attributes)?;
+                println!("Expires: {:?}", times.expires);
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "UsageCount" => {
+                times.usage_count = decode_i64(reader, name, attributes)? as i32;
+                println!("UsageCount: {:?}", times.usage_count);
+            },
+            XmlEvent::StartElement { name, .. } => {
+                elements.push(name);
+            },
+            XmlEvent::EndElement { name, .. } => {
+                let start_tag = elements.pop().expect("Can't consume a bare end element");
+                if start_tag != name {
+                    return Err(format!("Start tag <{}> mismatches end tag </{}>", start_tag, name));
+                }
+            },
+            _ => {
+                // Consume any PI, text, comment, or cdata node
+                //return Ok(());
+            },
+        };
+    }
+
+    Ok(times)
+}
+
 fn decode_group<R: Read>(reader: &mut EventReader<R>) -> Result<Group, String> {
     let mut elements = vec![];
     elements.push(::xml::name::OwnedName::local("Group"));
 
+    let mut uuid = Uuid::default();
+    let mut group_name = "".to_string();
+    let mut notes = "".to_string();
+    let mut icon_id = 0;
+    let default_date = DateTime::parse_from_rfc3339("1970-01-01T00:00:00+00:00").unwrap().with_timezone(&Utc);
+    let mut times = Times {
+        creation_time: default_date,
+        last_access_time: default_date,
+        last_modification_time: default_date,
+        location_changed: default_date,
+        expiry_time: default_date,
+        expires: false,
+        usage_count: 0,
+    };
+    let mut is_expanded = false;
+    let mut last_top_visible_entry = Uuid::default();
     let mut entries = Vec::<Entry>::new();
     let mut groups = Vec::<Group>::new();
     while elements.len() > 0 {
@@ -1017,6 +1123,34 @@ fn decode_group<R: Read>(reader: &mut EventReader<R>) -> Result<Group, String> {
             },
             XmlEvent::EndDocument { .. } => {
                 return Err("Malformed XML document".to_string());
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "UUID" => {
+                uuid = decode_uuid(reader, name, attributes)?;
+                println!("UUID: {:?}", uuid);
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "Name" => {
+                group_name = decode_string(reader, name, attributes)?;
+                println!("Name: {:?}", group_name);
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "Notes" => {
+                notes = decode_string(reader, name, attributes)?;
+                println!("Notes: {:?}", notes);
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "IconID" => {
+                icon_id = decode_i64(reader, name, attributes)?;
+                println!("IconID: {:?}", icon_id);
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "Times" => {
+                times = decode_times(reader/*, name, attributes*/)?;
+                println!("Times: {:?}", times);
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "IsExpanded" => {
+                is_expanded = decode_bool(reader, name, attributes)?;
+                println!("IsExpanded: {:?}", is_expanded);
+            },
+            XmlEvent::StartElement { name, attributes, .. } if name.local_name == "LastTopVisibleEntry" => {
+                last_top_visible_entry = decode_uuid(reader, name, attributes)?;
+                println!("LastTopVisibleEntry: {:?}", last_top_visible_entry);
             },
             XmlEvent::StartElement { name, attributes: _, .. }
               if name.local_name == "Entry" => {
@@ -1045,17 +1179,18 @@ fn decode_group<R: Read>(reader: &mut EventReader<R>) -> Result<Group, String> {
             },
         };
     }
+
     Ok(Group {
-        _uuid: "".to_string(),
-        _name: "".to_string(),
-        _notes: "".to_string(),
-        _icon_id: 0,
-        //times: Times,
-        _is_expanded: "".to_string(),
+        uuid,
+        name: group_name,
+        notes,
+        icon_id: icon_id as u32,
+        times,
+        is_expanded,
         //<DefaultAutoTypeSequence/>
-        _enable_auto_type: "".to_string(),
-        _enable_searching: "".to_string(),
-        _last_top_visible_entry: "".to_string(),
+        //_enable_auto_type: "".to_string(),
+        //_enable_searching: "".to_string(),
+        last_top_visible_entry,
         //custom_data: CustomData,
         group: groups,
         entry: entries,
@@ -1072,7 +1207,6 @@ fn decode_root<R: Read>(reader: &mut EventReader<R>) -> Result<Vec<Group>, Strin
     //elements.push(::xml::name::Name::from("Foo").into());
     //let mut elements = vec![];
     //elements.push(::xml::name::OwnedName::from_str("Foo").unwrap());
-
 
     let mut groups = Vec::<Group>::new();
     while elements.len() > 0 {
