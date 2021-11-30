@@ -526,15 +526,15 @@ fn decode_i64<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes:
 }
 
 const KDBX4_TIME_OFFSET : i64 = 62135596800;
-fn decode_optional_datetime<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<DateTime<Local>>, String> {
-    decode_optional_string(reader, name, attributes).map(|x| x.map(|y| Local.timestamp(Cursor::new(decode(&y).expect("Valid base64")).read_i64::<LittleEndian>().unwrap() - KDBX4_TIME_OFFSET, 0)))
+fn decode_optional_datetime<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<DateTime<Utc>>, String> {
+    decode_optional_string(reader, name, attributes).map(|x| x.map(|y| Utc.timestamp(Cursor::new(decode(&y).expect("Valid base64")).read_i64::<LittleEndian>().unwrap() - KDBX4_TIME_OFFSET, 0)))
 }
 
-fn decode_datetime<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<DateTime<Local>, String> {
+fn decode_datetime<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<DateTime<Utc>, String> {
     decode_optional_datetime(reader, name, attributes).map(|x| x.expect("missing date"))
 }
 
-//fn decode_i64<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<DateTime<Local>, String> {
+//fn decode_i64<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<DateTime<Utc>, String> {
     //decode_optional_i64(reader, name, attributes).map(|x| x.unwrap_or(0))
 //}
 
@@ -610,14 +610,14 @@ struct MemoryProtection {
 struct Meta {
     generator: String,
     database_name: String,
-    database_name_changed: Option<DateTime<Local>>,
+    database_name_changed: Option<DateTime<Utc>>,
     database_description: String,
-    database_description_changed: Option<DateTime<Local>>,
+    database_description_changed: Option<DateTime<Utc>>,
     default_user_name: String,
-    default_user_name_changed: Option<DateTime<Local>>,
+    default_user_name_changed: Option<DateTime<Utc>>,
     maintenance_history_days: u32,
     color: String,
-    master_key_changed: Option<DateTime<Local>>,
+    master_key_changed: Option<DateTime<Utc>>,
     master_key_change_rec: i64,
     master_key_change_force: i64,
     memory_protection: MemoryProtection,
@@ -631,7 +631,7 @@ struct Meta {
     last_top_visible_group: String,
     history_max_items: String,
     history_max_size: String,
-    settings_changed: Option<DateTime<Local>>,
+    settings_changed: Option<DateTime<Utc>>,
     custom_data: HashMap<String, String>,
 }
 
