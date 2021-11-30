@@ -519,14 +519,14 @@ fn test_decode_document_kdbx41() {
     end_document(reader);
     assert_eq!(document.meta.generator, "KeePass");
     assert_eq!(document.meta.database_name, "MyDatabase");
-    // assert_eq!(document.meta.database_name_changed, Some(DateTime::parse_from_rfc3339("2021-07-30T21:33:09+00:00").unwrap().with_timezone(&Utc)));
+    assert_eq!(document.meta.database_name_changed, Some(DateTime::parse_from_rfc3339("2021-07-30T21:33:09+00:00").unwrap().with_timezone(&Utc)));
     assert_eq!(document.meta.database_description, "A KDBX 4.1 Database from KeePass 2.48.1.");
-    // assert_eq!(document.meta.database_description_changed, Some(DateTime::parse_from_rfc3339("2021-07-30T21:33:09+00:00").unwrap().with_timezone(&Utc)));
+    assert_eq!(document.meta.database_description_changed, Some(DateTime::parse_from_rfc3339("2021-07-30T21:33:09+00:00").unwrap().with_timezone(&Utc)));
     assert_eq!(document.meta.default_user_name, "user");
-    // assert_eq!(document.meta.default_user_name_changed, Some(DateTime::parse_from_rfc3339("2021-07-30T21:33:09+00:00").unwrap().with_timezone(&Utc)));
+    assert_eq!(document.meta.default_user_name_changed, Some(DateTime::parse_from_rfc3339("2021-07-30T21:33:09+00:00").unwrap().with_timezone(&Utc)));
     assert_eq!(document.meta.maintenance_history_days, 365);
     //assert_eq!(document.meta.color, Color::rgb(0xFF, 0x00, 0x3F));
-    // assert_eq!(document.meta.master_key_changed, Some(DateTime::parse_from_rfc3339("2021-07-31T00:02:45+00:00").unwrap().with_timezone(&Utc)));
+    assert_eq!(document.meta.master_key_changed, Some(DateTime::parse_from_rfc3339("2021-07-31T00:02:45+00:00").unwrap().with_timezone(&Utc)));
     assert_eq!(document.meta.master_key_change_rec, 182);
     assert_eq!(document.meta.master_key_change_force, 365);
     assert_eq!(document.meta.memory_protection.protect_notes, false);
@@ -534,7 +534,7 @@ fn test_decode_document_kdbx41() {
     assert_eq!(document.meta.memory_protection.protect_title, false);
     assert_eq!(document.meta.memory_protection.protect_url, false);
     assert_eq!(document.meta.memory_protection.protect_user_name, false);
-    // assert_eq!(document.meta.settings_changed, Some(DateTime::parse_from_rfc3339("2021-07-31T00:03:06+00:00").unwrap().with_timezone(&Utc)));
+    assert_eq!(document.meta.settings_changed, Some(DateTime::parse_from_rfc3339("2021-07-31T00:03:06+00:00").unwrap().with_timezone(&Utc)));
     assert_eq!(document.meta.custom_data.len(), 0, "Correct number of custom data fields");
     // <CustomIcons>
     //     <Icon>

@@ -757,12 +757,12 @@ fn decode_meta<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String> {
     let mut database_name = String::new();
     let mut database_name_changed = None;
     let mut database_description = String::new();
-    let database_description_changed = None;
+    let mut database_description_changed = None;
     let mut default_user_name = String::new();
-    let default_user_name_changed = None;
+    let mut default_user_name_changed = None;
     let mut maintenance_history_days = 0;
     let color = String::new();
-    let master_key_changed = None;
+    let mut master_key_changed = None;
     let mut master_key_change_rec = 0;
     let mut master_key_change_force = 0;
     let mut memory_protection = MemoryProtection::default();
@@ -776,7 +776,7 @@ fn decode_meta<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String> {
     let last_top_visible_group = String::new();
     let history_max_items = String::new();
     let history_max_size = String::new();
-    let settings_changed = None;
+    let mut settings_changed = None;
     let mut custom_data = HashMap::new();
     while elements.len() > 0 {
         let event = reader.next().map_err(|_|"")?;
@@ -809,14 +809,29 @@ fn decode_meta<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String> {
                 println!("DatabaseDescription: {:?}", database_description);
             },
             XmlEvent::StartElement { name, attributes, .. }
+              if name.local_name == "DatabaseDescriptionChanged" => {
+                database_description_changed = decode_optional_datetime(reader, name, attributes)?;
+                println!("DatabaseDescriptionChanged: {:?}", database_description_changed);
+            },
+            XmlEvent::StartElement { name, attributes, .. }
               if name.local_name == "DefaultUserName" => {
                 default_user_name = decode_string(reader, name, attributes)?;
                 println!("DefaultUserName: {:?}", default_user_name);
             },
             XmlEvent::StartElement { name, attributes, .. }
+              if name.local_name == "DefaultUserNameChanged" => {
+                default_user_name_changed = decode_optional_datetime(reader, name, attributes)?;
+                println!("DefaultUserNameChanged: {:?}", default_user_name_changed);
+            },
+            XmlEvent::StartElement { name, attributes, .. }
               if name.local_name == "MaintenanceHistoryDays" => {
                 maintenance_history_days = decode_i64(reader, name, attributes)? as u32;
                 println!("MaintenanceHistoryDays: {:?}", maintenance_history_days);
+            },
+            XmlEvent::StartElement { name, attributes, .. }
+              if name.local_name == "MasterKeyChanged" => {
+                master_key_changed = decode_optional_datetime(reader, name, attributes)?;
+                println!("MasterKeyChanged: {:?}", master_key_changed);
             },
             XmlEvent::StartElement { name, attributes, .. }
               if name.local_name == "MasterKeyChangeRec" => {
@@ -842,6 +857,11 @@ fn decode_meta<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String> {
               if name.local_name == "RecycleBinUUID" => {
                 recycle_bin_uuid = decode_optional_uuid(reader, name, attributes)?;
                 println!("RecycleBinUUID: {:?}", recycle_bin_uuid);
+            },
+            XmlEvent::StartElement { name, attributes, .. }
+              if name.local_name == "SettingsChanged" => {
+                settings_changed = decode_optional_datetime(reader, name, attributes)?;
+                println!("SettingsChanged: {:?}", settings_changed);
             },
             XmlEvent::StartElement { name, attributes, .. }
               if name.local_name == "CustomData" => {
