@@ -67,6 +67,8 @@ use xml::attribute::{OwnedAttribute};
 use xml::name::{OwnedName};
 use yaserde::{YaDeserialize, YaSerialize};
 
+use kdbx_derive::KdbxParse;
+
 #[cfg(test)]
 mod tests;
 
@@ -597,7 +599,7 @@ fn decode_custom_data<R: Read>(reader: &mut EventReader<R>, pname: OwnedName, _a
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, KdbxParse)]
 struct MemoryProtection {
     protect_title: bool,
     protect_user_name: bool,
@@ -2455,6 +2457,7 @@ fn main() -> io::Result<()> {
     database.meta.generator = "<Funny>".to_string();
     println!("Parsed: {:?}", database);
     println!("XML: {:?}", yaserde::ser::to_string(&database).unwrap());
+    test();
 
     Ok(())
 }
