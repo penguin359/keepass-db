@@ -20,7 +20,10 @@
                 }
             },
             //"args": ["dummy.kdbx"],
-            "args": ["testdata\\dummy-keepass2.08-gz.kdbx"],
+            //"args": ["testdata\\dummy-keepass2.08-gz.kdbx"],
+            "args": [
+                "testdata/dummy-kdbx41.kdbx"
+            ],
             "env": {
                 "KDBX_PASSWORD": "asdf"
             },
