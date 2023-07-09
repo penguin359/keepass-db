@@ -145,6 +145,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "bit-set"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0700ddab506f33b20a03b13996eccd309a48e5ff77d0d95926aa0210fb4e95f1"
+dependencies = [
+ "bit-vec",
+]
+
+[[package]]
+name = "bit-vec"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "349f9b6a179ed607305526ca489b34ad0a41aed5f7980fa90eb03160b69598fb"
+
+[[package]]
 name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -212,6 +227,17 @@ dependencies = [
  "byteorder",
  "salsa20-core",
  "stream-cipher",
+]
+
+[[package]]
+name = "change-case"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2cb9b85fd173fbe43d17902c970f23e5feda453526f4b28dbb4d2e688dffb92c"
+dependencies = [
+ "fancy-regex",
+ "lazy_static",
+ "regex",
 ]
 
 [[package]]
@@ -342,6 +368,16 @@ dependencies = [
  "quote 1.0.18",
  "syn",
  "synstructure",
+]
+
+[[package]]
+name = "fancy-regex"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae91abf6555234338687bb47913978d275539235fcb77ba9863b779090b42b14"
+dependencies = [
+ "bit-set",
+ "regex",
 ]
 
 [[package]]
@@ -512,6 +548,7 @@ dependencies = [
 name = "kdbx_derive"
 version = "0.1.0"
 dependencies = [
+ "change-case",
  "proc-macro2 1.0.37",
  "quote 1.0.18",
  "syn",

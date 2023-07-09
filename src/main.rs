@@ -681,7 +681,7 @@ struct KeePassFile {
     root: Vec<Group>,
 }
 
-fn decode_memory_protection<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<MemoryProtection, String> {
+fn decode_memory_protection_old<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<MemoryProtection, String> {
     let mut elements = vec![name];
     //elements.push(name);
 
@@ -692,7 +692,7 @@ fn decode_memory_protection<R: Read>(reader: &mut EventReader<R>, name: OwnedNam
     let mut protect_notes = false;
     while elements.len() > 0 {
         let event = reader.next().map_err(|_|"")?;
-        println!("Decode meta...");
+        println!("Decode mem...");
         match event {
             XmlEvent::StartDocument { .. } => {
                 return Err("Malformed XML document".to_string());
