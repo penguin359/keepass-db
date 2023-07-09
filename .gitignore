@@ -1,4 +1,5 @@
 *~
 *.swp
-/target
+target/
 **/*.rs.bk
+/data.xml

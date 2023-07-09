@@ -29,6 +29,7 @@ extern crate yaserde;
 #[macro_use]
 extern crate yaserde_derive;
 
+use std::convert::TryInto;
 use std::io::Cursor;
 use std::env;
 use std::process;
@@ -63,9 +64,12 @@ use argonautica::{Hasher, config::{Variant, Version}};
 use rand::Rng;
 use clap::{Arg, App};
 use xml::reader::{EventReader, ParserConfig, XmlEvent};
+use xml::writer::{EventWriter};
 use xml::attribute::{OwnedAttribute};
 use xml::name::{OwnedName};
 use yaserde::{YaDeserialize, YaSerialize};
+
+use kdbx_derive::{KdbxParse, KdbxSerialize};
 
 #[cfg(test)]
 mod tests;
@@ -505,24 +509,52 @@ fn decode_optional_string<R: Read>(reader: &mut EventReader<R>, name: OwnedName,
     }
 }
 
+fn encode_optional_string<W: Write>(writer: &mut EventWriter<W>, value: Option<&str>) -> Result<(), String> {
+    if let Some(contents) = value {
+        writer.write(xml::writer::XmlEvent::characters(contents)).map_err(|_|"".to_string())
+    } else {
+        Ok(())
+    }
+}
+
 fn decode_string<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<String, String> {
     decode_optional_string(reader, name, attributes).map(|x| x.unwrap_or_else(|| "".into()))
+}
+
+fn encode_string<W: Write>(writer: &mut EventWriter<W>, value: &str) -> Result<(), String> {
+    encode_optional_string(writer, Some(value))
 }
 
 fn decode_optional_bool<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<bool>, String> {
     decode_optional_string(reader, name, attributes).map(|x| x.map(|y| y.eq_ignore_ascii_case("true")))
 }
 
+fn encode_optional_bool<W: Write>(writer: &mut EventWriter<W>, value: Option<bool>) -> Result<(), String> {
+    encode_optional_string(writer, value.map(|x| if x { "true" } else { "false"}))
+}
+
 fn decode_bool<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<bool, String> {
     decode_optional_bool(reader, name, attributes).map(|x| x.unwrap_or(false))
+}
+
+fn encode_bool<W: Write>(writer: &mut EventWriter<W>, value: bool) -> Result<(), String> {
+    encode_optional_bool(writer, Some(value))
 }
 
 fn decode_optional_i64<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<i64>, String> {
     decode_optional_string(reader, name, attributes).map(|x| x.map(|y| y.parse().unwrap_or(0)))
 }
 
+fn encode_optional_i64<W: Write>(writer: &mut EventWriter<W>, value: Option<i64>) -> Result<(), String> {
+    encode_optional_string(writer, value.map(|x| format!("{}", x)).as_deref())
+}
+
 fn decode_i64<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<i64, String> {
     decode_optional_i64(reader, name, attributes).map(|x| x.unwrap_or(0))
+}
+
+fn encode_i64<W: Write>(writer: &mut EventWriter<W>, value: i64) -> Result<(), String> {
+    encode_optional_i64(writer, Some(value))
 }
 
 const KDBX4_TIME_OFFSET : i64 = 62135596800;
@@ -597,11 +629,12 @@ fn decode_custom_data<R: Read>(reader: &mut EventReader<R>, pname: OwnedName, _a
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, KdbxParse, KdbxSerialize)]
 struct MemoryProtection {
     protect_title: bool,
     protect_user_name: bool,
     protect_password: bool,
+    #[kdbx(element="ProtectURL")]
     protect_url: bool,
     protect_notes: bool,
 }
@@ -678,7 +711,7 @@ struct KeePassFile {
     root: Vec<Group>,
 }
 
-fn decode_memory_protection<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<MemoryProtection, String> {
+fn decode_memory_protection_old<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<MemoryProtection, String> {
     let mut elements = vec![name];
     //elements.push(name);
 
@@ -689,7 +722,7 @@ fn decode_memory_protection<R: Read>(reader: &mut EventReader<R>, name: OwnedNam
     let mut protect_notes = false;
     while elements.len() > 0 {
         let event = reader.next().map_err(|_|"")?;
-        println!("Decode meta...");
+        println!("Decode mem...");
         match event {
             XmlEvent::StartDocument { .. } => {
                 return Err("Malformed XML document".to_string());
@@ -2034,6 +2067,7 @@ fn main() -> io::Result<()> {
         debug!("TLV({}, {}): {:?}", tlv_type, tlv_len, tlv_data);
         tlvs.insert(tlv_type, tlv_data);
     };
+    let mut cipher_opt = None;
     let mut xml_file = File::create("data.xml")?;
     //let mut buf = vec![];
     let mut contents = String::new();
@@ -2070,6 +2104,11 @@ fn main() -> io::Result<()> {
                 let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
                 println!("Changed: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
                 println!("P: {:?}, ('{}')", p, p.string());
+                let inner_stream_cipher = &tlvs[&1u8];
+                if inner_stream_cipher.len() != 4 { panic!("Invalid inner cipher"); }
+                let inner_cipher = u32::from_le_bytes(inner_stream_cipher[..].try_into().unwrap());
+                println!("Inner Cipher: {inner_cipher}");
+                assert!(inner_cipher == 3); // ChaCha20
                 let mut p_ciphertext = decode(&p.string()).expect("Valid base64");
                 let p_algo = unmake_u32(&tlvs[&0x01u8]).unwrap();
                 assert_eq!(p_algo, 3);
@@ -2082,11 +2121,14 @@ fn main() -> io::Result<()> {
                 println!("p2_key: {}", p2_key.len());
                 let key = GenericArray::from_slice(&p2_key[0..32]);
                 let nonce = GenericArray::from_slice(&p2_key[32..32+12]);
-                let mut cipher = ChaCha20::new(&key, &nonce);
+                if cipher_opt.is_none() {
+                    cipher_opt = Some(ChaCha20::new(&key, &nonce));
+                }
+                let cipher = cipher_opt.as_mut().unwrap();
                 println!("Password Ciphertext: {:?}", p_ciphertext);
                 cipher.apply_keystream(&mut p_ciphertext);
                 //let data = decrypt(Cipher::chacha20(), &p2_key[0..32], Some(&p2_key[32..32+12]), &p_ciphertext).unwrap();
-                println!("Password: {:?}", String::from_utf8(p_ciphertext).unwrap());
+                println!("Password: {:?}", String::from_utf8(p_ciphertext).unwrap_or("«Failed to decrypt password»".to_owned()));
             }
         },
         _ => { panic!("XML corruption"); },
@@ -2455,6 +2497,7 @@ fn main() -> io::Result<()> {
     database.meta.generator = "<Funny>".to_string();
     println!("Parsed: {:?}", database);
     println!("XML: {:?}", yaserde::ser::to_string(&database).unwrap());
+    test();
 
     Ok(())
 }
