@@ -605,6 +605,7 @@ struct MemoryProtection {
     protect_title: bool,
     protect_user_name: bool,
     protect_password: bool,
+    #[kdbx(element="ProtectURL")]
     protect_url: bool,
     protect_notes: bool,
 }
