@@ -179,3 +179,67 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
         }
     }.into()
 }
+
+#[proc_macro_derive(KdbxSerialize, attributes(kdbx))]
+pub fn derive_serializer(input: TS1) -> TS1 {
+    let ast: syn::DeriveInput = syn::parse(input).expect("bad parsing");
+    let outer_type = &ast.ident;
+    let attrs = &ast.attrs;
+    let data = &ast.data;
+
+    let _ = KdbxAttributes::parse(attrs);
+
+    let impl_block = match *data {
+        syn::Data::Struct(ref data_struct) => {
+            let v = data_struct.fields.iter().map(|field| {
+                let field = field.clone();
+                let name = field.ident.unwrap();
+                let attrs = KdbxAttributes::parse(&field.attrs);
+                let big_name = attrs.element_name.clone().unwrap_or_else(|| pascal_case(&name.to_string()));
+                match field.ty {
+                syn::Type::Path(ref p) => {
+                    let r#type = p.path.segments.last().unwrap().ident.clone();
+                    match r#type {
+                        _ => { KdbxField {
+                            name,
+                            r#type,
+                            element_name: big_name,
+                        }},
+                    }
+                }
+                _ => {
+                    unimplemented!("Odd type: {:?}", field.ty);
+                },
+            }}).collect::<Vec<KdbxField>>();
+            v
+        },
+        _ => {
+            unimplemented!();
+        }
+    };
+    let elements: TokenStream = impl_block.iter().map(|r| {
+        let name = &r.name;
+        let my_type = &r.r#type;
+        let my_func = Ident::new(&format!("encode_{}", my_type), outer_type.span());
+        // let big_name = pascal_case(&name.to_string());
+        let big_name = &r.element_name;
+        eprintln!("Matching names: {big_name}");
+        let big_name_debug = format!("{big_name}: {{:?}}");
+        quote! {
+            writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
+            #my_func(writer, value.#name)?;
+            writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
+        }
+    }).collect();
+    let big_outer_type = pascal_case(&outer_type.to_string());
+    let func_name = Ident::new(&format!("encode_{}", snake_case(&outer_type.to_string())), outer_type.span());
+    let debug_string = format!("Encode {}...", outer_type.to_string());
+    let names = impl_block.iter().map(|r| &r.name);
+    quote! {
+        fn #func_name<W: Write>(writer: &mut EventWriter<W>, value: #outer_type) -> Result<(), String> {
+            println!(#debug_string);
+            #elements
+            Ok(())
+        }
+    }.into()
+}

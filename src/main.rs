@@ -64,11 +64,12 @@ use argonautica::{Hasher, config::{Variant, Version}};
 use rand::Rng;
 use clap::{Arg, App};
 use xml::reader::{EventReader, ParserConfig, XmlEvent};
+use xml::writer::{EventWriter};
 use xml::attribute::{OwnedAttribute};
 use xml::name::{OwnedName};
 use yaserde::{YaDeserialize, YaSerialize};
 
-use kdbx_derive::KdbxParse;
+use kdbx_derive::{KdbxParse, KdbxSerialize};
 
 #[cfg(test)]
 mod tests;
@@ -508,24 +509,52 @@ fn decode_optional_string<R: Read>(reader: &mut EventReader<R>, name: OwnedName,
     }
 }
 
+fn encode_optional_string<W: Write>(writer: &mut EventWriter<W>, value: Option<&str>) -> Result<(), String> {
+    if let Some(contents) = value {
+        writer.write(xml::writer::XmlEvent::characters(contents)).map_err(|_|"".to_string())
+    } else {
+        Ok(())
+    }
+}
+
 fn decode_string<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<String, String> {
     decode_optional_string(reader, name, attributes).map(|x| x.unwrap_or_else(|| "".into()))
+}
+
+fn encode_string<W: Write>(writer: &mut EventWriter<W>, value: &str) -> Result<(), String> {
+    encode_optional_string(writer, Some(value))
 }
 
 fn decode_optional_bool<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<bool>, String> {
     decode_optional_string(reader, name, attributes).map(|x| x.map(|y| y.eq_ignore_ascii_case("true")))
 }
 
+fn encode_optional_bool<W: Write>(writer: &mut EventWriter<W>, value: Option<bool>) -> Result<(), String> {
+    encode_optional_string(writer, value.map(|x| if x { "true" } else { "false"}))
+}
+
 fn decode_bool<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<bool, String> {
     decode_optional_bool(reader, name, attributes).map(|x| x.unwrap_or(false))
+}
+
+fn encode_bool<W: Write>(writer: &mut EventWriter<W>, value: bool) -> Result<(), String> {
+    encode_optional_bool(writer, Some(value))
 }
 
 fn decode_optional_i64<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<i64>, String> {
     decode_optional_string(reader, name, attributes).map(|x| x.map(|y| y.parse().unwrap_or(0)))
 }
 
+fn encode_optional_i64<W: Write>(writer: &mut EventWriter<W>, value: Option<i64>) -> Result<(), String> {
+    encode_optional_string(writer, value.map(|x| format!("{}", x)).as_deref())
+}
+
 fn decode_i64<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<i64, String> {
     decode_optional_i64(reader, name, attributes).map(|x| x.unwrap_or(0))
+}
+
+fn encode_i64<W: Write>(writer: &mut EventWriter<W>, value: i64) -> Result<(), String> {
+    encode_optional_i64(writer, Some(value))
 }
 
 const KDBX4_TIME_OFFSET : i64 = 62135596800;
@@ -600,7 +629,7 @@ fn decode_custom_data<R: Read>(reader: &mut EventReader<R>, pname: OwnedName, _a
     }
 }
 
-#[derive(Debug, Default, KdbxParse)]
+#[derive(Debug, Default, KdbxParse, KdbxSerialize)]
 struct MemoryProtection {
     protect_title: bool,
     protect_user_name: bool,
