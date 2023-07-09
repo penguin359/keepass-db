@@ -354,6 +354,40 @@ fn test_decode_memory_protection_all() {
 }
 
 #[test]
+fn test_encode_memory_protection_all() {
+    let mut buffer = vec![];
+    let mut writer = xml::writer::EventWriter::new(buffer);
+    writer.write(xml::writer::XmlEvent::start_element("MemoryProtection")).expect("Success!");
+    encode_memory_protection(&mut writer, MemoryProtection {
+        protect_notes: true,
+        protect_password: true,
+        protect_title: true,
+        protect_url: true,
+        protect_user_name: true,
+    }).expect("No error");
+    writer.write(xml::writer::XmlEvent::end_element()).expect("Success!");
+    let buffer = writer.into_inner();
+    let mut reader = ParserConfig::new()
+        .create_reader(Cursor::new(buffer));
+    match reader.next().unwrap() {
+        XmlEvent::StartDocument { .. } => {},
+        _ => { panic!("Missing document start"); },
+    };
+    let root = "MemoryProtection";
+    match reader.next().unwrap() {
+        XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, root); },
+        _ => { panic!("Missing root element start"); },
+    }
+    let mp = decode_memory_protection(&mut reader, OwnedName::local("MemoryProtection"), vec![]).expect("No error");
+    //end_document(reader);
+    assert_eq!(mp.protect_notes, true);
+    assert_eq!(mp.protect_password, true);
+    assert_eq!(mp.protect_title, true);
+    assert_eq!(mp.protect_url, true);
+    assert_eq!(mp.protect_user_name, true);
+}
+
+#[test]
 fn test_decode_item_empty() {
     let mut reader = start_document("<Item/>", "Item");
     let item = decode_item(&mut reader, OwnedName::local("Item"), vec![]).expect("No error");
