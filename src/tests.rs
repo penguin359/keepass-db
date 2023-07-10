@@ -305,8 +305,8 @@ fn test_decoding_optional_full_string() {
 #[test]
 fn test_decode_memory_protection_empty() {
     let mut reader = start_document("<MemoryProtection/>", "MemoryProtection");
-    //assert_eq!(decode_memory_protection(&mut reader).expect("No error"), Some(String::from("  This is  Test  of it 4   ")));
-    let mp = decode_memory_protection(&mut reader, OwnedName::local("MemoryProtection"), vec![]).expect("No error");
+    //assert_eq!(MemoryProtection::parse(&mut reader).expect("No error"), Some(String::from("  This is  Test  of it 4   ")));
+    let mp = MemoryProtection::parse(&mut reader, OwnedName::local("MemoryProtection"), vec![]).expect("No error");
     end_document(reader);
     assert_eq!(mp.protect_notes, false);
     assert_eq!(mp.protect_password, false);
@@ -325,7 +325,7 @@ fn test_decode_memory_protection_some() {
     <ProtectNotes>False</ProtectNotes>
 </MemoryProtection>
 "#, "MemoryProtection");
-    let mp = decode_memory_protection(&mut reader, OwnedName::local("MemoryProtection"), vec![]).expect("No error");
+    let mp = MemoryProtection::parse(&mut reader, OwnedName::local("MemoryProtection"), vec![]).expect("No error");
     end_document(reader);
     assert_eq!(mp.protect_notes, false);
     assert_eq!(mp.protect_password, true);
@@ -344,7 +344,7 @@ fn test_decode_memory_protection_all() {
     <ProtectNotes>True</ProtectNotes>
 </MemoryProtection>
 "#, "MemoryProtection");
-    let mp = decode_memory_protection(&mut reader, OwnedName::local("MemoryProtection"), vec![]).expect("No error");
+    let mp = MemoryProtection::parse(&mut reader, OwnedName::local("MemoryProtection"), vec![]).expect("No error");
     end_document(reader);
     assert_eq!(mp.protect_notes, true);
     assert_eq!(mp.protect_password, true);
@@ -378,7 +378,7 @@ fn test_encode_memory_protection_all() {
         XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, root); },
         _ => { panic!("Missing root element start"); },
     }
-    let mp = decode_memory_protection(&mut reader, OwnedName::local("MemoryProtection"), vec![]).expect("No error");
+    let mp = MemoryProtection::parse(&mut reader, OwnedName::local("MemoryProtection"), vec![]).expect("No error");
     //end_document(reader);
     assert_eq!(mp.protect_notes, true);
     assert_eq!(mp.protect_password, true);
