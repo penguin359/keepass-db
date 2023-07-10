@@ -77,16 +77,8 @@ impl KdbxAttributes {
     }
 }
 
-#[proc_macro_derive(KdbxParse, attributes(kdbx))]
-pub fn derive_deserializer(input: TS1) -> TS1 {
-    let ast: syn::DeriveInput = syn::parse(input).expect("bad parsing");
-    let outer_type = &ast.ident;
-    let attrs = &ast.attrs;
-    let data = &ast.data;
-
-    let _ = KdbxAttributes::parse(attrs);
-
-    let impl_block = match *data {
+fn decode_struct(ast: &syn::DeriveInput) -> Vec<KdbxField> {
+    match ast.data {
         syn::Data::Struct(ref data_struct) => {
             let v = data_struct.fields.iter().map(|field| {
                 let field = field.clone();
@@ -137,7 +129,18 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
         _ => {
             unimplemented!();
         }
-    };
+    }
+}
+
+#[proc_macro_derive(KdbxParse, attributes(kdbx))]
+pub fn derive_deserializer(input: TS1) -> TS1 {
+    let ast: syn::DeriveInput = syn::parse(input).expect("bad parsing");
+    let outer_type = &ast.ident;
+    let attrs = &ast.attrs;
+
+    let _ = KdbxAttributes::parse(attrs);
+
+    let impl_block = decode_struct(&ast);
     let variables: TokenStream = impl_block.iter().map(|r| {
         eprintln!("Field: {r:?}");
         let name = &r.name;
@@ -159,6 +162,7 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
             if r.flatten {
                 quote! {
                     XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
+                        //#mangled_name.push(<#my_type as KdbxParse>::parse(reader, name, attributes)?);
                         #mangled_name.push(#my_type::parse(reader, name, attributes)?);
                         println!(#big_name_debug, #mangled_name);
                     }
@@ -172,6 +176,7 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
                             let event = reader.next().map_err(|_|"")?;
                             match event {
                                 XmlEvent::StartElement { name, attributes, .. } if name.local_name == #match_name => {
+                                    //#mangled_name.push(<#my_type as KdbxParse>::parse(reader, name, attributes)?);
                                     #mangled_name.push(#my_type::parse(reader, name, attributes)?);
                                 },
                                 XmlEvent::StartElement { name, .. } => {
@@ -196,6 +201,7 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
         } else {
             quote! {
                 XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
+                    //#mangled_name = <#my_type as KdbxParse>::parse(reader, name, attributes)?;
                     #mangled_name = #my_type::parse(reader, name, attributes)?;
                     println!(#big_name_debug, #mangled_name);
                 }
@@ -250,7 +256,7 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
             }
         }
     };
-    eprintln!("Macros: {}", results);
+    eprintln!("Parse macros: {}", results);
     results.into()
 }
 
@@ -263,48 +269,19 @@ pub fn derive_serializer(input: TS1) -> TS1 {
 
     let _ = KdbxAttributes::parse(attrs);
 
-    let impl_block = match *data {
-        syn::Data::Struct(ref data_struct) => {
-            let v = data_struct.fields.iter().map(|field| {
-                let field = field.clone();
-                let name = field.ident.unwrap();
-                let attrs = KdbxAttributes::parse(&field.attrs);
-                let big_name = attrs.element_name.clone().unwrap_or_else(|| pascal_case(&name.to_string()));
-                match field.ty {
-                syn::Type::Path(ref p) => {
-                    let r#type = p.path.segments.last().unwrap().ident.clone();
-                    match r#type {
-                        _ => { KdbxField {
-                            name,
-                            r#type,
-                            element_name: big_name,
-                            full_type: field.ty.clone(),
-                            array: false,
-                            flatten: false,
-                        }},
-                    }
-                }
-                _ => {
-                    unimplemented!("Odd type: {:?}", field.ty);
-                },
-            }}).collect::<Vec<KdbxField>>();
-            v
-        },
-        _ => {
-            unimplemented!();
-        }
-    };
+    let impl_block = decode_struct(&ast);
     let elements: TokenStream = impl_block.iter().map(|r| {
         let name = &r.name;
         let my_type = &r.r#type;
-        let my_func = Ident::new(&format!("encode_{}", my_type), outer_type.span());
+        //let my_func = Ident::new(&format!("encode_{}", my_type), outer_type.span());
         // let big_name = pascal_case(&name.to_string());
         let big_name = &r.element_name;
         eprintln!("Matching names: {big_name}");
         let big_name_debug = format!("{big_name}: {{:?}}");
         quote! {
             writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
-            #my_func(writer, value.#name)?;
+            //<#my_type as KdbxSerialize>::serialize(writer, value.#name)?;
+            #my_type::serialize2(writer, value.#name)?;
             writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
         }
     }).collect();
@@ -312,11 +289,15 @@ pub fn derive_serializer(input: TS1) -> TS1 {
     let func_name = Ident::new(&format!("encode_{}", snake_case(&outer_type.to_string())), outer_type.span());
     let debug_string = format!("Encode {}...", outer_type.to_string());
     let names = impl_block.iter().map(|r| &r.name);
-    quote! {
-        fn #func_name<W: Write>(writer: &mut EventWriter<W>, value: #outer_type) -> Result<(), String> {
-            println!(#debug_string);
-            #elements
-            Ok(())
+    let results = quote! {
+        impl KdbxSerialize for #outer_type {
+            fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: #outer_type) -> Result<(), String> {
+                println!(#debug_string);
+                #elements
+                Ok(())
+            }
         }
-    }.into()
+    };
+    eprintln!("Serialize macros: {}", results);
+    results.into()
 }

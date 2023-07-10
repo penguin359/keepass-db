@@ -358,7 +358,7 @@ fn test_encode_memory_protection_all() {
     let mut buffer = vec![];
     let mut writer = xml::writer::EventWriter::new(buffer);
     writer.write(xml::writer::XmlEvent::start_element("MemoryProtection")).expect("Success!");
-    encode_memory_protection(&mut writer, MemoryProtection {
+    MemoryProtection::serialize2(&mut writer, MemoryProtection {
         protect_notes: true,
         protect_password: true,
         protect_title: true,

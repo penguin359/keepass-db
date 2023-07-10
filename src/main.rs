@@ -91,6 +91,9 @@ trait KdbxParse: Sized + Default {
 //    where T: KdbxParse + Default {
 //    fn default() -> Self {
 
+trait KdbxSerialize: Sized {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String>;
+}
 
 #[cfg(test)]
 mod tests;
@@ -548,6 +551,12 @@ impl KdbxParse for String {
     }
 }
 
+impl KdbxSerialize for String {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
+        encode_string(writer, &value)
+    }
+}
+
 fn encode_string<W: Write>(writer: &mut EventWriter<W>, value: &str) -> Result<(), String> {
     encode_optional_string(writer, Some(value))
 }
@@ -572,6 +581,12 @@ impl KdbxParse for bool {
 
 fn encode_bool<W: Write>(writer: &mut EventWriter<W>, value: bool) -> Result<(), String> {
     encode_optional_bool(writer, Some(value))
+}
+
+impl KdbxSerialize for bool {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
+        encode_bool(writer, value)
+    }
 }
 
 fn decode_optional_i64<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<i64>, String> {
@@ -602,9 +617,21 @@ impl KdbxParse for i32 {
     }
 }
 
+impl KdbxSerialize for i32 {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
+        encode_i64(writer, value as i64)
+    }
+}
+
 impl KdbxParse for u32 {
     fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Self, String> {
         Ok(decode_i64(reader, name, attributes)? as u32)
+    }
+}
+
+impl KdbxSerialize for u32 {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
+        encode_i64(writer, value as i64)
     }
 }
 
@@ -619,6 +646,12 @@ impl KdbxParse for Option<DateTime<Utc>> {
     }
 }
 
+//impl KdbxSerialize for Option<DateTime<Utc>> {
+//    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
+//        encode_optional_datetime(writer, value)
+//    }
+//}
+
 fn decode_datetime<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<DateTime<Utc>, String> {
     decode_optional_datetime(reader, name, attributes).map(|x| x.expect("missing date"))
 }
@@ -632,6 +665,13 @@ fn decode_datetime<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attrib
 impl KdbxParse for DateTime<Utc> {
     fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Self, String> {
         decode_datetime(reader, name, attributes)
+    }
+}
+
+impl KdbxSerialize for DateTime<Utc> {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
+        //encode_datetime(writer, value)
+        Ok(())
     }
 }
 
@@ -755,7 +795,8 @@ impl KdbxParse for HashMap<String, String> {
     }
 }
 
-#[derive(Debug, Default, KdbxParse)]
+#[derive(Debug, Default, KdbxParse, KdbxSerialize)]
+//#[derive(Debug, Default, KdbxParse)]
 struct Times {
     last_modification_time: DateTime<Utc>,
     creation_time: DateTime<Utc>,
