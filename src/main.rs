@@ -755,7 +755,9 @@ struct Group {
     //_enable_searching: String,
     last_top_visible_entry: Uuid,
     //custom_data: CustomData,
+    #[kdbx(flatten)]
     group: Vec<Group>,
+    #[kdbx(flatten)]
     entry: Vec<Entry>,
 }
 

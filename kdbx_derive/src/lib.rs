@@ -25,10 +25,12 @@ struct KdbxField {
     element_name: String,
     full_type: Type,
     array: bool,
+    flatten: bool,
 }
 
 struct KdbxAttributes {
-    element_name: Option<String>
+    element_name: Option<String>,
+    flatten: bool,
 }
 
 fn get_value(tokens: &mut IntoIter) -> Option<String> {
@@ -46,6 +48,7 @@ fn get_value(tokens: &mut IntoIter) -> Option<String> {
 impl KdbxAttributes {
     fn parse(attrs: &[Attribute]) -> Self {
         let mut element_name = None;
+        let mut flatten = false;
         for attr in attrs.iter().filter(|a| a.path.is_ident("kdbx")) {
             let mut attr_token = attr.tokens.clone().into_iter();
             if let Some(TokenTree::Group(value)) = attr_token.next() {
@@ -57,6 +60,9 @@ impl KdbxAttributes {
                                 "element" => {
                                     element_name = get_value(&mut attr_token);
                                 },
+                                "flatten" => {
+                                    flatten = true;
+                                }
                                 _ => {},
                             }
                         }
@@ -66,6 +72,7 @@ impl KdbxAttributes {
         }
         KdbxAttributes {
             element_name,
+            flatten,
         }
     }
 }
@@ -86,6 +93,7 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
                 let name = field.ident.unwrap();
                 let attrs = KdbxAttributes::parse(&field.attrs);
                 let big_name = attrs.element_name.clone().unwrap_or_else(|| pascal_case(&name.to_string()));
+                let flatten = attrs.flatten;
                 match field.ty {
                 syn::Type::Path(ref p) => {
                     let r#type = p.path.segments.last().unwrap().ident.clone();
@@ -99,6 +107,7 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
                                         element_name: big_name,
                                         full_type: field.ty.clone(),
                                         array: true,
+                                        flatten,
                                     }
                                 } else {
                                     unimplemented!()
@@ -113,6 +122,7 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
                             element_name: big_name,
                             full_type: field.ty.clone(),
                             array: false,
+                            flatten,
                         }},
                     }
                 }
@@ -144,10 +154,33 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
         eprintln!("Matching names: {big_name}");
         let big_name_debug = format!("{big_name}: {{:?}}");
         if r.array {
-            quote! {
-                XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
-                    #mangled_name.push(#my_type::parse(reader, name, attributes)?);
-                    println!(#big_name_debug, #mangled_name);
+            if r.flatten {
+                quote! {
+                    XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
+                        #mangled_name.push(#my_type::parse(reader, name, attributes)?);
+                        println!(#big_name_debug, #mangled_name);
+                    }
+                }
+            } else {
+                quote! {
+                    XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
+                        while true {
+                            let event = reader.next().map_err(|_|"")?;
+                            match event {
+                                XmlEvent::StartElement { name, attributes, .. } => {
+                                    #mangled_name.push(#my_type::parse(reader, name, attributes)?);
+                                },
+                                XmlEvent::EndElement { name, .. } => {
+                                    break;
+                                },
+                                _ => {
+                                    // Consume any PI, text, comment, or cdata node
+                                    //return Ok(());
+                                },
+                            }
+                        }
+                        println!(#big_name_debug, #mangled_name);
+                    }
                 }
             }
         } else {
@@ -237,6 +270,7 @@ pub fn derive_serializer(input: TS1) -> TS1 {
                             element_name: big_name,
                             full_type: field.ty.clone(),
                             array: false,
+                            flatten: false,
                         }},
                     }
                 }
