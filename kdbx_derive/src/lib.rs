@@ -8,7 +8,7 @@ use proc_macro2::{token_stream::IntoIter, Ident, TokenStream, TokenTree, Delimit
 use quote::quote;
 
 use change_case::{pascal_case, snake_case};
-use syn::Attribute;
+use syn::{Attribute, Type};
 
 #[cfg(test)]
 mod tests {
@@ -23,6 +23,7 @@ struct KdbxField {
     name: Ident,
     r#type: Ident,
     element_name: String,
+    full_type: Type,
 }
 
 struct KdbxAttributes {
@@ -97,6 +98,7 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
                             name,
                             r#type,
                             element_name: big_name,
+                            full_type: field.ty.clone(),
                         }},
                     }
                 }
@@ -115,19 +117,19 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
     let variables: TokenStream = impl_block.iter().map(|r| {
         let name = &r.name;
         let my_type = &r.r#type;
-        quote! { let mut #name: #my_type = #my_type::default(); }
+        let full_type = &r.full_type;
+        quote! { let mut #name = <#full_type as ::std::default::Default>::default(); }
     }).collect();
     let elements: TokenStream = impl_block.iter().map(|r| {
         let name = &r.name;
         let my_type = &r.r#type;
-        let my_func = Ident::new(&format!("decode_{}", my_type), outer_type.span());
         // let big_name = pascal_case(&name.to_string());
         let big_name = &r.element_name;
         eprintln!("Matching names: {big_name}");
         let big_name_debug = format!("{big_name}: {{:?}}");
         quote! {
             XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
-                #name = #my_func(reader, name, attributes)?;
+                #name = #my_type::parse(reader, name, attributes)?;
                 println!(#big_name_debug, #name);
             }
         }
@@ -137,7 +139,8 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
     let debug_string = format!("Decode {}...", outer_type.to_string());
     let names = impl_block.iter().map(|r| &r.name);
     quote! {
-        fn #func_name<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<#outer_type, String> {
+        impl KdbxParse for #outer_type {
+        fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<#outer_type, String> {
             let mut elements = vec![name];
             //elements.push(name);
 
@@ -173,9 +176,6 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
                 #(#names),*
             })
         }
-
-        fn test() {
-            println!("Hello, derive: {:?}", "boom");
         }
     }.into()
 }
@@ -204,6 +204,7 @@ pub fn derive_serializer(input: TS1) -> TS1 {
                             name,
                             r#type,
                             element_name: big_name,
+                            full_type: field.ty.clone(),
                         }},
                     }
                 }

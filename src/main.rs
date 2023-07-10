@@ -71,6 +71,27 @@ use yaserde::{YaDeserialize, YaSerialize};
 
 use kdbx_derive::{KdbxParse, KdbxSerialize};
 
+//trait KdbxDefault: Default {
+//    fn provide_default() -> Self
+//        {
+//        <Self as Default>::default()
+//    }
+//}
+
+trait KdbxParse: Sized + Default {
+//    fn provide_default() -> Self
+//        where Self: Default {
+//        <Self as Default>::default()
+//    }
+
+    fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Self, String>;
+}
+
+//impl<T: KdbxParse> KdbxParse
+//    where T: KdbxParse + Default {
+//    fn default() -> Self {
+
+
 #[cfg(test)]
 mod tests;
 
@@ -537,6 +558,12 @@ fn decode_bool<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes
     decode_optional_bool(reader, name, attributes).map(|x| x.unwrap_or(false))
 }
 
+impl KdbxParse for bool {
+    fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Self, String> {
+        decode_bool(reader, name, attributes)
+    }
+}
+
 fn encode_bool<W: Write>(writer: &mut EventWriter<W>, value: bool) -> Result<(), String> {
     encode_optional_bool(writer, Some(value))
 }
@@ -557,6 +584,12 @@ fn encode_i64<W: Write>(writer: &mut EventWriter<W>, value: i64) -> Result<(), S
     encode_optional_i64(writer, Some(value))
 }
 
+impl KdbxParse for i32 {
+    fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Self, String> {
+        Ok(decode_i64(reader, name, attributes)? as i32)
+    }
+}
+
 const KDBX4_TIME_OFFSET : i64 = 62135596800;
 fn decode_optional_datetime<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<DateTime<Utc>>, String> {
     decode_optional_string(reader, name, attributes).map(|x| x.map(|y| Utc.timestamp(Cursor::new(decode(&y).expect("Valid base64")).read_i64::<LittleEndian>().unwrap() - KDBX4_TIME_OFFSET, 0)))
@@ -564,6 +597,18 @@ fn decode_optional_datetime<R: Read>(reader: &mut EventReader<R>, name: OwnedNam
 
 fn decode_datetime<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<DateTime<Utc>, String> {
     decode_optional_datetime(reader, name, attributes).map(|x| x.expect("missing date"))
+}
+
+//impl KdbxDefault for DateTime<Utc> {
+//    fn provide_default() -> Self {
+//        Utc::now()
+//    }
+//}
+
+impl KdbxParse for DateTime<Utc> {
+    fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Self, String> {
+        decode_datetime(reader, name, attributes)
+    }
 }
 
 //fn decode_i64<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<DateTime<Utc>, String> {
@@ -668,7 +713,7 @@ struct Meta {
     custom_data: HashMap<String, String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, KdbxParse)]
 struct Times {
     last_modification_time: DateTime<Utc>,
     creation_time: DateTime<Utc>,
@@ -679,7 +724,7 @@ struct Times {
     location_changed: DateTime<Utc>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct Group {
     uuid: Uuid,
     name: String,
@@ -878,7 +923,7 @@ fn decode_meta<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String> {
             },
             XmlEvent::StartElement { name, attributes, .. }
               if name.local_name == "MemoryProtection" => {
-                memory_protection = decode_memory_protection(reader, name, attributes)?;
+                memory_protection = MemoryProtection::parse(reader, name, attributes)?;
                 println!("MemoryProtection: {:?}", memory_protection);
             },
             XmlEvent::StartElement { name, attributes, .. }
@@ -1194,7 +1239,7 @@ fn decode_group<R: Read>(reader: &mut EventReader<R>) -> Result<Group, String> {
                 println!("IconID: {:?}", icon_id);
             },
             XmlEvent::StartElement { name, attributes, .. } if name.local_name == "Times" => {
-                times = decode_times(reader/*, name, attributes*/)?;
+                times = Times::parse(reader, name, attributes)?;
                 println!("Times: {:?}", times);
             },
             XmlEvent::StartElement { name, attributes, .. } if name.local_name == "IsExpanded" => {
@@ -2497,7 +2542,7 @@ fn main() -> io::Result<()> {
     database.meta.generator = "<Funny>".to_string();
     println!("Parsed: {:?}", database);
     println!("XML: {:?}", yaserde::ser::to_string(&database).unwrap());
-    test();
+    println!("Done!");
 
     Ok(())
 }

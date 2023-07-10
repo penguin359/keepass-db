@@ -11,6 +11,7 @@ change-case = "0.2.0"
 proc-macro2 = "1.0.37"
 quote = "1.0.18"
 syn = "1.0.91"
+xml-rs = "0.8.15"
 
 [lib]
 proc-macro = true
