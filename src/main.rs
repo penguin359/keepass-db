@@ -43,7 +43,8 @@ use std::collections::HashMap;
 //use hex::ToHex;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use base64::{decode, encode};
-use uuid::{Builder, Uuid};
+use uuid::{Uuid};
+//use borsh::de::BorshDeserialize;  // try_from_slice()
 use ring::digest::{Context, SHA256, SHA512};
 use ring::hmac;
 use rpassword::read_password;
@@ -551,14 +552,14 @@ impl KdbxParse for String {
     }
 }
 
+fn encode_string<W: Write>(writer: &mut EventWriter<W>, value: &str) -> Result<(), String> {
+    encode_optional_string(writer, Some(value))
+}
+
 impl KdbxSerialize for String {
     fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
         encode_string(writer, &value)
     }
-}
-
-fn encode_string<W: Write>(writer: &mut EventWriter<W>, value: &str) -> Result<(), String> {
-    encode_optional_string(writer, Some(value))
 }
 
 fn decode_optional_bool<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<bool>, String> {
@@ -601,13 +602,19 @@ fn decode_i64<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes:
     decode_optional_i64(reader, name, attributes).map(|x| x.unwrap_or(0))
 }
 
+impl KdbxParse for i64 {
+    fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Self, String> {
+        decode_i64(reader, name, attributes)
+    }
+}
+
 fn encode_i64<W: Write>(writer: &mut EventWriter<W>, value: i64) -> Result<(), String> {
     encode_optional_i64(writer, Some(value))
 }
 
-impl KdbxParse for i64 {
-    fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Self, String> {
-        decode_i64(reader, name, attributes)
+impl KdbxSerialize for i64 {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
+        encode_i64(writer, value)
     }
 }
 
@@ -646,11 +653,15 @@ impl KdbxParse for Option<DateTime<Utc>> {
     }
 }
 
-//impl KdbxSerialize for Option<DateTime<Utc>> {
-//    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
-//        encode_optional_datetime(writer, value)
-//    }
-//}
+fn encode_optional_datetime<W: Write>(writer: &mut EventWriter<W>, value: Option<DateTime<Utc>>) -> Result<(), String> {
+    encode_optional_string(writer, value.map(|x| encode(&(x.timestamp() + KDBX4_TIME_OFFSET).to_le_bytes())).as_deref())
+}
+
+impl KdbxSerialize for Option<DateTime<Utc>> {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
+        encode_optional_datetime(writer, value)
+    }
+}
 
 fn decode_datetime<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<DateTime<Utc>, String> {
     decode_optional_datetime(reader, name, attributes).map(|x| x.expect("missing date"))
@@ -668,10 +679,13 @@ impl KdbxParse for DateTime<Utc> {
     }
 }
 
+fn encode_datetime<W: Write>(writer: &mut EventWriter<W>, value: DateTime<Utc>) -> Result<(), String> {
+    encode_optional_datetime(writer, Some(value))
+}
+
 impl KdbxSerialize for DateTime<Utc> {
     fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
-        //encode_datetime(writer, value)
-        Ok(())
+        encode_datetime(writer, value)
     }
 }
 
@@ -683,9 +697,19 @@ fn decode_optional_uuid<R: Read>(reader: &mut EventReader<R>, name: OwnedName, a
     decode_optional_string(reader, name, attributes).map(|x| x.map(|y| Uuid::from_slice(&decode(&y).expect("Valid base64")).unwrap()))
 }
 
+fn encode_optional_uuid<W: Write>(writer: &mut EventWriter<W>, value: Option<Uuid>) -> Result<(), String> {
+    encode_optional_string(writer, value.map(|x| encode(x.as_ref())).as_deref())
+}
+
 impl KdbxParse for Option<Uuid> {
     fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Self, String> {
         decode_optional_uuid(reader, name, attributes)
+    }
+}
+
+impl KdbxSerialize for Option<Uuid> {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
+        encode_optional_uuid(writer, value)
     }
 }
 
@@ -693,9 +717,19 @@ fn decode_uuid<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes
     decode_optional_uuid(reader, name, attributes).map(|x| x.unwrap_or_else(|| Uuid::default()))
 }
 
+fn encode_uuid<W: Write>(writer: &mut EventWriter<W>, value: Uuid) -> Result<(), String> {
+    encode_optional_uuid(writer, Some(value))
+}
+
 impl KdbxParse for Uuid {
     fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Self, String> {
         decode_uuid(reader, name, attributes)
+    }
+}
+
+impl KdbxSerialize for Uuid {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
+        encode_uuid(writer, value)
     }
 }
 
@@ -724,6 +758,18 @@ fn decode_item<R: Read>(reader: &mut EventReader<R>, _name: OwnedName, _attribut
     }
 }
 
+fn encode_item<W: Write>(writer: &mut EventWriter<W>, value: (&str, &str))-> Result<(), String> {
+    writer.write(xml::writer::XmlEvent::start_element("Item")).map_err(|_|"")?;
+    writer.write(xml::writer::XmlEvent::start_element("Key")).map_err(|_|"")?;
+    encode_string(writer, value.0);
+    writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
+    writer.write(xml::writer::XmlEvent::start_element("Value")).map_err(|_|"")?;
+    encode_string(writer, value.1);
+    writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
+    writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
+    Ok(())
+}
+
 fn decode_custom_data<R: Read>(reader: &mut EventReader<R>, pname: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<HashMap<String, String>, String> {
     //let mut elements = vec![];
     //elements.push(name);
@@ -750,6 +796,13 @@ fn decode_custom_data<R: Read>(reader: &mut EventReader<R>, pname: OwnedName, _a
     }
 }
 
+fn encode_custom_data<W: Write>(writer: &mut EventWriter<W>, map: HashMap<String, String>) -> Result<(), String> {
+    for (key, value) in map.iter() {
+        encode_item(writer, (key, value))?;
+    }
+    Ok(())
+}
+
 #[derive(Debug, Default, KdbxParse, KdbxSerialize)]
 struct MemoryProtection {
     protect_title: bool,
@@ -760,7 +813,7 @@ struct MemoryProtection {
     protect_notes: bool,
 }
 
-#[derive(Debug, Default, KdbxParse)]
+#[derive(Debug, Default, KdbxParse, KdbxSerialize)]
 struct Meta {
     generator: String,
     database_name: String,
@@ -795,6 +848,12 @@ impl KdbxParse for HashMap<String, String> {
     }
 }
 
+impl KdbxSerialize for HashMap<String, String> {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
+        encode_custom_data(writer, value)
+    }
+}
+
 #[derive(Debug, Default, KdbxParse, KdbxSerialize)]
 //#[derive(Debug, Default, KdbxParse)]
 struct Times {
@@ -807,7 +866,7 @@ struct Times {
     location_changed: DateTime<Utc>,
 }
 
-#[derive(Debug, Default, KdbxParse)]
+#[derive(Debug, Default, KdbxParse, KdbxSerialize)]
 struct Group {
     #[kdbx(element="UUID")]
     uuid: Uuid,
@@ -839,7 +898,7 @@ struct Entry {
     history: Vec<Entry>,
 }
 
-#[derive(Default, KdbxParse)]
+#[derive(Default, KdbxParse, KdbxSerialize)]
 struct KeePassFile {
     meta: Meta,
     root: Vec<Group>,
@@ -1998,7 +2057,7 @@ fn main() -> io::Result<()> {
     //let b = &src[..uuid.len()];
     //uuid.copy_from_slice(b);
     //let d = Builder::from_bytes(uuid).build();
-    let cipher_id = Builder::from_slice(&tlvs[&2u8]).unwrap().build();
+    let cipher_id = Uuid::from_slice(&tlvs[&2u8]).unwrap();
     println!("D: {:?}", cipher_id);
     if cipher_id != Uuid::parse_str("31c1f2e6-bf71-4350-be58-05216afc5aff").unwrap() {
         let _ = writeln!(stderr, "Unknown cipher\n");
@@ -2050,7 +2109,7 @@ fn main() -> io::Result<()> {
         }
     }
 
-    let kdf_id = Builder::from_slice(&custom_data[KDF_PARAM_UUID]).unwrap().build();
+    let kdf_id = Uuid::from_slice(&custom_data[KDF_PARAM_UUID]).unwrap();
     println!("KDF: {:?}", kdf_id);
 
     let transform_key = match kdf_id {

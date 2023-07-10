@@ -616,6 +616,36 @@ fn test_decode_document_empty() {
 }
 
 #[test]
+fn test_encode_document_empty() {
+    let expected = KeePassFile::default();
+    let mut buffer = vec![];
+    let mut writer = xml::writer::EventWriter::new(buffer);
+    writer.write(xml::writer::XmlEvent::start_element("KeePassFile")).expect("Success!");
+    KeePassFile::serialize2(&mut writer, expected).expect("No error");
+    writer.write(xml::writer::XmlEvent::end_element()).expect("Success!");
+    let buffer = writer.into_inner();
+    let mut reader = ParserConfig::new()
+        .create_reader(Cursor::new(buffer));
+    match reader.next().unwrap() {
+        XmlEvent::StartDocument { .. } => {},
+        _ => { panic!("Missing document start"); },
+    };
+    let root = "KeePassFile";
+    match reader.next().unwrap() {
+        XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, root); },
+        _ => { panic!("Missing root element start"); },
+    }
+    let actual = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![]).expect("No error");
+    assert_eq!(actual.meta.database_name, "");
+    assert_eq!(actual.meta.default_user_name, "");
+    assert_eq!(actual.meta.memory_protection.protect_notes, false);
+    assert_eq!(actual.meta.memory_protection.protect_password, false);
+    assert_eq!(actual.meta.memory_protection.protect_title, false);
+    assert_eq!(actual.meta.memory_protection.protect_url, false);
+    assert_eq!(actual.meta.memory_protection.protect_user_name, false);
+}
+
+#[test]
 fn test_decode_document_filled() {
     // let mut file = File::open("dummy.xml").expect("Missing test data dummy.xml");
     // let mut contents = Vec::new();
@@ -635,6 +665,43 @@ fn test_decode_document_filled() {
     assert_eq!(document.meta.custom_data.len(), 3, "Correct number of custom data fields");
     assert!(document.meta.custom_data.contains_key("KPXC_DECRYPTION_TIME_PREFERENCE"), "Missing a custom data field");
     assert_eq!(document.meta.custom_data["KPXC_DECRYPTION_TIME_PREFERENCE"], "100", "Custom data field has wrong value");
+}
+
+#[test]
+fn test_encode_document_filled() {
+    let mut expected = KeePassFile::default();
+    expected.meta.database_name = "Dummy".to_string();
+    expected.meta.default_user_name = "Someone".to_string();
+    expected.meta.memory_protection.protect_notes = true;
+    expected.meta.memory_protection.protect_password = true;
+    expected.meta.memory_protection.protect_title = true;
+    expected.meta.memory_protection.protect_url = true;
+    expected.meta.memory_protection.protect_user_name = true;
+    let mut buffer = vec![];
+    let mut writer = xml::writer::EventWriter::new(buffer);
+    writer.write(xml::writer::XmlEvent::start_element("KeePassFile")).expect("Success!");
+    KeePassFile::serialize2(&mut writer, expected).expect("No error");
+    writer.write(xml::writer::XmlEvent::end_element()).expect("Success!");
+    let buffer = writer.into_inner();
+    let mut reader = ParserConfig::new()
+        .create_reader(Cursor::new(buffer));
+    match reader.next().unwrap() {
+        XmlEvent::StartDocument { .. } => {},
+        _ => { panic!("Missing document start"); },
+    };
+    let root = "KeePassFile";
+    match reader.next().unwrap() {
+        XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, root); },
+        _ => { panic!("Missing root element start"); },
+    }
+    let actual = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![]).expect("No error");
+    assert_eq!(actual.meta.database_name, "Dummy");
+    assert_eq!(actual.meta.default_user_name, "Someone");
+    assert_eq!(actual.meta.memory_protection.protect_notes, true);
+    assert_eq!(actual.meta.memory_protection.protect_password, true);
+    assert_eq!(actual.meta.memory_protection.protect_title, true);
+    assert_eq!(actual.meta.memory_protection.protect_url, true);
+    assert_eq!(actual.meta.memory_protection.protect_user_name, true);
 }
 
 #[test]

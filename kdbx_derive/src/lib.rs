@@ -273,6 +273,7 @@ pub fn derive_serializer(input: TS1) -> TS1 {
     let elements: TokenStream = impl_block.iter().map(|r| {
         let name = &r.name;
         let my_type = &r.r#type;
+        let full_type = &r.full_type;
         //let my_func = Ident::new(&format!("encode_{}", my_type), outer_type.span());
         // let big_name = pascal_case(&name.to_string());
         let big_name = &r.element_name;
@@ -294,7 +295,8 @@ pub fn derive_serializer(input: TS1) -> TS1 {
             quote! {
                 writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
                 //<#my_type as KdbxSerialize>::serialize(writer, value.#name)?;
-                #my_type::serialize2(writer, value.#name)?;
+                //#full_type::serialize2(writer, value.#name)?;
+                <#full_type as KdbxSerialize>::serialize2(writer, value.#name)?;
                 writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
             }
         }
