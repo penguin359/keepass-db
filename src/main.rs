@@ -590,6 +590,12 @@ fn encode_i64<W: Write>(writer: &mut EventWriter<W>, value: i64) -> Result<(), S
     encode_optional_i64(writer, Some(value))
 }
 
+impl KdbxParse for i64 {
+    fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Self, String> {
+        decode_i64(reader, name, attributes)
+    }
+}
+
 impl KdbxParse for i32 {
     fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Self, String> {
         Ok(decode_i64(reader, name, attributes)? as i32)
@@ -605,6 +611,12 @@ impl KdbxParse for u32 {
 const KDBX4_TIME_OFFSET : i64 = 62135596800;
 fn decode_optional_datetime<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<DateTime<Utc>>, String> {
     decode_optional_string(reader, name, attributes).map(|x| x.map(|y| Utc.timestamp(Cursor::new(decode(&y).expect("Valid base64")).read_i64::<LittleEndian>().unwrap() - KDBX4_TIME_OFFSET, 0)))
+}
+
+impl KdbxParse for Option<DateTime<Utc>> {
+    fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Self, String> {
+        decode_optional_datetime(reader, name, attributes)
+    }
 }
 
 fn decode_datetime<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<DateTime<Utc>, String> {
@@ -629,6 +641,12 @@ impl KdbxParse for DateTime<Utc> {
 
 fn decode_optional_uuid<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<Uuid>, String> {
     decode_optional_string(reader, name, attributes).map(|x| x.map(|y| Uuid::from_slice(&decode(&y).expect("Valid base64")).unwrap()))
+}
+
+impl KdbxParse for Option<Uuid> {
+    fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Self, String> {
+        decode_optional_uuid(reader, name, attributes)
+    }
 }
 
 fn decode_uuid<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Uuid, String> {
@@ -702,7 +720,7 @@ struct MemoryProtection {
     protect_notes: bool,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, KdbxParse)]
 struct Meta {
     generator: String,
     database_name: String,
@@ -731,6 +749,12 @@ struct Meta {
     custom_data: HashMap<String, String>,
 }
 
+impl KdbxParse for HashMap<String, String> {
+    fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Self, String> {
+        decode_custom_data(reader, name, attributes)
+    }
+}
+
 #[derive(Debug, Default, KdbxParse)]
 struct Times {
     last_modification_time: DateTime<Utc>,
@@ -744,9 +768,11 @@ struct Times {
 
 #[derive(Debug, Default, KdbxParse)]
 struct Group {
+    #[kdbx(element="UUID")]
     uuid: Uuid,
     name: String,
     notes: String,
+    #[kdbx(element="IconID")]
     icon_id: u32,
     times: Times,
     is_expanded: bool,
@@ -770,7 +796,7 @@ struct Entry {
     history: Vec<Entry>,
 }
 
-#[derive(Default)]
+#[derive(Default, KdbxParse)]
 struct KeePassFile {
     meta: Meta,
     root: Vec<Group>,
@@ -839,7 +865,7 @@ fn decode_memory_protection_old<R: Read>(reader: &mut EventReader<R>, name: Owne
     })
 }
 
-fn decode_meta<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String> {
+fn decode_meta_old<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String> {
     //let mut elements: Vec<::xml::name::OwnedName> = vec![];
     //elements.push("Foo".into());
     let mut elements = vec![];
@@ -1362,7 +1388,7 @@ fn decode_root<R: Read>(reader: &mut EventReader<R>) -> Result<Vec<Group>, Strin
 }
 
 //fn consume_element<R: Read>(reader: &mut yaserde::de::Deserializer<R>, mut event: XmlEvent) -> Result<(), String> {
-fn decode_document<R: Read>(mut reader: &mut EventReader<R>) -> Result<KeePassFile, String> {
+fn decode_document_old<R: Read>(mut reader: &mut EventReader<R>) -> Result<KeePassFile, String> {
     //let mut elements: Vec<::xml::name::OwnedName> = vec![];
     //elements.push("Foo".into());
     let mut elements = vec![];
@@ -1386,7 +1412,7 @@ fn decode_document<R: Read>(mut reader: &mut EventReader<R>) -> Result<KeePassFi
                 return Err("Malformed XML document".to_string());
             },
             XmlEvent::StartElement { name, .. } if name.local_name == "Meta" => {
-                meta = decode_meta(&mut reader)?;
+                meta = decode_meta_old(&mut reader)?;
                 println!("Meta: {:?}", meta);
             },
             XmlEvent::StartElement { name, .. } if name.local_name == "Root" => {
@@ -2207,7 +2233,7 @@ fn main() -> io::Result<()> {
         let event = reader.next().unwrap();
         match event {
             XmlEvent::StartDocument { .. } => { println!("Start"); },
-            XmlEvent::StartElement { name: _, .. } => { decode_document(&mut reader).map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?; },
+            XmlEvent::StartElement { name, attributes, .. } => { crate::KeePassFile::parse(&mut reader, name, attributes).map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?; },
             XmlEvent::EndDocument => { println!("End"); break; },
             _ => {},
         }

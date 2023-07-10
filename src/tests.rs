@@ -430,7 +430,7 @@ fn test_decode_custom_data_simple() {
 #[test]
 fn test_decode_meta_empty() {
     let mut reader = start_document("<Meta/>", "Meta");
-    let meta = decode_meta(&mut reader).expect("No error");
+    let meta = Meta::parse(&mut reader, OwnedName::local("Meta"), vec![]).expect("No error");
     end_document(reader);
     assert_eq!(meta.database_name, "");
     assert_eq!(meta.default_user_name, "");
@@ -491,7 +491,7 @@ fn test_decode_meta_filled() {
     </CustomData>
 </Meta>
 "#, "Meta");
-    let meta = decode_meta(&mut reader).expect("No error");
+    let meta = Meta::parse(&mut reader, OwnedName::local("Meta"), vec![]).expect("No error");
     end_document(reader);
     assert_eq!(meta.database_name, "Dummy");
     assert_eq!(meta.default_user_name, "someone");
@@ -508,7 +508,7 @@ fn test_decode_meta_filled() {
 #[test]
 fn test_decode_document_empty() {
     let mut reader = start_document("<KeePassFile/>", "KeePassFile");
-    let document = decode_document(&mut reader).expect("No error");
+    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![]).expect("No error");
     end_document(reader);
     assert_eq!(document.meta.database_name, "");
     assert_eq!(document.meta.default_user_name, "");
@@ -527,7 +527,7 @@ fn test_decode_document_filled() {
     // file.read_to_end(&mut contents);
     let contents = include_str!("../testdata/dummy.xml");
     let mut reader = start_document(contents, "KeePassFile");
-    let document = decode_document(&mut reader).expect("No error");
+    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![]).expect("No error");
     end_document(reader);
     assert_eq!(document.meta.database_name, "Dummy");
     assert_eq!(document.meta.default_user_name, "someone");
@@ -549,7 +549,7 @@ fn test_decode_document_kdbx41() {
     // file.read_to_end(&mut contents);
     let contents = include_str!("../testdata/dummy-kdbx41.xml");
     let mut reader = start_document(contents, "KeePassFile");
-    let document = decode_document(&mut reader).expect("No error");
+    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![]).expect("No error");
     end_document(reader);
     assert_eq!(document.meta.generator, "KeePass");
     assert_eq!(document.meta.database_name, "MyDatabase");
@@ -610,7 +610,7 @@ fn test_basic_document() {
 fn test_decode_document_filled_contents() {
     let contents = include_str!("../testdata/dummy.xml");
     let mut reader = start_document(contents, "KeePassFile");
-    let document = decode_document(&mut reader).expect("No error");
+    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![]).expect("No error");
     end_document(reader);
     //assert_eq!(document.meta.database_name, "Dummy");
     //assert_eq!(document.meta.default_user_name, "someone");
@@ -642,7 +642,7 @@ fn test_decode_document_filled_contents() {
 fn test_decode_document_filled_group() {
     let contents = include_str!("../testdata/dummy.xml");
     let mut reader = start_document(contents, "KeePassFile");
-    let document = decode_document(&mut reader).expect("No error");
+    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![]).expect("No error");
     end_document(reader);
     assert_eq!(document.root.len(), 1);
     assert_eq!(document.root[0].entry.len(), 0);

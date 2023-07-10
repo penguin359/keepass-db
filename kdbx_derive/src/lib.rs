@@ -139,6 +139,7 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
         }
     };
     let variables: TokenStream = impl_block.iter().map(|r| {
+        eprintln!("Field: {r:?}");
         let name = &r.name;
         let mangled_name = Ident::new(&format!("field_{}", name), Span::call_site());
         let my_type = &r.r#type;
@@ -153,6 +154,7 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
         let big_name = &r.element_name;
         eprintln!("Matching names: {big_name}");
         let big_name_debug = format!("{big_name}: {{:?}}");
+        let match_name = my_type.to_string();
         if r.array {
             if r.flatten {
                 quote! {
@@ -164,14 +166,22 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
             } else {
                 quote! {
                     XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
-                        while true {
+                        let mut elements = vec![name];
+
+                        while elements.len() > 0 {
                             let event = reader.next().map_err(|_|"")?;
                             match event {
-                                XmlEvent::StartElement { name, attributes, .. } => {
+                                XmlEvent::StartElement { name, attributes, .. } if name.local_name == #match_name => {
                                     #mangled_name.push(#my_type::parse(reader, name, attributes)?);
                                 },
+                                XmlEvent::StartElement { name, .. } => {
+                                    elements.push(name);
+                                },
                                 XmlEvent::EndElement { name, .. } => {
-                                    break;
+                                    let start_tag = elements.pop().expect("Can't consume a bare end element");
+                                    if start_tag != name {
+                                        return Err(format!("Start tag <{}> mismatches end tag </{}>", start_tag, name));
+                                    }
                                 },
                                 _ => {
                                     // Consume any PI, text, comment, or cdata node
