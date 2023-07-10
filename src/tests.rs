@@ -506,6 +506,102 @@ fn test_decode_meta_filled() {
 }
 
 #[test]
+fn test_decode_entry_empty() {
+    let mut reader = start_document("<Entry/>", "Entry");
+    let entry = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![]).expect("No error");
+    end_document(reader);
+    assert_eq!(entry.uuid, ""); //Uuid::nil());
+    assert_eq!(entry.icon_id, 0);
+    assert_eq!(entry.history.len(), 0);
+}
+
+#[test]
+fn test_decode_entry_filled() {
+    let mut reader = start_document(r#"
+    <Entry>
+            <UUID>g9fGIDnSR8WvjPBJ/L4juA==</UUID>
+            <IconID>12</IconID>
+            <History>
+                    <Entry>
+                        <UUID>g9fGIDnSR8WvjPBJ/L4juA==</UUID>
+                        <IconID>7</IconID>
+                    </Entry>
+                    <Entry>
+                        <UUID>g9fGIDnSR8WvjPBJ/L4juA==</UUID>
+                        <IconID>25</IconID>
+                    </Entry>
+            </History>
+    </Entry>
+    "#, "Entry");
+    let entry = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![]).expect("No error");
+    end_document(reader);
+    let expected_uuid = Uuid::parse_str("83d7c620-39d2-47c5-af8c-f049fcbe23b8").unwrap();
+    assert_eq!(entry.uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
+    assert_eq!(entry.icon_id, 12);
+    assert_eq!(entry.history.len(), 2);
+    assert_eq!(entry.history[0].uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
+    assert_eq!(entry.history[0].icon_id, 7);
+    assert_eq!(entry.history[1].uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
+    assert_eq!(entry.history[1].icon_id, 25);
+}
+
+#[test]
+fn test_encode_entry_filled() {
+    let mut reader = start_document(r#"
+    <Entry>
+            <UUID>g9fGIDnSR8WvjPBJ/L4juA==</UUID>
+            <IconID>12</IconID>
+            <History>
+                    <Entry>
+                        <UUID>g9fGIDnSR8WvjPBJ/L4juA==</UUID>
+                        <IconID>7</IconID>
+                    </Entry>
+                    <Entry>
+                        <UUID>g9fGIDnSR8WvjPBJ/L4juA==</UUID>
+                        <IconID>25</IconID>
+                    </Entry>
+            </History>
+    </Entry>
+    "#, "Entry");
+    let actual = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![]).expect("No error");
+    end_document(reader);
+
+    let mut buffer = vec![];
+    let mut writer = xml::writer::EventWriter::new(buffer);
+    writer.write(xml::writer::XmlEvent::start_element("Entry")).expect("Success!");
+    Entry::serialize2(&mut writer, actual).expect("No error");
+//    Entry::serialize2(&mut writer, Entry {
+//        protect_notes: true,
+//        protect_password: true,
+//        protect_title: true,
+//        protect_url: true,
+//        protect_user_name: true,
+//    }).expect("No error");
+    writer.write(xml::writer::XmlEvent::end_element()).expect("Success!");
+    let buffer = writer.into_inner();
+    let mut reader = ParserConfig::new()
+        .create_reader(Cursor::new(buffer));
+    match reader.next().unwrap() {
+        XmlEvent::StartDocument { .. } => {},
+        _ => { panic!("Missing document start"); },
+    };
+    let root = "Entry";
+    match reader.next().unwrap() {
+        XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, root); },
+        _ => { panic!("Missing root element start"); },
+    }
+    let entry = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![]).expect("No error");
+
+    assert_eq!(entry.uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
+    assert_eq!(entry.icon_id, 12);
+    assert_eq!(entry.history.len(), 2);
+    assert_eq!(entry.history[0].uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
+    assert_eq!(entry.history[0].icon_id, 7);
+    assert_eq!(entry.history[1].uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
+    assert_eq!(entry.history[1].icon_id, 25);
+}
+
+#[test]
 fn test_decode_document_empty() {
     let mut reader = start_document("<KeePassFile/>", "KeePassFile");
     let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![]).expect("No error");

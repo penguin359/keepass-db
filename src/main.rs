@@ -828,10 +828,12 @@ struct Group {
     entry: Vec<Entry>,
 }
 
-#[derive(Debug, Default, PartialEq, KdbxParse)]
+#[derive(Debug, Default, PartialEq, KdbxParse, KdbxSerialize)]
 struct Entry {
-    _uuid: String,
-    _icon_id: u32,
+    #[kdbx(element="UUID")]
+    uuid: String,
+    #[kdbx(element="IconID")]
+    icon_id: u32,
     // times: Times,
     // custom_data: CustomData,
     history: Vec<Entry>,
