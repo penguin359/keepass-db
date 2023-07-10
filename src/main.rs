@@ -542,6 +542,12 @@ fn decode_string<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attribut
     decode_optional_string(reader, name, attributes).map(|x| x.unwrap_or_else(|| "".into()))
 }
 
+impl KdbxParse for String {
+    fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Self, String> {
+        decode_string(reader, name, attributes)
+    }
+}
+
 fn encode_string<W: Write>(writer: &mut EventWriter<W>, value: &str) -> Result<(), String> {
     encode_optional_string(writer, Some(value))
 }
@@ -590,6 +596,12 @@ impl KdbxParse for i32 {
     }
 }
 
+impl KdbxParse for u32 {
+    fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Self, String> {
+        Ok(decode_i64(reader, name, attributes)? as u32)
+    }
+}
+
 const KDBX4_TIME_OFFSET : i64 = 62135596800;
 fn decode_optional_datetime<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<DateTime<Utc>>, String> {
     decode_optional_string(reader, name, attributes).map(|x| x.map(|y| Utc.timestamp(Cursor::new(decode(&y).expect("Valid base64")).read_i64::<LittleEndian>().unwrap() - KDBX4_TIME_OFFSET, 0)))
@@ -621,6 +633,12 @@ fn decode_optional_uuid<R: Read>(reader: &mut EventReader<R>, name: OwnedName, a
 
 fn decode_uuid<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Uuid, String> {
     decode_optional_uuid(reader, name, attributes).map(|x| x.unwrap_or_else(|| Uuid::default()))
+}
+
+impl KdbxParse for Uuid {
+    fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Self, String> {
+        decode_uuid(reader, name, attributes)
+    }
 }
 
 fn decode_item<R: Read>(reader: &mut EventReader<R>, _name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<(String, String), String> {
@@ -724,7 +742,7 @@ struct Times {
     location_changed: DateTime<Utc>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, KdbxParse)]
 struct Group {
     uuid: Uuid,
     name: String,
@@ -741,7 +759,7 @@ struct Group {
     entry: Vec<Entry>,
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, KdbxParse)]
 struct Entry {
     _uuid: String,
     _icon_id: u32,
@@ -1250,15 +1268,15 @@ fn decode_group<R: Read>(reader: &mut EventReader<R>) -> Result<Group, String> {
                 last_top_visible_entry = decode_uuid(reader, name, attributes)?;
                 println!("LastTopVisibleEntry: {:?}", last_top_visible_entry);
             },
-            XmlEvent::StartElement { name, attributes: _, .. }
+            XmlEvent::StartElement { name, attributes, .. }
               if name.local_name == "Entry" => {
-                let entry = decode_entry(reader)?; //, name, attributes)?;
+                let entry = Entry::parse(reader, name, attributes)?;
                 println!("Entry: {:?}", entry);
                 entries.push(entry);
             },
-            XmlEvent::StartElement { name, attributes: _, .. }
+            XmlEvent::StartElement { name, attributes, .. }
               if name.local_name == "Group" => {
-                let group = decode_group(reader)?; //, name, attributes)?;
+                let group = Group::parse(reader, name, attributes)?;
                 println!("Group: {:?}", group);
                 groups.push(group);
             },

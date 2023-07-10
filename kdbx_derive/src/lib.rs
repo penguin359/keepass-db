@@ -3,7 +3,7 @@
 //extern crate quote;
 
 use proc_macro::TokenStream as TS1;
-use proc_macro2::{token_stream::IntoIter, Ident, TokenStream, TokenTree, Delimiter};
+use proc_macro2::{token_stream::IntoIter, Ident, Span, TokenStream, TokenTree, Delimiter};
 
 use quote::quote;
 
@@ -24,6 +24,7 @@ struct KdbxField {
     r#type: Ident,
     element_name: String,
     full_type: Type,
+    array: bool,
 }
 
 struct KdbxAttributes {
@@ -80,11 +81,7 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
 
     let impl_block = match *data {
         syn::Data::Struct(ref data_struct) => {
-            // todo!("unfinished");
-            // eprintln!("Fields: {:?}", &data_struct.fields);
             let v = data_struct.fields.iter().map(|field| {
-                eprintln!("Fields inside");
-                // todo!("unfinished");
                 let field = field.clone();
                 let name = field.ident.unwrap();
                 let attrs = KdbxAttributes::parse(&field.attrs);
@@ -92,13 +89,30 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
                 match field.ty {
                 syn::Type::Path(ref p) => {
                     let r#type = p.path.segments.last().unwrap().ident.clone();
-                    // format!("Support Path {} => {}", name, r#type)
-                    match r#type {
+                    match r#type.to_string().as_str() {
+                        "Vec" => {
+                            if let syn::PathArguments::AngleBracketed(ref args) = p.path.segments.last().unwrap().arguments {
+                                if let Some(syn::GenericArgument::Type(Type::Path(ref path))) = args.args.first() {
+                                    KdbxField {
+                                        name,
+                                        r#type: path.path.segments.last().unwrap().ident.clone(),
+                                        element_name: big_name,
+                                        full_type: field.ty.clone(),
+                                        array: true,
+                                    }
+                                } else {
+                                    unimplemented!()
+                                }
+                            } else {
+                                unimplemented!()
+                            }
+                        },
                         _ => { KdbxField {
                             name,
                             r#type,
                             element_name: big_name,
                             full_type: field.ty.clone(),
+                            array: false,
                         }},
                     }
                 }
@@ -116,68 +130,85 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
     };
     let variables: TokenStream = impl_block.iter().map(|r| {
         let name = &r.name;
+        let mangled_name = Ident::new(&format!("field_{}", name), Span::call_site());
         let my_type = &r.r#type;
         let full_type = &r.full_type;
-        quote! { let mut #name = <#full_type as ::std::default::Default>::default(); }
+        quote! { let mut #mangled_name = <#full_type as ::std::default::Default>::default(); }
     }).collect();
     let elements: TokenStream = impl_block.iter().map(|r| {
         let name = &r.name;
+        let mangled_name = Ident::new(&format!("field_{}", name), Span::call_site());
         let my_type = &r.r#type;
         // let big_name = pascal_case(&name.to_string());
         let big_name = &r.element_name;
         eprintln!("Matching names: {big_name}");
         let big_name_debug = format!("{big_name}: {{:?}}");
-        quote! {
-            XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
-                #name = #my_type::parse(reader, name, attributes)?;
-                println!(#big_name_debug, #name);
+        if r.array {
+            quote! {
+                XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
+                    #mangled_name.push(#my_type::parse(reader, name, attributes)?);
+                    println!(#big_name_debug, #mangled_name);
+                }
+            }
+        } else {
+            quote! {
+                XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
+                    #mangled_name = #my_type::parse(reader, name, attributes)?;
+                    println!(#big_name_debug, #mangled_name);
+                }
             }
         }
     }).collect();
     let big_outer_type = pascal_case(&outer_type.to_string());
     let func_name = Ident::new(&format!("decode_{}", snake_case(&outer_type.to_string())), outer_type.span());
     let debug_string = format!("Decode {}...", outer_type.to_string());
-    let names = impl_block.iter().map(|r| &r.name);
-    quote! {
+    let names = impl_block.iter().map(|r| {
+        let name = &r.name;
+        let mangled_name = Ident::new(&format!("field_{}", name), Span::call_site());
+        quote! { #name: #mangled_name }
+    });
+    let results = quote! {
         impl KdbxParse for #outer_type {
-        fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<#outer_type, String> {
-            let mut elements = vec![name];
-            //elements.push(name);
+            fn parse<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<#outer_type, String> {
+                let mut elements = vec![name];
+                //elements.push(name);
 
-            #variables
-            while elements.len() > 0 {
-                let event = reader.next().map_err(|_|"")?;
-                println!("Macro debug: {:?}", event);
-                println!(#debug_string);
-                match event {
-                    XmlEvent::StartDocument { .. } => {
-                        return Err("Malformed XML document".to_string());
-                    },
-                    XmlEvent::EndDocument { .. } => {
-                        return Err("Malformed XML document".to_string());
-                    },
-                    #elements
-                    XmlEvent::StartElement { name, .. } => {
-                        elements.push(name);
-                    },
-                    XmlEvent::EndElement { name, .. } => {
-                        let start_tag = elements.pop().expect("Can't consume a bare end element");
-                        if start_tag != name {
-                            return Err(format!("Start tag <{}> mismatches end tag </{}>", start_tag, name));
-                        }
-                    },
-                    _ => {
-                        // Consume any PI, text, comment, or cdata node
-                        //return Ok(());
-                    },
-                };
+                #variables
+                while elements.len() > 0 {
+                    let event = reader.next().map_err(|_|"")?;
+                    println!("Macro debug: {:?}", event);
+                    println!(#debug_string);
+                    match event {
+                        XmlEvent::StartDocument { .. } => {
+                            return Err("Malformed XML document".to_string());
+                        },
+                        XmlEvent::EndDocument { .. } => {
+                            return Err("Malformed XML document".to_string());
+                        },
+                        #elements
+                        XmlEvent::StartElement { name, .. } => {
+                            elements.push(name);
+                        },
+                        XmlEvent::EndElement { name, .. } => {
+                            let start_tag = elements.pop().expect("Can't consume a bare end element");
+                            if start_tag != name {
+                                return Err(format!("Start tag <{}> mismatches end tag </{}>", start_tag, name));
+                            }
+                        },
+                        _ => {
+                            // Consume any PI, text, comment, or cdata node
+                            //return Ok(());
+                        },
+                    };
+                }
+                Ok(#outer_type {
+                    #(#names),*
+                })
             }
-            Ok(#outer_type {
-                #(#names),*
-            })
         }
-        }
-    }.into()
+    };
+    eprintln!("Macros: {}", results);
+    results.into()
 }
 
 #[proc_macro_derive(KdbxSerialize, attributes(kdbx))]
@@ -205,6 +236,7 @@ pub fn derive_serializer(input: TS1) -> TS1 {
                             r#type,
                             element_name: big_name,
                             full_type: field.ty.clone(),
+                            array: false,
                         }},
                     }
                 }
