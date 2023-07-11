@@ -854,7 +854,7 @@ impl KdbxSerialize for HashMap<String, String> {
     }
 }
 
-#[derive(Debug, Default, KdbxParse, KdbxSerialize)]
+#[derive(Debug, Default, PartialEq, KdbxParse, KdbxSerialize)]
 //#[derive(Debug, Default, KdbxParse)]
 struct Times {
     last_modification_time: DateTime<Utc>,
@@ -893,7 +893,12 @@ struct Entry {
     uuid: String,
     #[kdbx(element="IconID")]
     icon_id: u32,
-    // times: Times,
+    foreground_color: String,
+    background_color: String,
+    #[kdbx(element="OverrideURL")]
+    override_url: String,
+    tags: String,
+    times: Times,
     // custom_data: CustomData,
     history: Vec<Entry>,
 }
