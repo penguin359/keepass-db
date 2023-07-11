@@ -2458,6 +2458,24 @@ fn main() -> io::Result<()> {
                                         }
                                     }
                                 },
+                                XmlEvent::StartElement { name, .. }
+                                  if name.local_name == "LastModificationTime" => {
+                                    loop {
+                                        match reader.next_event()? {
+                                            XmlEvent::Characters(k) => {
+                                                //value = k;
+                                            },
+                                            XmlEvent::EndElement { name }
+                                              if name.local_name == "LastModificationTime" => {
+                                                break;
+                                            },
+                                            XmlEvent::EndElement { .. } => {
+                                                return Err("Malformed XML document".to_string());
+                                            },
+                                            _ => { panic!("Bad document parsing"); },
+                                        }
+                                    }
+                                },
                                 XmlEvent::EndElement { name }
                                   if name.local_name == "Item" => {
                                     data.insert(key, value);
