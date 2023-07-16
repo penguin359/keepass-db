@@ -29,6 +29,7 @@ extern crate yaserde;
 #[macro_use]
 extern crate yaserde_derive;
 
+use std::collections::VecDeque;
 use std::convert::TryInto;
 use std::io::Cursor;
 use std::env;
@@ -39,6 +40,7 @@ use std::io::prelude::*;
 use std::collections::HashMap;
 //use std::cell::RefCell;
 //use std::rc::Rc;
+use std::cmp;
 
 //use hex::ToHex;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -128,6 +130,209 @@ fn unmake_u64_be(value: &[u8]) -> Option<u64> {
     }
     let mut cursor = Cursor::new(value);
     Some(cursor.read_u64::<BigEndian>().unwrap())
+}
+
+struct BlockReader<R: Read> {
+    index: u64,
+    // block_size: u32,
+    hmac_key_base: Vec<u8>,
+    output: R,
+    buf: VecDeque<u8>,
+    complete: bool,
+}
+
+impl<R: Read> BlockReader<R> where {
+    // const DEFAULT_BLOCK_SIZE: u32 = 1024*1024;
+
+    fn new(key: &[u8], output: R) -> Self {
+        Self {
+            index: 0,
+            // block_size: Self::DEFAULT_BLOCK_SIZE,
+            hmac_key_base: key.to_owned(),
+            output,
+            // buf: vec![0u8; 12],  /* Room for 64-bit block index and 32-bit size */
+            buf: VecDeque::new(),
+            complete: false,
+        }
+    }
+
+    fn load_next_block(&mut self) -> io::Result<()> {
+        println!("Block {}", self.index);
+        let mut hmac_tag: [u8; 32] = [0; 32];
+        // if major_version == 4 {
+            self.output.read_exact(&mut hmac_tag)?;
+        // } else {
+        //     /* KDBX 3.x format encrypts the database after breaking
+        //     * the stream into blocks */
+        //     let mut ciphertext = vec![];
+        //     self.output.read_to_end(&mut ciphertext)?;
+        //     let data = decrypt(Cipher::aes_256_cbc(), &master_key, Some(encryption_iv), &ciphertext).unwrap();
+        //     let mut c = Cursor::new(data);
+
+        //     /* Start stream header is used to verify successful decrypt */
+        //     let mut start_stream = vec![0; 32];
+        //     c.read_exact(&mut start_stream)?;
+        //     assert_eq!(&start_stream, &tlvs[&9u8]);
+        //     println!("Master Key appears valid");
+
+        //     let mut buf = vec![];
+        //     for self.index in 0.. {
+        //         println!("Block {}", self.index);
+        //         let block_id = c.read_u32::<LittleEndian>()?;
+        //         assert_eq!(self.index as u32, block_id);
+        //         let mut block_hash_expected = vec![0; 32];
+        //         c.read_exact(&mut block_hash_expected)?;
+        //         let block_size = c.read_u32::<LittleEndian>()?;
+        //         let mut block_data = vec![0; block_size as usize];
+        //         c.read_exact(&mut block_data)?;
+        //         let mut context = Context::new(&SHA256);
+        //         context.update(&block_data);
+        //         let block_hash = context.finish().as_ref().to_owned();
+        //         if block_size == 0 {
+        //             break;
+        //         }
+        //         assert_eq!(block_hash_expected, block_hash, "Failed hash");
+        //         buf.extend(block_data);
+        //     }
+        //     let mut gz:Box<dyn Read> = match compress {
+        //         Compression::Gzip => Box::new(GzDecoder::new(Cursor::new(buf))),
+        //         Compression::None => Box::new(Cursor::new(buf)),
+        //     };
+        //     let mut xml_file = File::create("data2.xml")?;
+        //     let mut contents = String::new();
+        //     gz.read_to_string(&mut contents)?;
+        //     let _ = xml_file.write(&contents.as_bytes());
+        //     // println!("{:#?}", &contents);
+        //     if &contents[0..3] == "\u{feff}" {
+        //         contents = contents[3..].to_string();
+        //     }
+        //     let package = parser::parse(&contents).unwrap();
+        //     let document = package.as_document();
+        //     let header_hash = evaluate_xpath(&document, "/KeePassFile/Meta/HeaderHash/text()").expect("Missing header hash");
+        //     if header_hash.string() != "" {
+        //         println!("Header Hash: '{}'", header_hash.string());
+        //         let expected_hash = decode(&header_hash.string()).expect("Valid base64");
+        //         if expected_hash != digest.as_ref() {
+        //             let _ = writeln!(stderr, "Possible header corruption\n");
+        //             process::exit(1);
+        //         }
+        //     }
+        //     return Ok(());
+        // }
+        let block_size = self.output.read_u32::<LittleEndian>()?;
+        if block_size == 0 {
+            self.complete = true;
+            return Ok(());
+        }
+        let mut block = vec![0; block_size as usize];
+        self.output.read_exact(&mut block)?;
+
+        let mut hmac_context = Context::new(&SHA512);
+        let mut buf = Cursor::new(Vec::new());
+        buf.write_u64::<LittleEndian>(self.index)?;
+        self.index += 1;
+        hmac_context.update(buf.get_ref());
+        hmac_context.update(&self.hmac_key_base);
+        let hmac_key = hmac_context.finish().as_ref().to_owned();
+        buf.write_u32::<LittleEndian>(block_size)?;
+        buf.write(&block)?;
+        let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
+        println!("Verifying HMAC");
+        hmac::verify(&hmac_key, buf.get_ref(), &hmac_tag).unwrap();
+        println!("Complete");
+        self.buf = block.into();
+        Ok(())
+    }
+}
+
+impl<R: Read> Read for BlockReader<R> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        if self.complete {
+            return Ok(0)
+        } else if self.buf.len() == 0 {
+            self.load_next_block()?;
+        }
+        let mut index = 0;
+        if index >= buf.len() {
+            return Ok(index)
+        }
+        while let Some(val) = self.buf.pop_front() {
+            buf[index] = val;
+            index += 1;
+            if index >= buf.len() {
+                return Ok(index);
+            }
+        }
+        Ok(index)
+    }
+}
+
+struct BlockWriter<W: Write> {
+    index: u64,
+    block_size: u32,
+    hmac_key_base: Vec<u8>,
+    output: W,
+    buf: Vec<u8>,
+}
+
+impl<W: Write> BlockWriter<W> where {
+    const DEFAULT_BLOCK_SIZE: u32 = 1024*1024;
+
+    fn new(key: &[u8], output: W) -> Self {
+        Self {
+            index: 0,
+            block_size: Self::DEFAULT_BLOCK_SIZE,
+            hmac_key_base: key.to_owned(),
+            output,
+            // buf: vec![0u8; 12],  /* Room for 64-bit block index and 32-bit size */
+            buf: Vec::new(),
+        }
+    }
+}
+
+impl<W: Write> Write for BlockWriter<W> {
+    fn flush(&mut self) -> io::Result<()> {
+        let mut hmac_context = Context::new(&SHA512);
+        let mut key_buf = Cursor::new(Vec::new());
+        key_buf.write_u64::<LittleEndian>(self.index)?;
+        self.index += 1;
+        hmac_context.update(key_buf.get_ref());
+        hmac_context.update(&self.hmac_key_base);
+        let hmac_key = hmac_context.finish().as_ref().to_owned();
+        key_buf.write_u32::<LittleEndian>(self.buf.len() as u32)?;
+        key_buf.write(&self.buf)?;
+        let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
+        // println!("Verifying HMAC");
+        let hmac_tag = hmac::sign(&hmac_key, key_buf.get_ref());
+        // println!("Complete");
+        self.output.write(hmac_tag.as_ref())?;
+        self.output.write_u32::<LittleEndian>(self.buf.len() as u32)?;
+        self.output.write(&self.buf)?;
+        self.buf.truncate(0);
+        Ok(())
+    }
+
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let remaining = cmp::min(self.block_size as usize  - cmp::min(self.buf.len(), self.block_size as usize), buf.len());
+        self.buf.extend(&buf[..remaining]);
+        if self.buf.len() >= self.block_size as usize {
+            self.flush()?;
+        }
+        Ok(remaining)
+        // let mut offset = 0;
+        // while offset < self.buf.len() {
+        //     let mut count = std::cmp::max(Self::DEFAULT_BLOCK_SIZE as usize - offset;
+        //     if count > buf.len() {
+        //         count = buf.len();
+        //     }
+        //     self.buf.extend(&buf[offset..offset+count]);
+        //     offset += count;
+        //     if self.buf.len() >= Self::DEFAULT_BLOCK_SIZE as usize {
+        //         self.flush()?;
+        //     }
+        // }
+        // Ok(buf.len())
+    }
 }
 
 struct Key {
@@ -1549,6 +1754,40 @@ fn decode_document_old<R: Read>(mut reader: &mut EventReader<R>) -> Result<KeePa
     }
 }
 
+const KDBX_MAGIC: u32 = 0x9AA2D903;
+
+const KDBX1_MAGIC_TYPE: u32 = 0xB54BFB65;
+const KDBX2_BETA_MAGIC_TYPE: u32 = 0xB54BFB66;
+const KDBX2_MAGIC_TYPE: u32 = 0xB54BFB67;
+
+fn save_file() -> io::Result<()> {
+    let mut file = File::create("data-out.kbdx")?;
+    let major_version = 4;
+    let minor_version = 0;
+    let mut header = vec![];
+    header.write_u32::<LittleEndian>(KDBX_MAGIC)?;
+    header.write_u32::<LittleEndian>(KDBX2_MAGIC_TYPE)?;
+    header.write_u16::<LittleEndian>(minor_version)?;
+    header.write_u16::<LittleEndian>(major_version)?;
+    let tlvs: HashMap<u8, Vec<u8>> = HashMap::new();
+    let term = HashMap::from([(0, vec![])]);
+    for (key, value) in tlvs.iter().chain(term.iter()) {
+        header.write_u8(*key)?;
+        if major_version == 4 {
+            header.write_u32::<LittleEndian>(value.len() as u32)?;
+        } else {
+            header.write_u16::<LittleEndian>(value.len() as u16)?;
+        }
+        header.write(value)?;
+    }
+    let mut context = Context::new(&SHA256);
+    context.update(&header);
+    let digest = context.finish();
+    file.write(header.as_ref())?;
+    file.write(digest.as_ref())?;
+    Ok(())
+}
+
 fn main() -> io::Result<()> {
     env_logger::init();
 
@@ -1606,7 +1845,7 @@ fn main() -> io::Result<()> {
     let mut custom_data = HashMap::<String, Vec<u8>>::new();
 
     match magic_type {
-        0xB54BFB65 => {
+        KDBX1_MAGIC_TYPE => {
             let flags = file.read_u32::<LittleEndian>()?;
             let version = file.read_u32::<LittleEndian>()?;
             let mut master_seed = vec![0; 16];
@@ -1973,12 +2212,12 @@ fn main() -> io::Result<()> {
 
             return Ok(());
         },
-        // 0xB54BFB66 => {
+        // KDBX2_BETA_MAGIC_TYPE => {
         //     // XXX Untested
         //     let _ = writeln!(stderr, "KeePass 2.x Beta files not supported\n");
         //     process::exit(1);
         // },
-        0xB54BFB67 | 0xB54BFB66 => {
+        KDBX2_MAGIC_TYPE | KDBX2_BETA_MAGIC_TYPE => {
             println!("Opening KeePass 2.x database");
         },
         _ => {

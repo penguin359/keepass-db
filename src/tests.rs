@@ -829,3 +829,36 @@ fn test_decode_document_filled_group() {
     let expected_uuid = Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap();
     assert_eq!(group.last_top_visible_entry, expected_uuid);
 }
+
+#[test]
+fn test_block_writer() {
+    let test_string = [
+        "This is a t",
+        "est of the block writer an",
+        "d reader code to verify that it created the",
+        " appropria",
+        "te set of hmac keys and validates.",
+        "",
+    ];
+    let mut rng = rand::thread_rng();
+    let key = rng.gen::<[u8; 32]>();
+    let mut buf = Vec::new();
+    {
+        let cursor = Cursor::new(&mut buf);
+        eprintln!("HMAC Test Key: {:0x?}", &key);
+        let mut writer = BlockWriter::new(&key, cursor);
+        for string in test_string {
+            writer.write_all(string.as_bytes()).unwrap();
+            writer.flush().unwrap();
+        }
+    }
+    //let expected = test_string.chain(["a".to_string()].iter()).join("");
+    let expected = test_string.join("");
+    eprintln!("Block output: {}", String::from_utf8_lossy(&buf));
+    assert_eq!(buf.len(), expected.len() + test_string.len() * (32 + 4));
+    let cursor = Cursor::new(&mut buf);
+    let mut reader = BlockReader::new(&key, cursor);
+    let mut actual = Vec::new();
+    assert_eq!(reader.read_to_end(&mut actual).unwrap(), actual.len());
+    assert_eq!(expected, String::from_utf8_lossy(&actual));
+}
