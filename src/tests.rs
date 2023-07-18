@@ -862,3 +862,39 @@ fn test_block_writer() {
     assert_eq!(reader.read_to_end(&mut actual).unwrap(), actual.len());
     assert_eq!(expected, String::from_utf8_lossy(&actual));
 }
+
+#[test]
+fn test_crypto_writer() {
+    let test_string = [
+        "This is a t",
+        "est of the block writer an",
+        "d reader code to verify that it created the",
+        " appropria",
+        "te set of hmac keys and validates.",
+        "",
+    ];
+    let cipher = Cipher::aes_256_cbc();
+    let mut rng = rand::thread_rng();
+    let key = rng.gen::<[u8; 32]>();
+    let iv = rng.gen::<[u8; 16]>();
+    let mut buf = Vec::new();
+    {
+        let cursor: Cursor<&mut Vec<u8>> = Cursor::new(&mut buf);
+        eprintln!("AES Test Key: {:0x?}", &key);
+        let mut writer = Crypto::new(cipher, &key, Some(&iv), cursor).expect("Failed to create crypto");
+        for string in test_string {
+            writer.write_all(string.as_bytes()).unwrap();
+            writer.flush().unwrap();
+        }
+    }
+    //let expected = test_string.chain(["a".to_string()].iter()).join("");
+    let expected = test_string.join("");    
+    eprintln!("Block output: {}", String::from_utf8_lossy(&buf));
+    assert_eq!(buf.len(), (expected.len() + 15)/16*16);
+    let actual = decrypt(cipher, &key, Some(&iv), &buf).expect("Failed to decrypt");
+    // let cursor = Cursor::new(&mut buf);
+    // let mut reader = BlockReader::new(&key, cursor);
+    // let mut actual = Vec::new();
+    // assert_eq!(reader.read_to_end(&mut actual).unwrap(), actual.len());
+    assert_eq!(expected, String::from_utf8_lossy(&actual));
+}

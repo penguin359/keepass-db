@@ -45,6 +45,7 @@ use std::cmp;
 //use hex::ToHex;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use base64::{decode, encode};
+use openssl::error::ErrorStack;
 use uuid::{Uuid};
 //use borsh::de::BorshDeserialize;  // try_from_slice()
 use ring::digest::{Context, SHA256, SHA512};
@@ -334,6 +335,94 @@ impl<W: Write> Write for BlockWriter<W> {
         // Ok(buf.len())
     }
 }
+
+#[derive(Debug)]
+struct CryptoError {
+    error: ErrorStack,
+}
+
+impl From<ErrorStack> for CryptoError {
+    fn from(error: ErrorStack) -> Self {
+        Self {
+            error,
+        }
+    }
+}
+
+struct Crypto<W: Write> {
+    crypter: Crypter,
+    output: W,
+    buf: Vec<u8>,
+    block_size: usize,
+}
+
+impl<W: Write> Crypto<W> {
+    fn new(cipher: Cipher, key: &[u8], iv: Option<&[u8]>, output: W) -> Result<Self, CryptoError> {
+        Ok(Self {
+            crypter: Crypter::new(cipher, Mode::Encrypt, key, iv)?,
+            output,
+            buf: Vec::new(),
+            block_size: cipher.block_size(),
+        })
+    }
+}
+
+impl<W: Write> Drop for Crypto<W> {
+    fn drop(&mut self) {
+        let rest = self.crypter.finalize(&mut self.buf).expect("Failed to finalize encryption");
+        self.output.write_all(&self.buf[..rest]).expect("Failed to flush");
+    }
+}
+
+impl<W: Write> Write for Crypto<W> {
+    fn flush(&mut self) -> io::Result<()> {
+        // TODO Call lower layer
+        Ok(())
+    }
+
+    fn write(&mut self, data: &[u8]) -> io::Result<usize> {
+        self.buf.resize(data.len() + self.block_size, 0);
+        let count = self.crypter.update(data, &mut self.buf)?;
+        self.output.write_all(&self.buf[..count])?;
+        self.buf = self.buf[count..].to_vec();
+        Ok(data.len())
+    }
+}
+
+struct CryptoReader<R: Read> {
+    crypter: Crypter,
+    output: R,
+    buf: Vec<u8>,
+    block_size: usize,
+}
+
+impl<R: Read> CryptoReader<R> {
+    fn new(cipher: Cipher, key: &[u8], iv: Option<&[u8]>, output: R) -> Result<Self, CryptoError> {
+        Ok(Self {
+            crypter: Crypter::new(cipher, Mode::Decrypt, key, iv)?,
+            output,
+            buf: Vec::new(),
+            block_size: cipher.block_size(),
+        })
+    }
+}
+
+// impl<R: Read> Drop for CryptoReader<R> {
+//     fn drop(&mut self) {
+//         let rest = self.crypter.finalize(&mut self.buf).expect("Failed to finalize encryption");
+//         self.output.write_all(&self.buf[..rest]).expect("Failed to flush");
+//     }
+// }
+
+// impl<R: Read> Read for CryptoReader<R> {
+//     fn read(&mut self, data: &mut [u8]) -> io::Result<usize> {
+//         self.buf.resize(data.len() + self.block_size, 0);
+//         let count = self.crypter.update(data, &mut self.buf)?;
+//         self.output.write_all(&self.buf[..count])?;
+//         self.buf = self.buf[count..].to_vec();
+//         Ok(data.len())
+//     }
+// }
 
 struct Key {
     user_password: Option<Vec<u8>>,
