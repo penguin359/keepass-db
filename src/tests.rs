@@ -888,7 +888,7 @@ fn test_crypto_writer() {
         }
     }
     //let expected = test_string.chain(["a".to_string()].iter()).join("");
-    let expected = test_string.join("");    
+    let expected = test_string.join("");
     eprintln!("Block output: {}", String::from_utf8_lossy(&buf));
     assert_eq!(buf.len(), (expected.len() + 15)/16*16);
     let actual = decrypt(cipher, &key, Some(&iv), &buf).expect("Failed to decrypt");

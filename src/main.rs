@@ -16,6 +16,8 @@ extern crate argonautica;
 extern crate chacha20;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate num_derive;
 extern crate rand;
 extern crate clap;
 extern crate xml;
@@ -37,10 +39,12 @@ use std::process;
 use std::fs::File;
 use std::io::{self, SeekFrom};
 use std::io::prelude::*;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 //use std::cell::RefCell;
 //use std::rc::Rc;
 use std::cmp;
+
+use num_traits::{FromPrimitive, ToPrimitive};
 
 //use hex::ToHex;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -131,6 +135,60 @@ fn unmake_u64_be(value: &[u8]) -> Option<u64> {
     }
     let mut cursor = Cursor::new(value);
     Some(cursor.read_u64::<BigEndian>().unwrap())
+}
+
+#[derive(FromPrimitive, ToPrimitive)]
+enum TlvType {
+    END = 0,
+    COMMENT = 1,
+    CIPHER_ID = 2,
+    COMPRESSION_FLAGS = 3,
+    MASTER_SEED = 4,
+    TRANSFORM_SEED = 5,
+    TRANSFORM_ROUNDS = 6,
+    ENCRYPTION_IV = 7,
+    PROTECTED_STREAM_KEY = 8,
+    STREAM_START_BYTES = 9,
+    INNER_RANDOM_STREAM_ID = 10,
+    KDF_PARAMETERS = 11,
+    PUBLIC_CUSTOM_DATA = 12,
+}
+
+struct Header {
+    tlvs: BTreeMap<u8, Vec<u8>>,
+}
+
+impl Header {
+    fn load<R: Read>(input: &mut R, major_version: u16) -> io::Result<(Self, Vec<u8>)> {
+        let mut tlvs = BTreeMap::new();
+        let mut header_blob = Vec::new();
+        loop {
+            let mut tlv_header = if major_version == 3 {
+                vec![0; 3]
+            } else {
+                vec![0; 5]
+            };
+            input.read_exact(&mut tlv_header)?;
+            header_blob.extend(&tlv_header);
+            let mut header_cursor = Cursor::new(tlv_header);
+            let tlv_type = header_cursor.read_u8()?;
+            let tlv_len = if major_version == 3 {
+                header_cursor.read_u16::<LittleEndian>()? as u32
+            } else {
+                header_cursor.read_u32::<LittleEndian>()?
+            };
+            let mut tlv_data = vec![0; tlv_len as usize];
+            input.read_exact(&mut tlv_data)?;
+            header_blob.extend(&tlv_data);
+            debug!("TLV({}, {}): {:?}", tlv_type, tlv_len, &tlv_data);
+            if tlv_type == 0 {
+                break;
+            }
+            // TODO Check for duplicate inserts
+            tlvs.insert(tlv_type, tlv_data);
+        };
+        Ok((Self { tlvs }, header_blob))
+    }
 }
 
 struct BlockReader<R: Read> {

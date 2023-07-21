@@ -36,3 +36,5 @@ serde_derive = "1.0.104"
 yaserde = "0.3.11"
 yaserde_derive = "0.3.11"
 kdbx_derive = { path = "kdbx_derive/" }
+num-derive = "0.4.0"
+num-traits = "0.2.16"
