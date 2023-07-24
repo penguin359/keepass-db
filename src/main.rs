@@ -2704,27 +2704,13 @@ fn main() -> io::Result<()> {
     };
     println!("Database Name Changed: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
 
-    let xpath_username = Factory::new().build("String[Key/text() = 'UserName']/Value/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
-    let xpath_last_mod_time = Factory::new().build("Times/LastModificationTime/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
-    let xpath_password = Factory::new().build("String[Key/text() = 'Password']/Value[@Protected = 'True']/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
     let xpath_context = XPathContext::new();
-    //let entry_nodes = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry").expect("Missing database entries");
-    let entry_nodes = evaluate_xpath(&document, "//Entry").expect("Missing database entries");
-    match entry_nodes {
+    let protected_nodes = evaluate_xpath(&document, "//Value[@Protected = 'True']/text()").expect("Missing database entries");
+    let xpath_current = Factory::new().build(".").expect("Failed to compile XPath").expect("Empty XPath expression");
+    match protected_nodes {
         Value::Nodeset(nodes) => {
             for entry in nodes.document_order() {
-                //let n = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry/String[Key/text() = 'UserName']/Value/text()").expect("Missing entry username");
-                let n = xpath_username.evaluate(&xpath_context, entry).expect("Missing entry username");
-                let t = xpath_last_mod_time.evaluate(&xpath_context, entry).expect("Missing entry modification");
-                let p = xpath_password.evaluate(&xpath_context, entry).expect("Missing entry password");
-                println!("Name: {}", n.string());
-                let datetime: DateTime<Local> = if major_version == 3 {
-                    DateTime::parse_from_rfc3339(&database_name_changed_node.string()).expect("failed to parse timestamp").with_timezone(&Local)
-                } else {
-                    let timestamp = Cursor::new(decode(&t.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - KDBX4_TIME_OFFSET;
-                    Local.timestamp(timestamp, 0)
-                };
-                println!("Changed: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                let p = xpath_current.evaluate(&xpath_context, entry).expect("Missing entry text");
                 println!("P: {:?}, ('{}')", p, p.string());
                 let inner_stream_cipher = &inner_tlvs[&1u8];
                 if inner_stream_cipher.len() != 4 { panic!("Invalid inner cipher"); }
@@ -2757,10 +2743,42 @@ fn main() -> io::Result<()> {
                     cipher_opt = Some(cipher);
                 }
                 let cipher = cipher_opt.as_mut().unwrap();
-                println!("Password Ciphertext: {:?}", p_ciphertext);
+                println!("Protected Value Ciphertext: {:?}", p_ciphertext);
                 cipher.apply_keystream(&mut p_ciphertext);
                 //let data = decrypt(Cipher::chacha20(), &p2_key[0..32], Some(&p2_key[32..32+12]), &p_ciphertext).unwrap();
-                println!("Password: {:?}", String::from_utf8(p_ciphertext).unwrap_or("«Failed to decrypt password»".to_owned()));
+                let value = String::from_utf8(p_ciphertext).unwrap_or("«Failed to decrypt value»".to_owned());
+                println!("Protected Value: {:?}", &value);
+                match entry {
+                    sxd_xpath::nodeset::Node::Text(t) => {
+                        t.set_text(&value);
+                    },
+                    _ => {},
+                }
+            }
+        },
+        _ => { panic!("XML corruption"); },
+    }
+    let xpath_username = Factory::new().build("String[Key/text() = 'UserName']/Value/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
+    let xpath_last_mod_time = Factory::new().build("Times/LastModificationTime/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
+    let xpath_password = Factory::new().build("String[Key/text() = 'Password']/Value[@Protected = 'True']/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
+    //let entry_nodes = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry").expect("Missing database entries");
+    let entry_nodes = evaluate_xpath(&document, "//Entry").expect("Missing database entries");
+    match entry_nodes {
+        Value::Nodeset(nodes) => {
+            for entry in nodes.document_order() {
+                //let n = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry/String[Key/text() = 'UserName']/Value/text()").expect("Missing entry username");
+                let n = xpath_username.evaluate(&xpath_context, entry).expect("Missing entry username");
+                let t = xpath_last_mod_time.evaluate(&xpath_context, entry).expect("Missing entry modification");
+                let p = xpath_password.evaluate(&xpath_context, entry).expect("Missing entry password");
+                println!("Name: {}", n.string());
+                let datetime: DateTime<Local> = if major_version == 3 {
+                    DateTime::parse_from_rfc3339(&database_name_changed_node.string()).expect("failed to parse timestamp").with_timezone(&Local)
+                } else {
+                    let timestamp = Cursor::new(decode(&t.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - KDBX4_TIME_OFFSET;
+                    Local.timestamp(timestamp, 0)
+                };
+                println!("Changed: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                println!("Password: {:?}", p.string());
             }
         },
         _ => { panic!("XML corruption"); },
