@@ -2712,7 +2712,7 @@ fn main() -> io::Result<()> {
     let entry_nodes = evaluate_xpath(&document, "//Entry").expect("Missing database entries");
     match entry_nodes {
         Value::Nodeset(nodes) => {
-            for entry in nodes {
+            for entry in nodes.document_order() {
                 //let n = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry/String[Key/text() = 'UserName']/Value/text()").expect("Missing entry username");
                 let n = xpath_username.evaluate(&xpath_context, entry).expect("Missing entry username");
                 let t = xpath_last_mod_time.evaluate(&xpath_context, entry).expect("Missing entry modification");
@@ -2739,7 +2739,7 @@ fn main() -> io::Result<()> {
                 if cipher_opt.is_none() {
                     let mut cipher = if inner_cipher == 2 {
                         //let nonce = Vec::from_hex("E830094B97205D2A").unwrap();
-                        let nonce = hex!("f830094B97205D2A");
+                        let nonce = hex!("E830094B97205D2A");
                         let mut p_context = Context::new(&SHA256);
                         p_context.update(p_key);
                         let p2_key = p_context.finish().as_ref().to_owned();
