@@ -47,6 +47,8 @@ use std::cmp;
 use num_traits::{FromPrimitive, ToPrimitive};
 
 //use hex::ToHex;
+use hex::FromHex;
+use hex_literal::hex;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use base64::{decode, encode};
 use openssl::error::ErrorStack;
@@ -60,6 +62,9 @@ use flate2::read::GzDecoder;
 use sxd_document::parser;
 use sxd_xpath::{evaluate_xpath, Context as XPathContext, Factory, Value};
 use chrono::prelude::*;
+use salsa20::Salsa20;
+use salsa20::Key as Salsa20_Key;
+use salsa20::cipher::{KeyIvInit, StreamCipher, StreamCipherSeek};
 use chacha20::ChaCha20;
 use chacha20::stream_cipher::generic_array::GenericArray;
 use chacha20::stream_cipher::{NewStreamCipher, SyncStreamCipher};
@@ -2403,6 +2408,7 @@ fn main() -> io::Result<()> {
         },
     };
     let mut tlvs = HashMap::new();
+    let mut inner_tlvs = HashMap::new();
     loop {
         let tlv_type = file.read_u8()?;
         let tlv_len = if major_version == 4 {
@@ -2418,6 +2424,8 @@ fn main() -> io::Result<()> {
             0 => { break; }
             5 => { custom_data.insert(KDF_PARAM_SALT.to_string(), tlv_data); },
             6 => { custom_data.insert(KDF_PARAM_ROUNDS.to_string(), tlv_data); },
+            8 => { inner_tlvs.insert(2u8, tlv_data); },
+            10 => { inner_tlvs.insert(1u8, tlv_data); },
             11 => {
                 let kdf_parameters = &tlv_data;
                 let mut c = Cursor::new(kdf_parameters);
@@ -2558,7 +2566,6 @@ fn main() -> io::Result<()> {
         println!("Complete");
     }
 
-    let mut inner_tlvs = HashMap::new();
     let contents = if major_version == 4 {
         let mut ciphertext = vec![];
         for idx in 0.. {
@@ -2663,6 +2670,20 @@ fn main() -> io::Result<()> {
         contents
     };
 
+    enum CipherType {
+        Salsa20(Salsa20),
+        ChaCha20(ChaCha20),
+    }
+
+    impl CipherType {
+        fn apply_keystream(&mut self, buf: &mut [u8]) {
+            match self {
+                Self::Salsa20(c) => c.apply_keystream(buf),
+                Self::ChaCha20(c) => c.apply_keystream(buf),
+            }
+        }
+    }
+
     let mut cipher_opt = None;
     let mut xml_file = File::create("data.xml")?;
     let _ = xml_file.write(&contents.as_bytes());
@@ -2687,7 +2708,8 @@ fn main() -> io::Result<()> {
     let xpath_last_mod_time = Factory::new().build("Times/LastModificationTime/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
     let xpath_password = Factory::new().build("String[Key/text() = 'Password']/Value[@Protected = 'True']/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
     let xpath_context = XPathContext::new();
-    let entry_nodes = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry").expect("Missing database entries");
+    //let entry_nodes = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry").expect("Missing database entries");
+    let entry_nodes = evaluate_xpath(&document, "//Entry").expect("Missing database entries");
     match entry_nodes {
         Value::Nodeset(nodes) => {
             for entry in nodes {
@@ -2708,21 +2730,31 @@ fn main() -> io::Result<()> {
                 if inner_stream_cipher.len() != 4 { panic!("Invalid inner cipher"); }
                 let inner_cipher = u32::from_le_bytes(inner_stream_cipher[..].try_into().unwrap());
                 println!("Inner Cipher: {inner_cipher}");
-                assert!(inner_cipher == 3); // ChaCha20
+                assert!(inner_cipher == 2 || inner_cipher == 3); // Salsa20 or ChaCha20
                 let mut p_ciphertext = decode(&p.string()).expect("Valid base64");
-                let p_algo = unmake_u32(&inner_tlvs[&0x01u8]).unwrap();
-                assert_eq!(p_algo, 3);
+                //let p_algo = unmake_u32(&inner_tlvs[&0x01u8]).unwrap();
+                //assert_eq!(p_algo, 3);
                 let p_key = &inner_tlvs[&0x02u8];
-                //let iv = Vec::from_hex("E830094B97205D2A").unwrap();
                 println!("p_key: {}", p_key.len());
-                let mut p_context = Context::new(&SHA512);
-                p_context.update(p_key);
-                let p2_key = p_context.finish().as_ref().to_owned();
-                println!("p2_key: {}", p2_key.len());
-                let key = GenericArray::from_slice(&p2_key[0..32]);
-                let nonce = GenericArray::from_slice(&p2_key[32..32+12]);
                 if cipher_opt.is_none() {
-                    cipher_opt = Some(ChaCha20::new(&key, &nonce));
+                    let mut cipher = if inner_cipher == 2 {
+                        //let nonce = Vec::from_hex("E830094B97205D2A").unwrap();
+                        let nonce = hex!("f830094B97205D2A");
+                        let mut p_context = Context::new(&SHA256);
+                        p_context.update(p_key);
+                        let p2_key = p_context.finish().as_ref().to_owned();
+                        let key = Salsa20_Key::from_slice(&p2_key[0..32]);
+                        CipherType::Salsa20(Salsa20::new(&key, &nonce.into()))
+                    } else {
+                        let mut p_context = Context::new(&SHA512);
+                        p_context.update(p_key);
+                        let p2_key = p_context.finish().as_ref().to_owned();
+                        println!("p2_key: {}", p2_key.len());
+                        let key = GenericArray::from_slice(&p2_key[0..32]);
+                        let nonce = GenericArray::from_slice(&p2_key[32..32+12]);
+                        CipherType::ChaCha20(ChaCha20::new(&key, &nonce))
+                    };
+                    cipher_opt = Some(cipher);
                 }
                 let cipher = cipher_opt.as_mut().unwrap();
                 println!("Password Ciphertext: {:?}", p_ciphertext);
