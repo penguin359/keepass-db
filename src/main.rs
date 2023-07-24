@@ -994,9 +994,15 @@ impl KdbxSerialize for u32 {
     }
 }
 
+static mut KDBX4: bool = false;
 const KDBX4_TIME_OFFSET : i64 = 62135596800;
 fn decode_optional_datetime<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<DateTime<Utc>>, String> {
-    decode_optional_string(reader, name, attributes).map(|x| x.map(|y| Utc.timestamp(Cursor::new(decode(&y).expect("Valid base64")).read_i64::<LittleEndian>().unwrap() - KDBX4_TIME_OFFSET, 0)))
+    let is_new = unsafe { KDBX4 };
+    if is_new {
+        decode_optional_string(reader, name, attributes).map(|x| x.map(|y| Utc.timestamp(Cursor::new(decode(&y).expect("Valid base64")).read_i64::<LittleEndian>().unwrap() - KDBX4_TIME_OFFSET, 0)))
+    } else {
+        decode_optional_string(reader, name, attributes).map(|x| x.map(|y| DateTime::parse_from_rfc3339(&y).expect("failed to parse timestamp").with_timezone(&Utc)))
+    }
 }
 
 impl KdbxParse for Option<DateTime<Utc>> {
@@ -2384,6 +2390,7 @@ fn main() -> io::Result<()> {
             custom_data.insert(KDF_PARAM_UUID.to_string(), kdf_aes_kdbx3.as_bytes().to_vec());
         },
         4 => {
+            unsafe { KDBX4 = true; };
         },
         1 => {
             custom_data.insert(KDF_PARAM_UUID.to_string(), kdf_aes_kdbx3.as_bytes().to_vec());
@@ -2653,8 +2660,7 @@ fn main() -> io::Result<()> {
                 process::exit(1);
             }
         }
-        return Ok(());
-        //contents
+        contents
     };
 
     let mut cipher_opt = None;
@@ -2667,10 +2673,14 @@ fn main() -> io::Result<()> {
     let database_name_node = evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseName/text()").expect("Missing database name");
     println!("Database Name: {}", database_name_node.string());
     let database_name_changed_node = evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseNameChanged/text()").expect("Missing database name changed");
-    let timestamp = Cursor::new(decode(&database_name_changed_node.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - KDBX4_TIME_OFFSET;
-    //let naive = NaiveDateTime::from_timestamp(timestamp, 0);
-    //let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
-    let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
+    let datetime: DateTime<Local> = if major_version == 3 {
+        DateTime::parse_from_rfc3339(&database_name_changed_node.string()).expect("failed to parse timestamp").with_timezone(&Local)
+    } else {
+        let timestamp = Cursor::new(decode(&database_name_changed_node.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - KDBX4_TIME_OFFSET;
+        //let naive = NaiveDateTime::from_timestamp(timestamp, 0);
+        //let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+        Local.timestamp(timestamp, 0)
+    };
     println!("Database Name Changed: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
 
     let xpath_username = Factory::new().build("String[Key/text() = 'UserName']/Value/text()").expect("Failed to compile XPath").expect("Empty XPath expression");
@@ -2686,8 +2696,12 @@ fn main() -> io::Result<()> {
                 let t = xpath_last_mod_time.evaluate(&xpath_context, entry).expect("Missing entry modification");
                 let p = xpath_password.evaluate(&xpath_context, entry).expect("Missing entry password");
                 println!("Name: {}", n.string());
-                let timestamp = Cursor::new(decode(&t.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - KDBX4_TIME_OFFSET;
-                let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
+                let datetime: DateTime<Local> = if major_version == 3 {
+                    DateTime::parse_from_rfc3339(&database_name_changed_node.string()).expect("failed to parse timestamp").with_timezone(&Local)
+                } else {
+                    let timestamp = Cursor::new(decode(&t.string()).expect("Valid base64")).read_i64::<LittleEndian>()? - KDBX4_TIME_OFFSET;
+                    Local.timestamp(timestamp, 0)
+                };
                 println!("Changed: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
                 println!("P: {:?}, ('{}')", p, p.string());
                 let inner_stream_cipher = &inner_tlvs[&1u8];
