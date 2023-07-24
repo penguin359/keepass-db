@@ -999,7 +999,7 @@ impl KdbxSerialize for u32 {
     }
 }
 
-static mut KDBX4: bool = false;
+static mut KDBX4: bool = true;
 const KDBX4_TIME_OFFSET : i64 = 62135596800;
 fn decode_optional_datetime<R: Read>(reader: &mut EventReader<R>, name: OwnedName, attributes: Vec<OwnedAttribute>) -> Result<Option<DateTime<Utc>>, String> {
     let is_new = unsafe { KDBX4 };
@@ -2392,10 +2392,10 @@ fn main() -> io::Result<()> {
     let major_version = file.read_u16::<LittleEndian>()?;
     match major_version {
         3 => {
+            unsafe { KDBX4 = false; };
             custom_data.insert(KDF_PARAM_UUID.to_string(), kdf_aes_kdbx3.as_bytes().to_vec());
         },
         4 => {
-            unsafe { KDBX4 = true; };
         },
         1 => {
             custom_data.insert(KDF_PARAM_UUID.to_string(), kdf_aes_kdbx3.as_bytes().to_vec());
