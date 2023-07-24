@@ -2551,112 +2551,114 @@ fn main() -> io::Result<()> {
         println!("Complete");
     }
 
-    let mut ciphertext = vec![];
-    for idx in 0.. {
-        println!("Block {}", idx);
-        if major_version == 4 {
+    let mut inner_tlvs = HashMap::new();
+    let contents = if major_version == 4 {
+        let mut ciphertext = vec![];
+        for idx in 0.. {
+            println!("Block {}", idx);
             file.read_exact(&mut hmac_tag)?;
-        } else {
-            /* KDBX 3.x format encrypts the database after breaking
-             * the stream into blocks */
-            let mut ciphertext = vec![];
-            file.read_to_end(&mut ciphertext)?;
-            let data = decrypt(Cipher::aes_256_cbc(), &master_key, Some(encryption_iv), &ciphertext).unwrap();
-            let mut c = Cursor::new(data);
+            let block_size = file.read_u32::<LittleEndian>()?;
+            if block_size == 0 {
+                break;
+            }
+            let mut block = vec![0; block_size as usize];
+            file.read_exact(&mut block)?;
 
-            /* Start stream header is used to verify successful decrypt */
-            let mut start_stream = vec![0; 32];
-            c.read_exact(&mut start_stream)?;
-            assert_eq!(&start_stream, &tlvs[&9u8]);
-            println!("Master Key appears valid");
-
-            let mut buf = vec![];
-            for idx in 0.. {
-                println!("Block {}", idx);
-                let block_id = c.read_u32::<LittleEndian>()?;
-                assert_eq!(idx as u32, block_id);
-                let mut block_hash_expected = vec![0; 32];
-                c.read_exact(&mut block_hash_expected)?;
-                let block_size = c.read_u32::<LittleEndian>()?;
-                let mut block_data = vec![0; block_size as usize];
-                c.read_exact(&mut block_data)?;
-                let mut context = Context::new(&SHA256);
-                context.update(&block_data);
-                let block_hash = context.finish().as_ref().to_owned();
-                if block_size == 0 {
-                    break;
-                }
-                assert_eq!(block_hash_expected, block_hash, "Failed hash");
-                buf.extend(block_data);
-            }
-            let mut gz:Box<dyn Read> = match compress {
-                Compression::Gzip => Box::new(GzDecoder::new(Cursor::new(buf))),
-                Compression::None => Box::new(Cursor::new(buf)),
-            };
-            let mut xml_file = File::create("data2.xml")?;
-            let mut contents = String::new();
-            gz.read_to_string(&mut contents)?;
-            let _ = xml_file.write(&contents.as_bytes());
-            // println!("{:#?}", &contents);
-            if &contents[0..3] == "\u{feff}" {
-                contents = contents[3..].to_string();
-            }
-            let package = parser::parse(&contents).unwrap();
-            let document = package.as_document();
-            let header_hash = evaluate_xpath(&document, "/KeePassFile/Meta/HeaderHash/text()").expect("Missing header hash");
-            if header_hash.string() != "" {
-                println!("Header Hash: '{}'", header_hash.string());
-                let expected_hash = decode(&header_hash.string()).expect("Valid base64");
-                if expected_hash != digest.as_ref() {
-                    let _ = writeln!(stderr, "Possible header corruption\n");
-                    process::exit(1);
-                }
-            }
-            return Ok(());
+            let mut hmac_context = Context::new(&SHA512);
+            let mut buf = Cursor::new(Vec::new());
+            buf.write_u64::<LittleEndian>(idx)?;
+            hmac_context.update(buf.get_ref());
+            hmac_context.update(&hmac_key_base);
+            let hmac_key = hmac_context.finish().as_ref().to_owned();
+            buf.write_u32::<LittleEndian>(block_size)?;
+            buf.write(&block)?;
+            let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
+            println!("Verifying HMAC");
+            hmac::verify(&hmac_key, buf.get_ref(), &hmac_tag).unwrap();
+            println!("Complete");
+            ciphertext.extend(block);
         }
-        let block_size = file.read_u32::<LittleEndian>()?;
-        if block_size == 0 {
-            break;
-        }
-        let mut block = vec![0; block_size as usize];
-        file.read_exact(&mut block)?;
 
-        let mut hmac_context = Context::new(&SHA512);
-        let mut buf = Cursor::new(Vec::new());
-        buf.write_u64::<LittleEndian>(idx)?;
-        hmac_context.update(buf.get_ref());
-        hmac_context.update(&hmac_key_base);
-        let hmac_key = hmac_context.finish().as_ref().to_owned();
-        buf.write_u32::<LittleEndian>(block_size)?;
-        buf.write(&block)?;
-        let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
-        println!("Verifying HMAC");
-        hmac::verify(&hmac_key, buf.get_ref(), &hmac_tag).unwrap();
-        println!("Complete");
-        ciphertext.extend(block);
+        let data = decrypt(Cipher::aes_256_cbc(), &master_key, Some(encryption_iv), &ciphertext).unwrap();
+        let mut gz = GzDecoder::new(Cursor::new(data));
+
+        loop {
+            let tlv_type = gz.read_u8()?;
+            let tlv_len = gz.read_u32::<LittleEndian>()?;
+            let mut tlv_data = vec![0; tlv_len as usize];
+            gz.read_exact(&mut tlv_data)?;
+            if tlv_type == 0 {
+                break;
+            }
+            debug!("TLV({}, {}): {:?}", tlv_type, tlv_len, tlv_data);
+            inner_tlvs.insert(tlv_type, tlv_data);
+        };
+
+        let mut contents = String::new();
+        gz.read_to_string(&mut contents)?;
+        contents
+    } else {
+        /* KDBX 3.x format encrypts the database after breaking
+         * the stream into blocks */
+        let mut ciphertext = vec![];
+        file.read_to_end(&mut ciphertext)?;
+        let data = decrypt(Cipher::aes_256_cbc(), &master_key, Some(encryption_iv), &ciphertext).unwrap();
+        let mut c = Cursor::new(data);
+
+        /* Start stream header is used to verify successful decrypt */
+        let mut start_stream = vec![0; 32];
+        c.read_exact(&mut start_stream)?;
+        assert_eq!(&start_stream, &tlvs[&9u8]);
+        println!("Master Key appears valid");
+
+        let mut buf = vec![];
+        for idx in 0.. {
+            println!("Block {}", idx);
+            let block_id = c.read_u32::<LittleEndian>()?;
+            assert_eq!(idx as u32, block_id);
+            let mut block_hash_expected = vec![0; 32];
+            c.read_exact(&mut block_hash_expected)?;
+            let block_size = c.read_u32::<LittleEndian>()?;
+            let mut block_data = vec![0; block_size as usize];
+            c.read_exact(&mut block_data)?;
+            let mut context = Context::new(&SHA256);
+            context.update(&block_data);
+            let block_hash = context.finish().as_ref().to_owned();
+            if block_size == 0 {
+                break;
+            }
+            assert_eq!(block_hash_expected, block_hash, "Failed hash");
+            buf.extend(block_data);
+        }
+        let mut gz:Box<dyn Read> = match compress {
+            Compression::Gzip => Box::new(GzDecoder::new(Cursor::new(buf))),
+            Compression::None => Box::new(Cursor::new(buf)),
+        };
+        let mut xml_file = File::create("data2.xml")?;
+        let mut contents = String::new();
+        gz.read_to_string(&mut contents)?;
+        let _ = xml_file.write(&contents.as_bytes());
+        // println!("{:#?}", &contents);
+        if &contents[0..3] == "\u{feff}" {
+            contents = contents[3..].to_string();
+        }
+        let package = parser::parse(&contents).unwrap();
+        let document = package.as_document();
+        let header_hash = evaluate_xpath(&document, "/KeePassFile/Meta/HeaderHash/text()").expect("Missing header hash");
+        if header_hash.string() != "" {
+            println!("Header Hash: '{}'", header_hash.string());
+            let expected_hash = decode(&header_hash.string()).expect("Valid base64");
+            if expected_hash != digest.as_ref() {
+                let _ = writeln!(stderr, "Possible header corruption\n");
+                process::exit(1);
+            }
+        }
+        return Ok(());
+        //contents
     };
 
-    let data = decrypt(Cipher::aes_256_cbc(), &master_key, Some(encryption_iv), &ciphertext).unwrap();
-    let mut gz = GzDecoder::new(Cursor::new(data));
-
-    let mut tlvs = HashMap::new();
-    loop {
-        let tlv_type = gz.read_u8()?;
-        let tlv_len = gz.read_u32::<LittleEndian>()?;
-        let mut tlv_data = vec![0; tlv_len as usize];
-        gz.read_exact(&mut tlv_data)?;
-        if tlv_type == 0 {
-            break;
-        }
-        debug!("TLV({}, {}): {:?}", tlv_type, tlv_len, tlv_data);
-        tlvs.insert(tlv_type, tlv_data);
-    };
     let mut cipher_opt = None;
     let mut xml_file = File::create("data.xml")?;
-    //let mut buf = vec![];
-    let mut contents = String::new();
-    gz.read_to_string(&mut contents)?;
-    //gz.read_to_end(&mut buf);
     let _ = xml_file.write(&contents.as_bytes());
     const KDBX4_TIME_OFFSET : i64 = 62135596800;
     let package = parser::parse(&contents).unwrap();
@@ -2688,15 +2690,15 @@ fn main() -> io::Result<()> {
                 let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
                 println!("Changed: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
                 println!("P: {:?}, ('{}')", p, p.string());
-                let inner_stream_cipher = &tlvs[&1u8];
+                let inner_stream_cipher = &inner_tlvs[&1u8];
                 if inner_stream_cipher.len() != 4 { panic!("Invalid inner cipher"); }
                 let inner_cipher = u32::from_le_bytes(inner_stream_cipher[..].try_into().unwrap());
                 println!("Inner Cipher: {inner_cipher}");
                 assert!(inner_cipher == 3); // ChaCha20
                 let mut p_ciphertext = decode(&p.string()).expect("Valid base64");
-                let p_algo = unmake_u32(&tlvs[&0x01u8]).unwrap();
+                let p_algo = unmake_u32(&inner_tlvs[&0x01u8]).unwrap();
                 assert_eq!(p_algo, 3);
-                let p_key = &tlvs[&0x02u8];
+                let p_key = &inner_tlvs[&0x02u8];
                 //let iv = Vec::from_hex("E830094B97205D2A").unwrap();
                 println!("p_key: {}", p_key.len());
                 let mut p_context = Context::new(&SHA512);
