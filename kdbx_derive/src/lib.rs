@@ -7,7 +7,7 @@ use proc_macro2::{token_stream::IntoIter, Ident, Span, TokenStream, TokenTree, D
 
 use quote::quote;
 
-use change_case::{pascal_case, snake_case};
+use change_case::pascal_case;
 use syn::{Attribute, Type};
 
 #[cfg(test)]
@@ -123,7 +123,7 @@ fn decode_struct(ast: &syn::DeriveInput) -> Vec<KdbxField> {
                     // unimplemented!("Odd type");
                 },
             }}).collect::<Vec<KdbxField>>();
-            eprintln!("Fields done: {:?}.", &v);
+            // eprintln!("Fields done: {:?}.", &v);
             v
         },
         _ => {
@@ -142,10 +142,10 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
 
     let impl_block = decode_struct(&ast);
     let variables: TokenStream = impl_block.iter().map(|r| {
-        eprintln!("Field: {r:?}");
+        // eprintln!("Field: {r:?}");
         let name = &r.name;
         let mangled_name = Ident::new(&format!("field_{}", name), Span::call_site());
-        let my_type = &r.r#type;
+        let _my_type = &r.r#type;
         let full_type = &r.full_type;
         quote! { let mut #mangled_name = <#full_type as ::std::default::Default>::default(); }
     }).collect();
@@ -155,7 +155,7 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
         let my_type = &r.r#type;
         // let big_name = pascal_case(&name.to_string());
         let big_name = &r.element_name;
-        eprintln!("Matching names: {big_name}");
+        // eprintln!("Matching names: {big_name}");
         let big_name_debug = format!("{big_name}: {{:?}}");
         let match_name = my_type.to_string();
         if r.array {
@@ -208,8 +208,8 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
             }
         }
     }).collect();
-    let big_outer_type = pascal_case(&outer_type.to_string());
-    let func_name = Ident::new(&format!("decode_{}", snake_case(&outer_type.to_string())), outer_type.span());
+    let _big_outer_type = pascal_case(&outer_type.to_string());
+    // let _func_name = Ident::new(&format!("decode_{}", snake_case(&outer_type.to_string())), outer_type.span());
     let debug_string = format!("Decode {}...", outer_type.to_string());
     let names = impl_block.iter().map(|r| {
         let name = &r.name;
@@ -256,7 +256,7 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
             }
         }
     };
-    eprintln!("Parse macros: {}", results);
+    // eprintln!("Parse macros: {}", results);
     results.into()
 }
 
@@ -265,7 +265,7 @@ pub fn derive_serializer(input: TS1) -> TS1 {
     let ast: syn::DeriveInput = syn::parse(input).expect("bad parsing");
     let outer_type = &ast.ident;
     let attrs = &ast.attrs;
-    let data = &ast.data;
+    // let _data = &ast.data;
 
     let _ = KdbxAttributes::parse(attrs);
 
@@ -278,8 +278,8 @@ pub fn derive_serializer(input: TS1) -> TS1 {
         // let big_name = pascal_case(&name.to_string());
         let big_name = &r.element_name;
         let match_name = my_type.to_string();
-        eprintln!("Matching names: {big_name}");
-        let big_name_debug = format!("{big_name}: {{:?}}");
+        // eprintln!("Matching names: {big_name}");
+        let _big_name_debug = format!("{big_name}: {{:?}}");
         if r.array {
             quote! {
                 writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
@@ -301,10 +301,10 @@ pub fn derive_serializer(input: TS1) -> TS1 {
             }
         }
     }).collect();
-    let big_outer_type = pascal_case(&outer_type.to_string());
-    let func_name = Ident::new(&format!("encode_{}", snake_case(&outer_type.to_string())), outer_type.span());
+    let _big_outer_type = pascal_case(&outer_type.to_string());
+    // let _func_name = Ident::new(&format!("encode_{}", snake_case(&outer_type.to_string())), outer_type.span());
     let debug_string = format!("Encode {}...", outer_type.to_string());
-    let names = impl_block.iter().map(|r| &r.name);
+    // let names = impl_block.iter().map(|r| &r.name);
     let results = quote! {
         impl KdbxSerialize for #outer_type {
             fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: #outer_type) -> Result<(), String> {
@@ -314,6 +314,6 @@ pub fn derive_serializer(input: TS1) -> TS1 {
             }
         }
     };
-    eprintln!("Serialize macros: {}", results);
+    // eprintln!("Serialize macros: {}", results);
     results.into()
 }

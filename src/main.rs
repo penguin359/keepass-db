@@ -44,15 +44,15 @@ use std::collections::{BTreeMap, HashMap};
 //use std::rc::Rc;
 use std::cmp;
 
-use num_traits::{FromPrimitive, ToPrimitive};
+// use num_traits::{FromPrimitive, ToPrimitive};
 
 //use hex::ToHex;
-use hex::FromHex;
+// use hex::FromHex;
 use hex_literal::hex;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use base64::{decode, encode};
 use openssl::error::ErrorStack;
-use uuid::{Uuid};
+use uuid::{uuid, Uuid};
 //use borsh::de::BorshDeserialize;  // try_from_slice()
 use ring::digest::{Context, SHA256, SHA512};
 use ring::hmac;
@@ -64,7 +64,7 @@ use sxd_xpath::{evaluate_xpath, Context as XPathContext, Factory, Value};
 use chrono::prelude::*;
 use salsa20::Salsa20;
 use salsa20::Key as Salsa20_Key;
-use salsa20::cipher::{KeyIvInit, StreamCipher, StreamCipherSeek};
+use salsa20::cipher::{KeyIvInit, StreamCipher};
 use chacha20::ChaCha20;
 use chacha20::stream_cipher::generic_array::GenericArray;
 use chacha20::stream_cipher::{NewStreamCipher, SyncStreamCipher};
@@ -77,9 +77,9 @@ use argonautica::{Hasher, config::{Variant, Version}};
 use rand::Rng;
 use clap::{Arg, App};
 use xml::reader::{EventReader, ParserConfig, XmlEvent};
-use xml::writer::{EventWriter};
-use xml::attribute::{OwnedAttribute};
-use xml::name::{OwnedName};
+use xml::writer::EventWriter;
+use xml::attribute::OwnedAttribute;
+use xml::name::OwnedName;
 use yaserde::{YaDeserialize, YaSerialize};
 
 use kdbx_derive::{KdbxParse, KdbxSerialize};
@@ -144,19 +144,19 @@ fn unmake_u64_be(value: &[u8]) -> Option<u64> {
 
 #[derive(FromPrimitive, ToPrimitive)]
 enum TlvType {
-    END = 0,
-    COMMENT = 1,
-    CIPHER_ID = 2,
-    COMPRESSION_FLAGS = 3,
-    MASTER_SEED = 4,
-    TRANSFORM_SEED = 5,
-    TRANSFORM_ROUNDS = 6,
-    ENCRYPTION_IV = 7,
-    PROTECTED_STREAM_KEY = 8,
-    STREAM_START_BYTES = 9,
-    INNER_RANDOM_STREAM_ID = 10,
-    KDF_PARAMETERS = 11,
-    PUBLIC_CUSTOM_DATA = 12,
+    End = 0,
+    Comment = 1,
+    CipherId = 2,
+    CompressionFlags = 3,
+    MasterSeed = 4,
+    TransformSeed = 5,
+    TransformRounds = 6,
+    EncryptionIv = 7,
+    ProtectedStreamKey = 8,
+    StreamStartBytes = 9,
+    InnerRandomStreamId = 10,
+    KdfParameters = 11,
+    PublicCustomData = 12,
 }
 
 struct Header {
@@ -1124,10 +1124,10 @@ fn decode_item<R: Read>(reader: &mut EventReader<R>, _name: OwnedName, _attribut
 fn encode_item<W: Write>(writer: &mut EventWriter<W>, value: (&str, &str))-> Result<(), String> {
     writer.write(xml::writer::XmlEvent::start_element("Item")).map_err(|_|"")?;
     writer.write(xml::writer::XmlEvent::start_element("Key")).map_err(|_|"")?;
-    encode_string(writer, value.0);
+    encode_string(writer, value.0)?;
     writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
     writer.write(xml::writer::XmlEvent::start_element("Value")).map_err(|_|"")?;
-    encode_string(writer, value.1);
+    encode_string(writer, value.1)?;
     writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
     writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
     Ok(())
@@ -1992,7 +1992,7 @@ fn main() -> io::Result<()> {
     let magic = file.read_u32::<LittleEndian>()?;
     let magic_type = file.read_u32::<LittleEndian>()?;
 
-    if magic != 0x9AA2D903 {
+    if magic != KDBX_MAGIC {
         let _ = writeln!(stderr, "Invalid database file\n");
         process::exit(1);
     }
@@ -2723,7 +2723,7 @@ fn main() -> io::Result<()> {
                 let p_key = &inner_tlvs[&0x02u8];
                 println!("p_key: {}", p_key.len());
                 if cipher_opt.is_none() {
-                    let mut cipher = if inner_cipher == 2 {
+                    let cipher = if inner_cipher == 2 {
                         //let nonce = Vec::from_hex("E830094B97205D2A").unwrap();
                         let nonce = hex!("E830094B97205D2A");
                         let mut p_context = Context::new(&SHA256);
@@ -2914,7 +2914,7 @@ fn main() -> io::Result<()> {
                                   if name.local_name == "LastModificationTime" => {
                                     loop {
                                         match reader.next_event()? {
-                                            XmlEvent::Characters(k) => {
+                                            XmlEvent::Characters(_k) => {
                                                 //value = k;
                                             },
                                             XmlEvent::EndElement { name }

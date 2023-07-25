@@ -355,7 +355,7 @@ fn test_decode_memory_protection_all() {
 
 #[test]
 fn test_encode_memory_protection_all() {
-    let mut buffer = vec![];
+    let buffer = vec![];
     let mut writer = xml::writer::EventWriter::new(buffer);
     writer.write(xml::writer::XmlEvent::start_element("MemoryProtection")).expect("Success!");
     MemoryProtection::serialize2(&mut writer, MemoryProtection {
@@ -535,7 +535,7 @@ fn test_decode_entry_filled() {
     "#, "Entry");
     let entry = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![]).expect("No error");
     end_document(reader);
-    let expected_uuid = Uuid::parse_str("83d7c620-39d2-47c5-af8c-f049fcbe23b8").unwrap();
+    let _expected_uuid = uuid!("83d7c620-39d2-47c5-af8c-f049fcbe23b8");
     assert_eq!(entry.uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
     assert_eq!(entry.icon_id, 12);
     assert_eq!(entry.history.len(), 2);
@@ -566,7 +566,7 @@ fn test_encode_entry_filled() {
     let actual = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![]).expect("No error");
     end_document(reader);
 
-    let mut buffer = vec![];
+    let buffer = vec![];
     let mut writer = xml::writer::EventWriter::new(buffer);
     writer.write(xml::writer::XmlEvent::start_element("Entry")).expect("Success!");
     Entry::serialize2(&mut writer, actual).expect("No error");
@@ -618,7 +618,7 @@ fn test_decode_document_empty() {
 #[test]
 fn test_encode_document_empty() {
     let expected = KeePassFile::default();
-    let mut buffer = vec![];
+    let buffer = vec![];
     let mut writer = xml::writer::EventWriter::new(buffer);
     writer.write(xml::writer::XmlEvent::start_element("KeePassFile")).expect("Success!");
     KeePassFile::serialize2(&mut writer, expected).expect("No error");
@@ -677,7 +677,7 @@ fn test_encode_document_filled() {
     expected.meta.memory_protection.protect_title = true;
     expected.meta.memory_protection.protect_url = true;
     expected.meta.memory_protection.protect_user_name = true;
-    let mut buffer = vec![];
+    let buffer = vec![];
     let mut writer = xml::writer::EventWriter::new(buffer);
     writer.write(xml::writer::XmlEvent::start_element("KeePassFile")).expect("Success!");
     KeePassFile::serialize2(&mut writer, expected).expect("No error");
