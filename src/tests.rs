@@ -898,3 +898,81 @@ fn test_crypto_writer() {
     // assert_eq!(reader.read_to_end(&mut actual).unwrap(), actual.len());
     assert_eq!(expected, String::from_utf8_lossy(&actual));
 }
+
+#[test]
+fn test_save_tlvs_ver3() {
+    let mut buf = Cursor::new(Vec::new());
+    let mut map = BTreeMap::new();
+    map.insert(3, vec![vec![9u8, 8u8, 7u8]]);
+    map.insert(1, vec![vec![0u8, 1u8, 2u8, 3u8]]);
+    map.insert(2, vec![vec![3u8, 4u8], vec![5u8, 6u8]]);
+    let expected = vec![
+        1u8, 4, 0, 0, 1, 2, 3,  // TLV 1 = [0,1,2,3]
+        2, 2, 0, 3, 4,  // TLV 2 = [3, 4]
+        2, 2, 0, 5, 6,  // TLV 2 = [5, 6]
+        3, 3, 0, 9, 8, 7,  // TLV 3 =  [9, 8, 7]
+        0, 0, 0,  // TLV END
+    ];
+    let actual = save_tlvs(&mut buf, &map, 3).expect("Failed to write tlvs");
+    assert_eq!(expected, actual);
+    assert_eq!(expected, buf.into_inner());
+}
+
+#[test]
+fn test_load_tlvs_ver3() {
+    let mut buf = Cursor::new(vec![
+        2, 2, 0, 3, 4,  // TLV 2 = [3, 4]
+        3, 3, 0, 9, 8, 7,  // TLV 3 =  [9, 8, 7]
+        1u8, 4, 0, 0, 1, 2, 3,  // TLV 1 = [0,1,2,3]
+        2, 2, 0, 5, 6,  // TLV 2 = [5, 6]
+        0, 0, 0,  // TLV END
+    ]);
+    let (actual, bytes) = load_tlvs(&mut buf, 3).expect("Failed to read tlvs");
+    assert_eq!(bytes, buf.into_inner());
+    assert_eq!(actual.len(), 3);
+    assert_eq!(actual[&1].len(), 1);
+    assert_eq!(actual[&2].len(), 2);
+    assert_eq!(actual[&3].len(), 1);
+    assert_eq!(actual[&1], vec![vec![0u8, 1u8, 2u8, 3u8]]);
+    assert_eq!(actual[&2], vec![vec![3u8, 4u8], vec![5u8, 6u8]]);
+    assert_eq!(actual[&3], vec![vec![9u8, 8u8, 7u8]]);
+}
+
+#[test]
+fn test_save_tlvs_ver4() {
+    let mut buf = Cursor::new(Vec::new());
+    let mut map = BTreeMap::new();
+    map.insert(3, vec![vec![9u8, 8u8, 7u8]]);
+    map.insert(1, vec![vec![0u8, 1u8, 2u8, 3u8]]);
+    map.insert(2, vec![vec![3u8, 4u8], vec![5u8, 6u8]]);
+    let expected = vec![
+        1u8, 4, 0, 0, 0, 0, 1, 2, 3,  // TLV 1 = [0,1,2,3]
+        2, 2, 0, 0, 0, 3, 4,  // TLV 2 = [3, 4]
+        2, 2, 0, 0, 0, 5, 6,  // TLV 2 = [5, 6]
+        3, 3, 0, 0, 0, 9, 8, 7,  // TLV 3 =  [9, 8, 7]
+        0, 0, 0, 0, 0,  // TLV END
+    ];
+    let actual = save_tlvs(&mut buf, &map, 4).expect("Failed to write tlvs");
+    assert_eq!(expected, actual);
+    assert_eq!(expected, buf.into_inner());
+}
+
+#[test]
+fn test_load_tlvs_ver4() {
+    let mut buf = Cursor::new(vec![
+        2, 2, 0, 0, 0, 3, 4,  // TLV 2 = [3, 4]
+        3, 3, 0, 0, 0, 9, 8, 7,  // TLV 3 =  [9, 8, 7]
+        1u8, 4, 0, 0, 0, 0, 1, 2, 3,  // TLV 1 = [0,1,2,3]
+        2, 2, 0, 0, 0, 5, 6,  // TLV 2 = [5, 6]
+        0, 0, 0, 0, 0,  // TLV END
+    ]);
+    let (actual, bytes) = load_tlvs(&mut buf, 4).expect("Failed to read tlvs");
+    assert_eq!(bytes, buf.into_inner());
+    assert_eq!(actual.len(), 3);
+    assert_eq!(actual[&1].len(), 1);
+    assert_eq!(actual[&2].len(), 2);
+    assert_eq!(actual[&3].len(), 1);
+    assert_eq!(actual[&1], vec![vec![0u8, 1u8, 2u8, 3u8]]);
+    assert_eq!(actual[&2], vec![vec![3u8, 4u8], vec![5u8, 6u8]]);
+    assert_eq!(actual[&3], vec![vec![9u8, 8u8, 7u8]]);
+}

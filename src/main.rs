@@ -159,12 +159,15 @@ enum TlvType {
     PublicCustomData = 12,
 }
 
-struct Header {
-    tlvs: BTreeMap<u8, Vec<u8>>,
-}
+// struct Header {
+//     major_version: u16,
+//     minor_version: u16,
+//     tlvs: BTreeMap<u8, Vec<Vec<u8>>>,
+// }
 
-impl Header {
-    fn load<R: Read>(input: &mut R, major_version: u16) -> io::Result<(Self, Vec<u8>)> {
+// impl Header {
+    fn load_tlvs<R: Read>(input: &mut R, major_version: u16) -> io::Result<(BTreeMap<u8, Vec<Vec<u8>>>, Vec<u8>)> {
+        // let minor_version = 0;
         let mut tlvs = BTreeMap::new();
         let mut header_blob = Vec::new();
         loop {
@@ -177,7 +180,7 @@ impl Header {
             header_blob.extend(&tlv_header);
             let mut header_cursor = Cursor::new(tlv_header);
             let tlv_type = header_cursor.read_u8()?;
-            let tlv_len = if major_version == 3 {
+            let tlv_len = if major_version <= 3 {
                 header_cursor.read_u16::<LittleEndian>()? as u32
             } else {
                 header_cursor.read_u32::<LittleEndian>()?
@@ -189,12 +192,39 @@ impl Header {
             if tlv_type == 0 {
                 break;
             }
-            // TODO Check for duplicate inserts
-            tlvs.insert(tlv_type, tlv_data);
+            let values = match tlvs.get_mut(&tlv_type) {
+                Some(v) => v,
+                None => {
+                    let v = Vec::new();
+                    tlvs.insert(tlv_type, v);
+                    tlvs.get_mut(&tlv_type).unwrap()
+                }
+            };
+            values.push(tlv_data);
         };
-        Ok((Self { tlvs }, header_blob))
+        Ok((tlvs, header_blob))
     }
-}
+
+    fn save_tlvs<W: Write>(output: &mut W, tlvs: &BTreeMap<u8, Vec<Vec<u8>>>, major_version: u16) -> io::Result<Vec<u8>> {
+        let mut buf = Cursor::new(Vec::new());
+        let term = HashMap::from([(0, vec![vec![]])]);
+        for (key, values) in tlvs.iter().chain(term.iter()) {
+            for value in values {
+                buf.write_u8(*key)?;
+                // TODO Check for overflow
+                if major_version <= 3 {
+                    buf.write_u16::<LittleEndian>(value.len() as u16)?;
+                } else {
+                    buf.write_u32::<LittleEndian>(value.len() as u32)?;
+                }
+                buf.write(value)?;
+            }
+        }
+        let bytes = buf.into_inner();
+        output.write(&bytes);
+        Ok(bytes)
+    }
+// }
 
 struct BlockReader<R: Read> {
     index: u64,
