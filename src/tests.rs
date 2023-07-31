@@ -976,3 +976,92 @@ fn test_load_tlvs_ver4() {
     assert_eq!(actual[&2], vec![vec![3u8, 4u8], vec![5u8, 6u8]]);
     assert_eq!(actual[&3], vec![vec![9u8, 8u8, 7u8]]);
 }
+
+#[test]
+fn test_load_variant_map_empty() {
+    let buf = vec![
+        0u8, 1,  // Version 1.0
+        0x0,  // End
+    ];
+    let map = load_map(&buf).expect("Error decoding map");
+    assert_eq!(map.len(), 0);
+}
+
+#[test]
+fn test_load_variant_map_bool() {
+    let buf = vec![
+        0u8, 1,  // Version 1.0
+        0x08, 4, 0, 0, 0, 0x42, 0x4f, 0x4f, 0x4c, 1, 0, 0, 0, 1,  // BOOL = true
+        0x08, 2, 0, 0, 0, 0x6e, 0x6f, 1, 0, 0, 0, 0,  // no = true
+        0x0,  // End
+    ];
+    let map = load_map(&buf).expect("Error decoding map");
+    assert_eq!(map.len(), 2);
+    assert!(map.contains_key("BOOL"));
+    assert!(map.contains_key("no"));
+    assert_eq!(map["BOOL"], MapValue::Bool(true));
+    assert_eq!(map["no"], MapValue::Bool(false));
+}
+
+#[test]
+fn test_load_variant_map_bytes() {
+    let buf = vec![
+        0u8, 1,  // Version 1.0
+        0x42, 5, 0, 0, 0, 0x62, 0x79, 0x74, 0x65, 0x73, 4, 0, 0, 0, 1, 2, 3, 4,  // bytes = [1, 2, 3, 4]
+        0x0,  // End
+    ];
+    let map = load_map(&buf).expect("Error decoding map");
+    assert_eq!(map.len(), 1);
+    assert!(map.contains_key("bytes"));
+    assert_eq!(map["bytes"], MapValue::ByteArray(vec![1, 2, 3, 4]));
+}
+
+#[test]
+fn test_load_variant_map() {
+    let buf = vec![
+        0u8, 1,  // Version 1.0
+        0x04, 3, 0, 0, 0, 0x55, 0x33, 0x32, 4, 0, 0, 0, 0, 0, 0, 0x80,  // U32 = 0x80000000
+        0x05, 3, 0, 0, 0, 0x55, 0x36, 0x34, 8, 0, 0, 0, 123, 0, 0, 0, 0, 0, 0, 0,  // U64 = 123
+        0x08, 4, 0, 0, 0, 0x42, 0x4f, 0x4f, 0x4c, 1, 0, 0, 0, 1,  // BOOL = true
+        0x08, 2, 0, 0, 0, 0x6e, 0x6f, 1, 0, 0, 0, 0,  // no = true
+        0x0c, 3, 0, 0, 0, 0x49, 0x33, 0x32, 4, 0, 0, 0, 0xff, 0xff, 0xff, 0xff,  // I32 = -1
+        0x0d, 3, 0, 0, 0, 0x49, 0x36, 0x34, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x80,  // I64 = uint64::min
+        0x18, 2, 0, 0, 0, 0x68, 0x69, 3, 0, 0, 0, 0x62, 0x79, 0x65,  // hi = bye
+        0x42, 5, 0, 0, 0, 0x62, 0x79, 0x74, 0x65, 0x73, 4, 0, 0, 0, 1, 2, 3, 4,  // bytes = [1, 2, 3, 4]
+        0x0,  // End
+    ];
+    let map = load_map(&buf).expect("Error decoding map");
+    assert_eq!(map.len(), 8);
+    assert!(map.contains_key("U32"));
+    assert!(map.contains_key("U64"));
+    assert!(map.contains_key("BOOL"));
+    assert!(map.contains_key("no"));
+    assert!(map.contains_key("I32"));
+    assert!(map.contains_key("I64"));
+    assert!(map.contains_key("hi"));
+    assert!(map.contains_key("bytes"));
+    assert_eq!(map["U32"], MapValue::UInt32(0x80000000));
+    assert_eq!(map["U64"], MapValue::UInt64(123));
+    assert_eq!(map["BOOL"], MapValue::Bool(true));
+    assert_eq!(map["no"], MapValue::Bool(false));
+    assert_eq!(map["I32"], MapValue::Int32(-1));
+    assert_eq!(map["I64"], MapValue::Int64(i64::MIN));
+    assert_eq!(map["hi"], MapValue::String("bye".to_string()));
+    assert_eq!(map["bytes"], MapValue::ByteArray(vec![1, 2, 3, 4]));
+}
+
+#[test]
+fn test_save_variant_map() {
+    let mut expected = HashMap::new();
+    expected.insert("U32".to_string(), MapValue::UInt32(0x80000000));
+    expected.insert("U64".to_string(), MapValue::UInt64(123));
+    expected.insert("BOOL".to_string(), MapValue::Bool(true));
+    expected.insert("no".to_string(), MapValue::Bool(false));
+    expected.insert("I32".to_string(), MapValue::Int32(-1));
+    expected.insert("I64".to_string(), MapValue::Int64(i64::MIN));
+    expected.insert("hi".to_string(), MapValue::String("bye".to_string()));
+    expected.insert("bytes".to_string(), MapValue::ByteArray(vec![1, 2, 3, 4]));
+    let bytes = save_map(&expected);
+    let actual = load_map(&bytes).expect("Read failure");
+    assert_eq!(actual, expected);
+}

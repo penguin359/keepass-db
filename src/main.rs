@@ -44,7 +44,7 @@ use std::collections::{BTreeMap, HashMap};
 //use std::rc::Rc;
 use std::cmp;
 
-// use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::{FromPrimitive, ToPrimitive};
 
 //use hex::ToHex;
 // use hex::FromHex;
@@ -225,6 +225,151 @@ enum TlvType {
         Ok(bytes)
     }
 // }
+
+#[derive(PartialEq, Eq, FromPrimitive, ToPrimitive)]
+enum MapType {
+    None = 0,
+    // Byte = 0x02,
+    // UInt16 = 0x03,
+    UInt32 = 0x04,
+    UInt64 = 0x05,
+    Bool = 0x08,
+    // SByte = 0x0A,
+    // Int16 = 0x0B,
+    Int32 = 0x0C,
+    Int64 = 0x0D,
+    // Float = 0x10,
+    // Double = 0x11,
+    // Decimal = 0x12,
+    // Char = 0x17, // 16-bit Unicode character
+    String = 0x18,
+    ByteArray = 0x42,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+enum MapValue {
+    UInt32(u32),
+    UInt64(u64),
+    Bool(bool),
+    Int32(i32),
+    Int64(i64),
+    String(String),
+    ByteArray(Vec<u8>),
+}
+
+impl From<&MapValue> for MapType {
+    fn from(value: &MapValue) -> Self {
+        match value {
+            MapValue::Bool(_) => MapType::Bool,
+            MapValue::Int32(_) => MapType::Int32,
+            MapValue::Int64(_) => MapType::Int64,
+            MapValue::UInt32(_) => MapType::UInt32,
+            MapValue::UInt64(_) => MapType::UInt64,
+            MapValue::String(_) => MapType::String,
+            MapValue::ByteArray(_) => MapType::ByteArray,
+        }
+    }
+}
+
+fn load_map(tlv_data: &[u8]) -> io::Result<HashMap::<String, MapValue>> {
+    let mut custom_data = HashMap::new();
+    let kdf_parameters = &tlv_data;
+    let mut c = Cursor::new(kdf_parameters);
+    let variant_minor = c.read_u8()?;
+    let variant_major = c.read_u8()?;
+    if variant_major != 1 {
+        let _ = eprintln!(
+                 "Unsupported variant dictionary version ({}.{})\n",
+                 variant_major, variant_minor);
+        return Err(io::Error::new(io::ErrorKind::Other, "Unsupported variant"));
+    };
+
+    loop {
+        let item_type = MapType::from_u8(c.read_u8()?).ok_or(io::Error::new(io::ErrorKind::Other, "Unknown type"))?;
+        if item_type == MapType::None {
+            break;
+        }
+        let item_key_len = c.read_u32::<LittleEndian>()?;
+        let mut item_key = vec![0; item_key_len as usize];
+        c.read_exact(&mut item_key)?;
+        let item_key_str = String::from_utf8_lossy(&item_key).to_owned();
+        let item_value_len = c.read_u32::<LittleEndian>()?;
+        let mut item_value = vec![0; item_value_len as usize];
+        c.read_exact(&mut item_value)?;
+        debug!("K: {}, V: {:0x?}", item_key_str, item_value);
+        let item_value = match item_type {
+            MapType::Bool => {
+                if item_value.len() != 1 {
+                    return Err(io::Error::new(io::ErrorKind::Unsupported, "Invalid bool value"));
+                }
+                MapValue::Bool(item_value[0] != 0)
+            },
+            MapType::Int32 => {
+                MapValue::Int32(i32::from_le_bytes(item_value.try_into().map_err(|_| io::Error::new(io::ErrorKind::Unsupported, "Invalid i32 value"))?))
+            },
+            MapType::Int64 => {
+                MapValue::Int64(i64::from_le_bytes(item_value.try_into().map_err(|_| io::Error::new(io::ErrorKind::Unsupported, "Invalid i64 value"))?))
+            },
+            MapType::UInt32 => {
+                MapValue::UInt32(u32::from_le_bytes(item_value.try_into().map_err(|_| io::Error::new(io::ErrorKind::Unsupported, "Invalid u32 value"))?))
+            },
+            MapType::UInt64 => {
+                MapValue::UInt64(u64::from_le_bytes(item_value.try_into().map_err(|_| io::Error::new(io::ErrorKind::Unsupported, "Invalid u64 value"))?))
+            },
+            MapType::String => {
+                MapValue::String(String::from_utf8(item_value).map_err(|_| io::Error::new(io::ErrorKind::Unsupported, "Invalid string value"))?)
+            },
+            MapType::ByteArray => {
+                MapValue::ByteArray(item_value)
+            },
+            MapType::None => {
+                unreachable!()
+            },
+        };
+        custom_data.insert(item_key_str.to_owned().to_string(), item_value);
+    }
+    Ok(custom_data)
+}
+
+fn save_map(map: &HashMap::<String, MapValue>) -> Vec<u8> {
+    let variant_major = 1;
+    let variant_minor = 0;
+    let mut output = Cursor::new(Vec::new());
+    output.write_u8(variant_minor).unwrap();
+    output.write_u8(variant_major).unwrap();
+    for (k, v) in map {
+        output.write_u8(MapType::from(v).to_u8().unwrap()).unwrap();
+        output.write_u32::<LittleEndian>(k.len() as u32).unwrap();
+        output.write(k.as_bytes()).unwrap();
+        let item_value = match v {
+            MapValue::Bool(v) => {
+                vec![if *v { 1 } else { 0 }]
+            },
+            MapValue::Int32(v) => {
+                v.to_le_bytes().to_vec()
+            },
+            MapValue::Int64(v) => {
+                v.to_le_bytes().to_vec()
+            },
+            MapValue::UInt32(v) => {
+                v.to_le_bytes().to_vec()
+            },
+            MapValue::UInt64(v) => {
+                v.to_le_bytes().to_vec()
+            },
+            MapValue::String(v) => {
+                v.as_bytes().to_vec()
+            },
+            MapValue::ByteArray(v) => {
+                v.clone()
+            },
+        };
+        output.write_u32::<LittleEndian>(item_value.len() as u32).unwrap();
+        output.write(&item_value).unwrap();
+    }
+    output.write_u8(0);  // End of dictionary
+    output.into_inner()
+}
 
 struct BlockReader<R: Read> {
     index: u64,
@@ -1957,21 +2102,11 @@ fn save_file() -> io::Result<()> {
     header.write_u32::<LittleEndian>(KDBX2_MAGIC_TYPE)?;
     header.write_u16::<LittleEndian>(minor_version)?;
     header.write_u16::<LittleEndian>(major_version)?;
-    let tlvs: HashMap<u8, Vec<u8>> = HashMap::new();
-    let term = HashMap::from([(0, vec![])]);
-    for (key, value) in tlvs.iter().chain(term.iter()) {
-        header.write_u8(*key)?;
-        if major_version == 4 {
-            header.write_u32::<LittleEndian>(value.len() as u32)?;
-        } else {
-            header.write_u16::<LittleEndian>(value.len() as u16)?;
-        }
-        header.write(value)?;
-    }
+    let tlvs = BTreeMap::new();
+    let header = save_tlvs(&mut file, &tlvs, major_version)?;
     let mut context = Context::new(&SHA256);
     context.update(&header);
     let digest = context.finish();
-    file.write(header.as_ref())?;
     file.write(digest.as_ref())?;
     Ok(())
 }
