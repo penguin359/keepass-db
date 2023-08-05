@@ -929,9 +929,15 @@ fn decode_datetime_kdb1(content: &[u8]) -> NaiveDateTime {
               .and_hms(hour as u32, minute as u32, second as u32)
 }
 
-const KDF_AES_KDBX3: &str = "c9d9f39a-628a-4460-bf74-0d08c18a4fea";
-const KDF_AES_KDBX4: &str = "7c02bb82-79a7-4ac0-927d-114a00648238";
-const KDF_ARGON2   : &str = "ef636ddf-8c29-444b-91f7-a9a403e30a0c";
+
+const KDF_AES_KDBX3: Uuid = uuid!("c9d9f39a-628a-4460-bf74-0d08c18a4fea");
+const KDF_AES_KDBX4: Uuid = uuid!("7c02bb82-79a7-4ac0-927d-114a00648238");
+const KDF_ARGON2   : Uuid = uuid!("ef636ddf-8c29-444b-91f7-a9a403e30a0c");
+
+const CIPHER_ID_AES128_CBC : Uuid =  uuid!("61ab05a1-9464-41c3-8d74-3a563df8dd35");
+const CIPHER_ID_AES256_CBC : Uuid =  uuid!("31c1f2e6-bf71-4350-be58-05216afc5aff");
+const CIPHER_ID_TWOFISH_CBC: Uuid =  uuid!("ad68f29f-576f-4bb9-a36a-d47af965346c");
+const CIPHER_ID_CHACHA20   : Uuid =  uuid!("d6038a2b-8b6f-4cb5-a524-339a31dbb59a");
 
 
 fn consume_element<R: Read>(reader: &mut EventReader<R>, name: OwnedName, _attributes: Vec<OwnedAttribute>) -> Result<Option<String>, String> {
@@ -2162,9 +2168,6 @@ fn main() -> io::Result<()> {
         process::exit(1);
     }
 
-    let kdf_aes_kdbx3 = Uuid::parse_str(KDF_AES_KDBX3).unwrap();
-    let kdf_aes_kdbx4 = Uuid::parse_str(KDF_AES_KDBX4).unwrap();
-    let kdf_argon2    = Uuid::parse_str(KDF_ARGON2   ).unwrap();
     let mut custom_data = HashMap::<String, Vec<u8>>::new();
 
     match magic_type {
@@ -2558,12 +2561,12 @@ fn main() -> io::Result<()> {
     match major_version {
         3 => {
             unsafe { KDBX4 = false; };
-            custom_data.insert(KDF_PARAM_UUID.to_string(), kdf_aes_kdbx3.as_bytes().to_vec());
+            custom_data.insert(KDF_PARAM_UUID.to_string(), KDF_AES_KDBX3.as_bytes().to_vec());
         },
         4 => {
         },
         1 => {
-            custom_data.insert(KDF_PARAM_UUID.to_string(), kdf_aes_kdbx3.as_bytes().to_vec());
+            custom_data.insert(KDF_PARAM_UUID.to_string(), KDF_AES_KDBX3.as_bytes().to_vec());
         },
         _ => {
             let _ = writeln!(stderr,
@@ -2630,7 +2633,7 @@ fn main() -> io::Result<()> {
     //let d = Builder::from_bytes(uuid).build();
     let cipher_id = Uuid::from_slice(&tlvs[&2u8]).unwrap();
     println!("D: {:?}", cipher_id);
-    if cipher_id != Uuid::parse_str("31c1f2e6-bf71-4350-be58-05216afc5aff").unwrap() {
+    if cipher_id != CIPHER_ID_AES256_CBC {
         let _ = writeln!(stderr, "Unknown cipher\n");
         process::exit(1);
     }
@@ -2684,19 +2687,19 @@ fn main() -> io::Result<()> {
     println!("KDF: {:?}", kdf_id);
 
     let transform_key = match kdf_id {
-        x if x == kdf_aes_kdbx3 => {
-            //panic!("KDBX 3 AES-KDF not supported!");
+        x if x == KDF_AES_KDBX3 => {
+            //unimplemented!("KDBX 3 AES-KDF not supported!");
             transform_aes_kdf(&composite_key, &custom_data)?
         },
-        x if x == kdf_aes_kdbx4 => {
-            panic!("KDBX 4 AES-KDF not supported!");
+        x if x == KDF_AES_KDBX4 => {
+            unimplemented!("KDBX 4 AES-KDF not supported!");
         },
-        x if x == kdf_argon2 => {
+        x if x == KDF_ARGON2 => {
             transform_argon2(&composite_key, &custom_data)?
-            //panic!("Argon2 KDF not supported!");
+            //unimplemented!("Argon2 KDF not supported!");
         },
         _ => {
-            panic!("Unknown");
+            unimplemented!("Unknown");
         },
     };
 
