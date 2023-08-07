@@ -734,6 +734,77 @@ impl Key {
     }
 }
 
+trait Kdf {
+    fn uuid(&self) -> Uuid;
+    fn randomize(&mut self);
+    fn transform_key(&self, composite_key: &[u8]) -> io::Result<Vec<u8>>;
+    fn save(&self, custom_data: &mut HashMap::<String, MapValue>);
+}
+
+struct AesKdf {
+    salt: [u8; 32],
+    rounds: u64,
+}
+
+impl AesKdf {
+    fn load(custom_data: &HashMap::<String, MapValue>) -> io::Result<Self> {
+            // let salt = &custom_data[KDF_PARAM_SALT];
+            // let mut c = custom_data[KDF_PARAM_ROUNDS];
+        match (&custom_data[KDF_PARAM_SALT], &custom_data[KDF_PARAM_ROUNDS]) {
+            (MapValue::ByteArray(ref salt), MapValue::UInt64(rounds)) =>
+                Ok(AesKdf { salt: salt.clone().try_into().unwrap()/*From::<Vec<u8>>::try_into(salt.clone()).unwrap()*/, rounds: *rounds }),
+            _ => Err(io::Error::new(io::ErrorKind::Unsupported, "Bad rounds")),
+        }
+    }
+}
+
+impl Kdf for AesKdf {
+    fn uuid(&self) -> Uuid {
+        KDF_AES_KDBX3
+    }
+
+    fn randomize(&mut self) {
+        unimplemented!("Can't randomize yet")
+    }
+
+    fn save(&self, custom_data: &mut HashMap::<String, MapValue>) {
+        custom_data.insert(KDF_PARAM_ROUNDS.to_string(), MapValue::UInt64(self.rounds));
+        custom_data.insert(KDF_PARAM_SALT.to_string(), MapValue::ByteArray(self.salt.into()));
+    }
+
+    fn transform_key(&self, composite_key: &[u8]) -> io::Result<Vec<u8>> {
+        println!("Calculating transformed key ({})", self.rounds);
+
+        let mut transform_key = composite_key.to_owned();
+        let cipher = Cipher::aes_256_ecb();
+        let mut c = Crypter::new(cipher, Mode::Encrypt, &self.salt, None)?;
+        for _ in 0..cipher.block_size() {
+            transform_key.push(0);
+        }
+        let mut out = vec![0; 16 + 16 + cipher.block_size()];
+        c.pad(false);
+        for _ in 0..self.rounds {
+            c.update(&transform_key[0..32], &mut out)?;
+            let temp = transform_key;
+            transform_key = out;
+            out = temp;
+        }
+        transform_key.truncate(32);
+        let mut context = Context::new(&SHA256);
+        context.update(&transform_key);
+        Ok(context.finish().as_ref().to_owned())
+    }
+}
+
+impl Default for AesKdf {
+    fn default() -> Self {
+        Self {
+            salt: [0; 32],
+            rounds: 60000,
+        }
+    }
+}
+
 fn transform_aes_kdf(composite_key: &[u8], custom_data: &HashMap<String, Vec<u8>>) -> io::Result<Vec<u8>> {
     let transform_seed = &custom_data[KDF_PARAM_SALT];
     let mut c = Cursor::new(&custom_data[KDF_PARAM_ROUNDS]);
@@ -932,7 +1003,8 @@ fn decode_datetime_kdb1(content: &[u8]) -> NaiveDateTime {
 
 const KDF_AES_KDBX3: Uuid = uuid!("c9d9f39a-628a-4460-bf74-0d08c18a4fea");
 const KDF_AES_KDBX4: Uuid = uuid!("7c02bb82-79a7-4ac0-927d-114a00648238");
-const KDF_ARGON2   : Uuid = uuid!("ef636ddf-8c29-444b-91f7-a9a403e30a0c");
+const KDF_ARGON2_D : Uuid = uuid!("ef636ddf-8c29-444b-91f7-a9a403e30a0c");
+const KDF_ARGON2_ID: Uuid = uuid!("9e298b19-56db-4773-b23d-fc3ec6f0a1e6");
 
 const CIPHER_ID_AES128_CBC : Uuid =  uuid!("61ab05a1-9464-41c3-8d74-3a563df8dd35");
 const CIPHER_ID_AES256_CBC : Uuid =  uuid!("31c1f2e6-bf71-4350-be58-05216afc5aff");
@@ -2688,13 +2760,15 @@ fn main() -> io::Result<()> {
 
     let transform_key = match kdf_id {
         x if x == KDF_AES_KDBX3 => {
+            let custom_data = load_map(&tlvs[&11]).unwrap();
             //unimplemented!("KDBX 3 AES-KDF not supported!");
-            transform_aes_kdf(&composite_key, &custom_data)?
+            AesKdf::load(&custom_data)?.transform_key(&composite_key)?
+            // transform_aes_kdf(&composite_key, &custom_data)?
         },
         x if x == KDF_AES_KDBX4 => {
             unimplemented!("KDBX 4 AES-KDF not supported!");
         },
-        x if x == KDF_ARGON2 => {
+        x if x == KDF_ARGON2_D => {
             transform_argon2(&composite_key, &custom_data)?
             //unimplemented!("Argon2 KDF not supported!");
         },

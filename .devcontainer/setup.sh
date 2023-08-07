@@ -1,5 +1,8 @@
 ## update and install some things we should probably have
 apt-get update
+ln -fns /usr/share/zoneinfo/America/Los_Angeles /etc/localtime
+DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+  tzdata
 apt-get install -y \
   curl \
   git \
@@ -13,8 +16,7 @@ apt-get install -y \
   pkgconf \
   libssl-dev \
   libclang-dev \
-  clang \
-  tzdata
+  clang
 
 ## Install rustup and common components
 curl https://sh.rustup.rs -sSf | sh -s -- -y 
