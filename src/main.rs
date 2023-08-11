@@ -143,6 +143,12 @@ fn unmake_u64_be(value: &[u8]) -> Option<u64> {
 }
 
 #[derive(FromPrimitive, ToPrimitive)]
+enum Compression {
+    None = 0,
+    Gzip = 1,
+}
+
+#[derive(FromPrimitive, ToPrimitive)]
 enum TlvType {
     End = 0,
     Comment = 1,
@@ -2180,12 +2186,60 @@ fn save_file() -> io::Result<()> {
     header.write_u32::<LittleEndian>(KDBX2_MAGIC_TYPE)?;
     header.write_u16::<LittleEndian>(minor_version)?;
     header.write_u16::<LittleEndian>(major_version)?;
-    let tlvs = BTreeMap::new();
-    let header = save_tlvs(&mut file, &tlvs, major_version)?;
+    let mut key = Key::new();
+    key.set_user_password("asdf");
+    let composite_key = key.composite_key();
+    let kdf = AesKdf::default();
+    let mut custom_data = HashMap::new();
+    custom_data.insert(KDF_PARAM_UUID.to_string(), MapValue::ByteArray(KDF_AES_KDBX3.into_bytes().to_vec()));
+    kdf.save(&mut custom_data);
+    let transform_key = kdf.transform_key(&composite_key).expect("Failed to transform key");
+    let master_seed = [0u8; 32];
+    let iv = [0u8; 16];
+    let mut tlvs = BTreeMap::new();
+    tlvs.insert(TlvType::MasterSeed.to_u8().unwrap(), vec![master_seed.to_vec()]);
+    tlvs.insert(TlvType::CipherId.to_u8().unwrap(), vec![CIPHER_ID_AES256_CBC.into_bytes().to_vec()]);
+    tlvs.insert(TlvType::EncryptionIv.to_u8().unwrap(), vec![iv.to_vec()]);
+    tlvs.insert(TlvType::CompressionFlags.to_u8().unwrap(), vec![Compression::None.to_u32().unwrap().to_le_bytes().to_vec()]);
+    tlvs.insert(TlvType::KdfParameters.to_u8().unwrap(), vec![save_map(&custom_data)]);
+    header.append(&mut save_tlvs(&mut io::sink(), &tlvs, major_version).unwrap());
+    file.write(&header)?;
     let mut context = Context::new(&SHA256);
     context.update(&header);
     let digest = context.finish();
     file.write(digest.as_ref())?;
+    header.append(&mut digest.as_ref().to_owned());
+
+    let mut master_key = master_seed.to_vec();
+    master_key.extend(transform_key);
+    let mut context = Context::new(&SHA256);
+    let mut hmac_context = Context::new(&SHA512);
+    context.update(&master_key);
+    hmac_context.update(&master_key);
+    hmac_context.update(&[1u8]);
+    master_key = context.finish().as_ref().to_owned();
+    let hmac_key_base = hmac_context.finish().as_ref().to_owned();
+
+    let mut hmac_context = Context::new(&SHA512);
+    hmac_context.update(&[0xff; 8]);
+    hmac_context.update(&hmac_key_base);
+    let hmac_key = hmac_context.finish().as_ref().to_owned();
+
+    let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
+    let hmac_tag = hmac::sign(&hmac_key, &header);
+    file.write(hmac_tag.as_ref())?;
+
+    let output = BlockWriter::new(&hmac_key_base, file);
+    let cipher = Cipher::aes_256_cbc();
+    let mut output = Crypto::new(cipher, &master_key, Some(&iv), output).unwrap();
+
+    let stream_cipher = 2u32;
+    let stream_key = [0u8; 32];
+    let mut inner_tlvs = BTreeMap::new();
+    inner_tlvs.insert(1, vec![stream_cipher.to_le_bytes().to_vec()]);
+    inner_tlvs.insert(2, vec![stream_key.to_vec()]);
+    save_tlvs(&mut output, &tlvs, major_version).unwrap();
+
     Ok(())
 }
 
@@ -3039,6 +3093,8 @@ fn main() -> io::Result<()> {
             _ => {},
         }
     }
+
+    save_file().unwrap();
 
     //#[derive(Debug, Serialize, Deserialize, YaSerialize, YaDeserialize, PartialEq)]
     #[derive(Debug, YaSerialize, YaDeserialize, PartialEq)]
