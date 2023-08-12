@@ -645,6 +645,7 @@ impl<W: Write> Drop for Crypto<W> {
 
 impl<W: Write> Write for Crypto<W> {
     fn flush(&mut self) -> io::Result<()> {
+        self.buf = vec![0; self.block_size];
         let rest = self
             .crypter
             .finalize(&mut self.buf)
@@ -3606,6 +3607,7 @@ fn main() -> io::Result<()> {
                         .expect("failed to parse timestamp")
                         .with_timezone(&Local)
                 } else {
+                    println!("Inner: {:?}", &t.string());
                     let timestamp = Cursor::new(decode(&t.string()).expect("Valid base64"))
                         .read_i64::<LittleEndian>()?
                         - KDBX4_TIME_OFFSET;
