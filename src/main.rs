@@ -1686,7 +1686,7 @@ fn encode_custom_data<W: Write>(
     Ok(())
 }
 
-#[derive(Debug, Default, KdbxParse, KdbxSerialize)]
+#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
 struct MemoryProtection {
     protect_title: bool,
     protect_user_name: bool,
@@ -1696,7 +1696,7 @@ struct MemoryProtection {
     protect_notes: bool,
 }
 
-#[derive(Debug, Default, KdbxParse, KdbxSerialize)]
+#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
 struct Meta {
     generator: String,
     database_name: String,
@@ -1741,7 +1741,7 @@ impl KdbxSerialize for HashMap<String, String> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, KdbxParse, KdbxSerialize)]
+#[derive(Clone, Debug, Default, PartialEq, KdbxParse, KdbxSerialize)]
 //#[derive(Debug, Default, KdbxParse)]
 struct Times {
     last_modification_time: DateTime<Utc>,
@@ -1753,7 +1753,7 @@ struct Times {
     location_changed: DateTime<Utc>,
 }
 
-#[derive(Debug, Default, KdbxParse, KdbxSerialize)]
+#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
 struct Group {
     #[kdbx(element = "UUID")]
     uuid: Uuid,
@@ -1774,7 +1774,7 @@ struct Group {
     entry: Vec<Entry>,
 }
 
-#[derive(Debug, Default, PartialEq, KdbxParse, KdbxSerialize)]
+#[derive(Clone, Debug, Default, PartialEq, KdbxParse, KdbxSerialize)]
 struct Entry {
     #[kdbx(element = "UUID")]
     uuid: String,
@@ -1790,7 +1790,7 @@ struct Entry {
     history: Vec<Entry>,
 }
 
-#[derive(Default, KdbxParse, KdbxSerialize)]
+#[derive(Clone, Default, KdbxParse, KdbxSerialize)]
 struct KeePassFile {
     meta: Meta,
     root: Vec<Group>,
@@ -2542,7 +2542,7 @@ const KDBX1_MAGIC_TYPE: u32 = 0xB54BFB65;
 const KDBX2_BETA_MAGIC_TYPE: u32 = 0xB54BFB66;
 const KDBX2_MAGIC_TYPE: u32 = 0xB54BFB67;
 
-fn save_file() -> io::Result<()> {
+fn save_file(doc: &KeePassFile) -> io::Result<()> {
     let mut file = File::create("data-out.kbdx")?;
     let major_version = 4;
     let minor_version = 0;
@@ -2621,6 +2621,15 @@ fn save_file() -> io::Result<()> {
     inner_tlvs.insert(1, vec![stream_cipher.to_le_bytes().to_vec()]);
     inner_tlvs.insert(2, vec![stream_key.to_vec()]);
     save_tlvs(&mut output, &inner_tlvs, major_version).unwrap();
+    let mut writer = xml::writer::EventWriter::new(output);
+    writer
+        .write(xml::writer::XmlEvent::start_element("KeePassFile"))
+        .expect("Success!");
+    KeePassFile::serialize2(&mut writer, doc.clone()).unwrap();
+    writer
+        .write(xml::writer::XmlEvent::end_element())
+        .expect("Success!");
+    let mut output = writer.into_inner();
     output.flush()?;
     // output.flush()?;
     // drop(output);
@@ -3624,8 +3633,9 @@ fn main() -> io::Result<()> {
             XmlEvent::StartElement {
                 name, attributes, ..
             } => {
-                crate::KeePassFile::parse(&mut reader, name, attributes)
+                let my_doc = crate::KeePassFile::parse(&mut reader, name, attributes)
                     .map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?;
+                save_file(&my_doc).unwrap();
             }
             XmlEvent::EndDocument => {
                 println!("End");
@@ -3634,8 +3644,6 @@ fn main() -> io::Result<()> {
             _ => {}
         }
     }
-
-    save_file().unwrap();
 
     //#[derive(Debug, Serialize, Deserialize, YaSerialize, YaDeserialize, PartialEq)]
     #[derive(Debug, YaSerialize, YaDeserialize, PartialEq)]
