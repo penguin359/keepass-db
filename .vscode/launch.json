@@ -23,9 +23,12 @@
             //"args": ["testdata\\dummy-keepass2.08-gz.kdbx"],
             "args": [
                 "testdata/dummy-kdbx41.kdbx"
+                // "data-corrupt.kdbx"
             ],
             "env": {
-                "KDBX_PASSWORD": "asdf"
+                "KDBX_PASSWORD": "asdf",
+                "RUST_LOG": "debug",
+                "RUST_BACKTRACE": "1",
             },
             "cwd": "${workspaceFolder}"
         },
