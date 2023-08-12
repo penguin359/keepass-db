@@ -2208,7 +2208,7 @@ fn save_file() -> io::Result<()> {
     context.update(&header);
     let digest = context.finish();
     file.write(digest.as_ref())?;
-    header.append(&mut digest.as_ref().to_owned());
+    // header.append(&mut digest.as_ref().to_owned());
 
     let mut master_key = master_seed.to_vec();
     master_key.extend(transform_key);
@@ -2238,7 +2238,9 @@ fn save_file() -> io::Result<()> {
     let mut inner_tlvs = BTreeMap::new();
     inner_tlvs.insert(1, vec![stream_cipher.to_le_bytes().to_vec()]);
     inner_tlvs.insert(2, vec![stream_key.to_vec()]);
-    save_tlvs(&mut output, &tlvs, major_version).unwrap();
+    save_tlvs(&mut output, &inner_tlvs, major_version).unwrap();
+    output.flush()?;
+    drop(output);
 
     Ok(())
 }
@@ -2721,6 +2723,7 @@ fn main() -> io::Result<()> {
             8 => { inner_tlvs.insert(2u8, tlv_data); },
             10 => { inner_tlvs.insert(1u8, tlv_data); },
             11 => {
+                tlvs.insert(tlv_type, tlv_data.clone());
                 let kdf_parameters = &tlv_data;
                 let mut c = Cursor::new(kdf_parameters);
                 let variant_minor = c.read_u8()?;
@@ -2773,7 +2776,7 @@ fn main() -> io::Result<()> {
     let compress = match compression_flags {
         0 => {
             // XX Untested
-            let _ = writeln!(stderr, "Unsupported no compressed file\n");
+            // let _ = writeln!(stderr, "Unsupported no compressed file\n");
             //process::exit(1);
             Compression::None
         },
