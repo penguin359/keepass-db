@@ -1714,6 +1714,7 @@ struct Meta {
     memory_protection: MemoryProtection,
     custom_icons: String,
     recycle_bin_enabled: bool,
+    #[kdbx(element = "RecycleBinUUID")]
     recycle_bin_uuid: Option<Uuid>,
     recycle_bin_changed: String,
     entry_templates_group: String,
@@ -1754,6 +1755,13 @@ struct Times {
     location_changed: DateTime<Utc>,
 }
 
+//#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
+#[derive(Clone, Debug, Default, PartialEq, KdbxParse, KdbxSerialize)]
+struct ProtectedString {
+    Key: String,
+    Value: String,
+}
+
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
 struct Group {
     #[kdbx(element = "UUID")]
@@ -1770,9 +1778,9 @@ struct Group {
     last_top_visible_entry: Uuid,
     //custom_data: CustomData,
     #[kdbx(flatten)]
-    group: Vec<Group>,
-    #[kdbx(flatten)]
     entry: Vec<Entry>,
+    #[kdbx(flatten)]
+    group: Vec<Group>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, KdbxParse, KdbxSerialize)]
@@ -1788,6 +1796,8 @@ struct Entry {
     tags: String,
     times: Times,
     // custom_data: CustomData,
+    #[kdbx(flatten)]
+    string: Vec<ProtectedString>,
     history: Vec<Entry>,
 }
 

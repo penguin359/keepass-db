@@ -368,18 +368,6 @@ fn write_kdbx_document<K: KdbxSerialize + Clone>(expected: &K) -> Vec<u8> {
 
 #[test]
 fn test_encode_memory_protection_all() {
-    // let buffer = vec![];
-    // let mut writer = xml::writer::EventWriter::new(buffer);
-    // writer.write(xml::writer::XmlEvent::start_element("MemoryProtection")).expect("Success!");
-    // MemoryProtection::serialize2(&mut writer, MemoryProtection {
-    //     protect_notes: true,
-    //     protect_password: true,
-    //     protect_title: true,
-    //     protect_url: true,
-    //     protect_user_name: true,
-    // }).expect("No error");
-    // writer.write(xml::writer::XmlEvent::end_element()).expect("Success!");
-    // let buffer = writer.into_inner();
     let buffer = write_kdbx_document(&MemoryProtection {
         protect_notes: true,
         protect_password: true,
@@ -627,19 +615,14 @@ fn test_encode_entry_filled() {
     let actual = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![]).expect("No error");
     end_document(reader);
 
-    let buffer = vec![];
-    let mut writer = xml::writer::EventWriter::new(buffer);
-    writer.write(xml::writer::XmlEvent::start_element("Entry")).expect("Success!");
-    Entry::serialize2(&mut writer, actual).expect("No error");
-//    Entry::serialize2(&mut writer, Entry {
+    let buffer = write_kdbx_document(&actual);
+//    Entry {
 //        protect_notes: true,
 //        protect_password: true,
 //        protect_title: true,
 //        protect_url: true,
 //        protect_user_name: true,
 //    }).expect("No error");
-    writer.write(xml::writer::XmlEvent::end_element()).expect("Success!");
-    let buffer = writer.into_inner();
     let mut reader = ParserConfig::new()
         .create_reader(Cursor::new(buffer));
     match reader.next().unwrap() {

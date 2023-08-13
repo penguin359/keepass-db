@@ -281,15 +281,28 @@ pub fn derive_serializer(input: TS1) -> TS1 {
         // eprintln!("Matching names: {big_name}");
         let _big_name_debug = format!("{big_name}: {{:?}}");
         if r.array {
-            quote! {
-                writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
-                for item in value.#name {
-                    // writer.write(xml::writer::XmlEvent::start_element(#match_name)).map_err(|_|"")?;
-                    //<#my_type as KdbxSerialize>::serialize(writer, value.#name)?;
-                    #my_type::serialize2(writer, item)?;
+            if r.flatten {
+                quote! {
+                    // writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
+                    for item in value.#name {
+                        writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
+                        //<#my_type as KdbxSerialize>::serialize(writer, value.#name)?;
+                        #my_type::serialize2(writer, item)?;
+                        writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
+                    }
                     // writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
                 }
-                writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
+            } else {
+                quote! {
+                    writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
+                    for item in value.#name {
+                        writer.write(xml::writer::XmlEvent::start_element(#match_name)).map_err(|_|"")?;
+                        //<#my_type as KdbxSerialize>::serialize(writer, value.#name)?;
+                        #my_type::serialize2(writer, item)?;
+                        writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
+                    }
+                    writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
+                }
             }
         } else {
             quote! {
