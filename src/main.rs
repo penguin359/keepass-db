@@ -1727,8 +1727,8 @@ struct Times {
 //#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
 #[derive(Clone, Debug, Default, PartialEq, KdbxParse, KdbxSerialize)]
 struct ProtectedString {
-    Key: String,
-    Value: String,
+    key: String,
+    value: String,
 }
 
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
@@ -1767,7 +1767,7 @@ struct Entry {
     // custom_data: CustomData,
     #[kdbx(flatten)]
     string: Vec<ProtectedString>,
-    history: Vec<Entry>,
+    history: Option<Vec<Entry>>,
 }
 
 #[derive(Clone, Default, KdbxParse, KdbxSerialize)]
@@ -2146,7 +2146,7 @@ fn decode_entry<R: Read>(reader: &mut EventReader<R>) -> Result<Entry, String> {
     let mut elements = vec![];
     elements.push(::xml::name::OwnedName::local("Entry"));
 
-    let mut history = Vec::new();
+    let mut history = None;
     while elements.len() > 0 {
         let event = reader.next().map_err(|_| "")?;
         println!("Decode entry...");
@@ -2162,7 +2162,7 @@ fn decode_entry<R: Read>(reader: &mut EventReader<R>) -> Result<Entry, String> {
                 attributes: _,
                 ..
             } if name.local_name == "History" => {
-                history = decode_history(reader)?; //, name, attributes)?;
+                history = Some(decode_history(reader)?); //, name, attributes)?;
                 println!("History: {:?}", history);
             }
             XmlEvent::StartElement { name, .. } => {

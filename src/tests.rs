@@ -561,7 +561,7 @@ fn test_decode_entry_empty() {
     end_document(reader);
     assert_eq!(entry.uuid, ""); //Uuid::nil());
     assert_eq!(entry.icon_id, 0);
-    assert_eq!(entry.history.len(), 0);
+    assert_eq!(entry.history, None);
 }
 
 #[test]
@@ -587,11 +587,12 @@ fn test_decode_entry_filled() {
     let _expected_uuid = uuid!("83d7c620-39d2-47c5-af8c-f049fcbe23b8");
     assert_eq!(entry.uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
     assert_eq!(entry.icon_id, 12);
-    assert_eq!(entry.history.len(), 2);
-    assert_eq!(entry.history[0].uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
-    assert_eq!(entry.history[0].icon_id, 7);
-    assert_eq!(entry.history[1].uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
-    assert_eq!(entry.history[1].icon_id, 25);
+    let history = entry.history.unwrap();
+    assert_eq!(history.len(), 2);
+    assert_eq!(history[0].uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
+    assert_eq!(history[0].icon_id, 7);
+    assert_eq!(history[1].uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
+    assert_eq!(history[1].icon_id, 25);
 }
 
 #[test]
@@ -638,11 +639,12 @@ fn test_encode_entry_filled() {
 
     assert_eq!(entry.uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
     assert_eq!(entry.icon_id, 12);
-    assert_eq!(entry.history.len(), 2);
-    assert_eq!(entry.history[0].uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
-    assert_eq!(entry.history[0].icon_id, 7);
-    assert_eq!(entry.history[1].uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
-    assert_eq!(entry.history[1].icon_id, 25);
+    let history = entry.history.unwrap();
+    assert_eq!(history.len(), 2);
+    assert_eq!(history[0].uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
+    assert_eq!(history[0].icon_id, 7);
+    assert_eq!(history[1].uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
+    assert_eq!(history[1].icon_id, 25);
 }
 
 #[test]
@@ -833,13 +835,13 @@ fn test_decode_document_filled_contents() {
     assert_eq!(document.root[0].entry.len(), 0);
     assert_eq!(document.root[0].group.len(), 1);
     assert_eq!(document.root[0].group[0].entry.len(), 1);
-    assert_eq!(document.root[0].group[0].entry[0].history.len(), 2);
+    assert_eq!(document.root[0].group[0].entry[0].history.as_ref().unwrap().len(), 2, "{:#?}", document.root[0].group[0].entry[0].history);
     assert_eq!(document.root[0].group[0].group.len(), 2);
     assert_eq!(document.root[0].group[0].group[0].entry.len(), 1);
-    assert_eq!(document.root[0].group[0].group[0].entry[0].history.len(), 2);
+    assert_eq!(document.root[0].group[0].group[0].entry[0].history.as_ref().unwrap().len(), 2);
     assert_eq!(document.root[0].group[0].group[0].group.len(), 1);
     assert_eq!(document.root[0].group[0].group[0].group[0].entry.len(), 1);
-    assert_eq!(document.root[0].group[0].group[0].group[0].entry[0].history.len(), 0);
+    assert_eq!(document.root[0].group[0].group[0].group[0].entry[0].history.as_ref().unwrap().len(), 0);
     assert_eq!(document.root[0].group[0].group[0].group[0].group.len(), 0);
     assert_eq!(document.root[0].group[0].group[1].entry.len(), 0);
     assert_eq!(document.root[0].group[0].group[1].group.len(), 0);

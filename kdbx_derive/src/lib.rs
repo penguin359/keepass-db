@@ -151,19 +151,28 @@ fn decode_struct(ast: &syn::DeriveInput) -> Vec<KdbxField> {
                             }
                         },
                         TypeCategory::Option(inner_type, tp) => {
-                            let subtype = match get_type(tp) {
-                                TypeCategory::Basic(t) => t,
-                                _ => panic!("Only basic types supported for Option<_>")
-                            };
-                            KdbxField {
-                                name,
-                                r#type: subtype,
-                                element_name: big_name,
-                                inner_type: inner_type.clone(),
-                                full_type: field.ty.clone(),
-                                array: false,
-                                option: true,
-                                flatten,
+                            match get_type(tp) {
+                                TypeCategory::Basic(t) => KdbxField {
+                                    name,
+                                    r#type: t,
+                                    element_name: big_name,
+                                    inner_type: inner_type.clone(),
+                                    full_type: field.ty.clone(),
+                                    array: false,
+                                    option: true,
+                                    flatten,
+                                },
+                                TypeCategory::Vec(inner_type, tp) => KdbxField {
+                                    name,
+                                    r#type: tp.path.segments.last().unwrap().ident.clone(),
+                                    element_name: big_name,
+                                    inner_type: inner_type.clone(),
+                                    full_type: field.ty.clone(),
+                                    array: true,
+                                    option: true,
+                                    flatten,
+                                },
+                                _ => panic!("Only basic and Vec types supported for Option<_>"),
                             }
                         },
                         TypeCategory::Basic(t) => KdbxField {
@@ -213,12 +222,40 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
         let name = &r.name;
         let mangled_name = Ident::new(&format!("field_{}", name), Span::call_site());
         let my_type = &r.r#type;
+        let inner_type = &r.inner_type;
         // let big_name = pascal_case(&name.to_string());
         let big_name = &r.element_name;
         // eprintln!("Matching names: {big_name}");
         let big_name_debug = format!("{big_name}: {{:?}}");
         let match_name = my_type.to_string();
         if r.array {
+            if r.option {
+                quote! {
+                    XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
+                        let mut vec = #mangled_name.get_or_insert_with(|| Vec::new());
+                        loop {
+                            let event = reader.next().map_err(|_|"")?;
+                            match event {
+                                XmlEvent::StartElement { name, attributes, .. } if name.local_name == #match_name => {
+                                    vec.push(match #my_type::parse(reader, name, attributes)? {
+                                        Some(v) => v,
+                                        None => <#my_type as ::std::default::Default>::default(),
+                                    });
+                                },
+                                XmlEvent::StartElement { .. } => {
+                                    reader.skip();
+                                },
+                                XmlEvent::EndElement { .. } => {
+                                    break;
+                                },
+                                _ => {
+                                },
+                            }
+                        }
+                        println!(#big_name_debug, #mangled_name);
+                    }
+                }
+            } else {
             if r.flatten {
                 let full_type = &r.full_type;
                 quote! {
@@ -266,13 +303,19 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
                     }
                 }
             }
+            }
         } else {
             if r.option {
-                quote! {
-                    XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
-                        //#mangled_name = <#my_type as KdbxParse>::parse(reader, name, attributes)?;
-                        #mangled_name = #my_type::parse(reader, name, attributes)?;
-                        println!(#big_name_debug, #mangled_name);
+                if r.array {
+                    quote! {
+                    }
+                } else {
+                    quote! {
+                        XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
+                            //#mangled_name = <#my_type as KdbxParse>::parse(reader, name, attributes)?;
+                            #mangled_name = #my_type::parse(reader, name, attributes)?;
+                            println!(#big_name_debug, #mangled_name);
+                        }
                     }
                 }
             } else {
@@ -376,15 +419,30 @@ pub fn derive_serializer(input: TS1) -> TS1 {
                     // writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
                 }
             } else {
-                quote! {
-                    writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
-                    for item in value.#name {
-                        writer.write(xml::writer::XmlEvent::start_element(#match_name)).map_err(|_|"")?;
-                        //<#my_type as KdbxSerialize>::serialize(writer, value.#name)?;
-                        #my_type::serialize2(writer, item)?;
+                if r.option {
+                    quote! {
+                        if let Some(inner) = value.#name {
+                            writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
+                            for item in inner {
+                                writer.write(xml::writer::XmlEvent::start_element(#match_name)).map_err(|_|"")?;
+                                //<#my_type as KdbxSerialize>::serialize(writer, inner)?;
+                                #my_type::serialize2(writer, item)?;
+                                writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
+                            }
+                            writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
+                        }
+                    }
+                } else {
+                    quote! {
+                        writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
+                        for item in value.#name {
+                            writer.write(xml::writer::XmlEvent::start_element(#match_name)).map_err(|_|"")?;
+                            //<#my_type as KdbxSerialize>::serialize(writer, value.#name)?;
+                            #my_type::serialize2(writer, item)?;
+                            writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
+                        }
                         writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
                     }
-                    writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
                 }
             }
         } else {
