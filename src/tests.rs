@@ -270,7 +270,7 @@ fn end_document(mut reader: EventReader<Cursor<&[u8]>>) {
 //    start_document_raw(contents.as_bytes(), root)
 //}
 
-#[derive(Default, KdbxParse)]
+#[derive(Clone, Default, KdbxParse, KdbxSerialize)]
 struct StringTest {
     field: String,
 }
@@ -325,7 +325,45 @@ fn test_parsing_string_ignores_child_elements() {
     end_document(reader);
 }
 
-#[derive(Default, KdbxParse)]
+#[test]
+fn test_serializing_empty_string() {
+    let doc = write_kdbx_document(&StringTest {
+        field: "".to_string(),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    //assert_eq!(actual, "<StringTest><Field/></StringTest>");  // TODO This should be normalized
+    assert_eq!(actual, "<StringTest><Field></Field></StringTest>");
+}
+
+#[test]
+fn test_serializing_valid_string() {
+    let doc = write_kdbx_document(&StringTest {
+        field: "This is valid.".to_string(),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<StringTest><Field>This is valid.</Field></StringTest>");
+}
+
+#[test]
+fn test_serializing_whitespace_string() {
+    let doc = write_kdbx_document(&StringTest {
+        field: "  \t ".to_string(),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<StringTest><Field>  \t </Field></StringTest>");
+}
+
+#[test]
+fn test_serializing_mixed_string() {
+    let doc = write_kdbx_document(&StringTest {
+        field: " This <b>is</b> valid.\t".to_string(),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    //assert_eq!(actual, "<StringTest><Field/></StringTest>");  // TODO This should be normalized
+    assert_eq!(actual, "<StringTest><Field> This &lt;b>is&lt;/b> valid.\t</Field></StringTest>");
+}
+
+#[derive(Clone, Default, KdbxParse, KdbxSerialize)]
 struct OptionStringTest {
     field: Option<String>,
 }
@@ -371,6 +409,50 @@ fn test_parsing_optional_mixed_string() {
     let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field.as_deref(), Some("\tA spaced string.  "));
     end_document(reader);
+}
+
+#[test]
+fn test_serializing_optional_empty_string() {
+    let doc = write_kdbx_document(&OptionStringTest {
+        field: None,
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<OptionStringTest/>");
+
+    let doc = write_kdbx_document(&OptionStringTest {
+        field: Some("".to_string()),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    //assert_eq!(actual, "<OptionStringTest><Field/></OptionStringTest>");  // TODO This should be normalized
+    assert_eq!(actual, "<OptionStringTest><Field></Field></OptionStringTest>");
+}
+
+#[test]
+fn test_serializing_optional_valid_string() {
+    let doc = write_kdbx_document(&OptionStringTest {
+        field: Some("This is valid.".to_string()),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<OptionStringTest><Field>This is valid.</Field></OptionStringTest>");
+}
+
+#[test]
+fn test_serializing_optional_whitespace_string() {
+    let doc = write_kdbx_document(&OptionStringTest {
+        field: Some("  \t ".to_string()),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<OptionStringTest><Field>  \t </Field></OptionStringTest>");
+}
+
+#[test]
+fn test_serializing_optional_mixed_string() {
+    let doc = write_kdbx_document(&OptionStringTest {
+        field: Some(" This <b>is</b> valid.\t".to_string()),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    //assert_eq!(actual, "<OptionStringTest><Field/></OptionStringTest>");  // TODO This should be normalized
+    assert_eq!(actual, "<OptionStringTest><Field> This &lt;b>is&lt;/b> valid.\t</Field></OptionStringTest>");
 }
 
 #[test]
@@ -466,7 +548,12 @@ fn test_decode_memory_protection_all() {
 
 fn write_kdbx_document<K: KdbxSerialize + Clone>(expected: &K) -> Vec<u8> {
     let buffer = vec![];
-    let mut writer = xml::writer::EventWriter::new(buffer);
+    let mut writer = xml::writer::EmitterConfig::new()
+        .write_document_declaration(false)
+        .normalize_empty_elements(true)
+        .cdata_to_characters(true)
+        .pad_self_closing(false)
+        .create_writer(buffer);
     writer.write(xml::writer::XmlEvent::start_element(std::any::type_name::<K>().rsplit(":").nth(0).unwrap())).expect("Success!");
     K::serialize2(&mut writer, expected.clone()).expect("No error");
     writer.write(xml::writer::XmlEvent::end_element()).expect("Success!");
