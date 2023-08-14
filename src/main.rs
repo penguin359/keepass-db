@@ -1241,13 +1241,19 @@ fn decode_optional_string<R: Read>(
                 elements.push(name);
             }
             XmlEvent::Characters(k) => {
-                string.push_str(&k);
+                if elements.len() == 1 {
+                    string.push_str(&k);
+                }
             }
             XmlEvent::Whitespace(k) => {
-                string.push_str(&k);
+                if elements.len() == 1 {
+                    string.push_str(&k);
+                }
             }
             XmlEvent::CData(k) => {
-                string.push_str(&k);
+                if elements.len() == 1 {
+                    string.push_str(&k);
+                }
             }
             XmlEvent::EndElement { name, .. } => {
                 let start_tag = elements.pop().expect("Can't consume a bare end element");
@@ -1301,7 +1307,7 @@ impl KdbxParse for String {
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
     ) -> Result<Option<Self>, String> {
-        Ok(Some(decode_string(reader, name, attributes)?))
+        decode_optional_string(reader, name, attributes)
     }
 }
 

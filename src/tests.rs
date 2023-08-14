@@ -241,9 +241,13 @@ fn test_find_next_element_document() {
     };
 }
 
-fn start_document_raw<'a>(contents: &'a [u8], root: &str) -> EventReader<Cursor<&'a [u8]>> {
+//fn start_document<'a>(contents: &'a (impl AsRef<[u8]> + ?Sized), root: &str) -> EventReader<Cursor<&'a [u8]>> {
+fn start_document<'a, C: AsRef<[u8]> + ?Sized>(contents: &'a C, root: &str) -> EventReader<Cursor<&'a [u8]>> {
+//fn start_document_raw<'a>(contents: &'a [u8], root: &str) -> EventReader<Cursor<&'a [u8]>> {
     let mut reader = ParserConfig::new()
-        .create_reader(Cursor::new(contents));
+        .ignore_comments(false)
+        //.ignore_root_level_whitespace(false)
+        .create_reader(Cursor::new(contents.as_ref()));
     match reader.next().unwrap() {
         XmlEvent::StartDocument { .. } => {},
         _ => { panic!("Missing document start"); },
@@ -262,8 +266,111 @@ fn end_document(mut reader: EventReader<Cursor<&[u8]>>) {
     };
 }
 
-fn start_document<'a>(contents: &'static str, root: &str) -> EventReader<Cursor<&'a [u8]>> {
-    start_document_raw(contents.as_bytes(), root)
+//fn start_document<'a>(contents: &'static str, root: &str) -> EventReader<Cursor<&'a [u8]>> {
+//    start_document_raw(contents.as_bytes(), root)
+//}
+
+#[derive(Default, KdbxParse)]
+struct StringTest {
+    field: String,
+}
+
+#[test]
+fn test_parsing_empty_string() {
+    let mut reader = start_document("<root> <Field /> </root>", "root");
+    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, "");
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field></Field> </root>", "root");
+    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, "");
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field><!-- This is invisible --></Field> </root>", "root");
+    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, "");
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_valid_string() {
+    let mut reader = start_document("<root> <Field>This is me.</Field> </root>", "root");
+    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, "This is me.");
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_whitespace_string() {
+    let mut reader = start_document("<root> <Field> \t  </Field> </root>", "root");
+    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, " \t  ");
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_mixed_string() {
+    let mut reader = start_document("<root> <Field>\tA spaced <!--hidden-->string.  </Field> </root>", "root");
+    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, "\tA spaced string.  ");
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_string_ignores_child_elements() {
+    let mut reader = start_document("<root> <Field>This <b>is</b> me.</Field> </root>", "root");
+    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, "This  me.");
+    end_document(reader);
+}
+
+#[derive(Default, KdbxParse)]
+struct OptionStringTest {
+    field: Option<String>,
+}
+
+#[test]
+fn test_parsing_optional_empty_string() {
+    let mut reader = start_document("<root> <Field /> </root>", "root");
+    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field.as_deref(), None);
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field></Field> </root>", "root");
+    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field.as_deref(), None);
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field><!-- This is invisible --></Field> </root>", "root");
+    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    //assert_eq!(actual.field.as_deref(), Some(""));  // Even a lone comment makes it non-empty
+    assert_eq!(actual.field.as_deref(), None);
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_optional_valid_string() {
+    let mut reader = start_document("<root> <Field>This is me.</Field> </root>", "root");
+    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field.as_deref(), Some("This is me."));
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_optional_whitespace_string() {
+    let mut reader = start_document("<root> <Field> \t  </Field> </root>", "root");
+    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field.as_deref(), Some(" \t  "));
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_optional_mixed_string() {
+    let mut reader = start_document("<root> <Field>\tA spaced <!--hidden-->string.  </Field> </root>", "root");
+    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field.as_deref(), Some("\tA spaced string.  "));
+    end_document(reader);
 }
 
 #[test]
@@ -549,7 +656,7 @@ fn test_encode_times_filled() {
         location_changed: DateTime::parse_from_rfc3339("2021-10-30T00:00:00-07:00").unwrap().with_timezone(&Utc),
     };
     let contents = write_kdbx_document(&expected);
-    let mut reader = start_document_raw(&contents, "Times");
+    let mut reader = start_document(&contents, "Times");
     let actual = Times::parse(&mut reader, OwnedName::local("Times"), vec![]).expect("No error").unwrap();
     assert_eq!(actual, expected);
 }
