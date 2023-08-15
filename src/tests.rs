@@ -636,6 +636,129 @@ fn test_serializing_optional_true_bool() {
     assert_eq!(actual, "<OptionBoolTest><Field>True</Field></OptionBoolTest>");
 }
 
+#[derive(Clone, Default, KdbxParse, KdbxSerialize)]
+struct UuidTest {
+    field: Uuid,
+}
+
+#[test]
+fn test_parsing_empty_uuid() {
+    let mut reader = start_document("<root> <Field /> </root>", "root");
+    let actual = UuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, Uuid::nil());
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field></Field> </root>", "root");
+    let actual = UuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, Uuid::nil());
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field><!-- This is invisible --></Field> </root>", "root");
+    let actual = UuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, Uuid::nil());
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_nil_uuid() {
+    let mut reader = start_document("<root> <Field>AAAAAAAAAAAAAAAAAAAAAA==</Field> </root>", "root");
+    let actual = UuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, Uuid::nil());
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_valid_uuid() {
+    let mut reader = start_document("<root> <Field>MZ3RgvukSfWAAWlPEBQOzA==</Field> </root>", "root");
+    let actual = UuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, uuid!("319dd182-fba4-49f5-8001-694f10140ecc"));
+    end_document(reader);
+}
+
+#[test]
+fn test_serializing_nil_uuid() {
+    let doc = write_kdbx_document(&UuidTest {
+        field: Uuid::nil(),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<UuidTest><Field>AAAAAAAAAAAAAAAAAAAAAA==</Field></UuidTest>");
+}
+
+#[test]
+fn test_serializing_valid_uuid() {
+    let doc = write_kdbx_document(&UuidTest {
+        field: uuid!("319dd182-fba4-49f5-8001-694f10140ecc"),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<UuidTest><Field>MZ3RgvukSfWAAWlPEBQOzA==</Field></UuidTest>");
+}
+
+#[derive(Clone, Default, KdbxParse, KdbxSerialize)]
+struct OptionUuidTest {
+    field: Option<Uuid>,
+}
+
+#[test]
+fn test_parsing_optional_empty_uuid() {
+    let mut reader = start_document("<root> <Field /> </root>", "root");
+    let actual = OptionUuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, None);
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field></Field> </root>", "root");
+    let actual = OptionUuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, None);
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field><!-- This is invisible --></Field> </root>", "root");
+    let actual = OptionUuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, None);
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_optional_nil_uuid() {
+    let mut reader = start_document("<root> <Field>AAAAAAAAAAAAAAAAAAAAAA==</Field> </root>", "root");
+    let actual = OptionUuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, Some(Uuid::nil()));
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_optional_valid_uuid() {
+    let mut reader = start_document("<root> <Field>MZ3RgvukSfWAAWlPEBQOzA==</Field> </root>", "root");
+    let actual = OptionUuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, Some(uuid!("319dd182-fba4-49f5-8001-694f10140ecc")));
+    end_document(reader);
+}
+
+#[test]
+fn test_serializing_optional_empty_uuid() {
+    let doc = write_kdbx_document(&OptionUuidTest {
+        field: None,
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<OptionUuidTest/>");
+}
+
+#[test]
+fn test_serializing_optional_nil_uuid() {
+    let doc = write_kdbx_document(&OptionUuidTest {
+        field: Some(Uuid::nil()),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<OptionUuidTest><Field>AAAAAAAAAAAAAAAAAAAAAA==</Field></OptionUuidTest>");
+}
+
+#[test]
+fn test_serializing_optional_valid_uuid() {
+    let doc = write_kdbx_document(&OptionUuidTest {
+        field: Some(uuid!("319dd182-fba4-49f5-8001-694f10140ecc")),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<OptionUuidTest><Field>MZ3RgvukSfWAAWlPEBQOzA==</Field></OptionUuidTest>");
+}
+
 #[test]
 fn test_decode_optional_empty_string() {
     let mut reader = start_document("<root/>", "root");

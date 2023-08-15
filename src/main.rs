@@ -1602,7 +1602,7 @@ impl<C> KdbxParse<C> for Uuid {
         attributes: Vec<OwnedAttribute>,
         context: &mut C,
     ) -> Result<Option<Self>, String> {
-        Ok(Some(decode_uuid(reader, name, attributes)?))
+        decode_optional_uuid(reader, name, attributes)
     }
 }
 
