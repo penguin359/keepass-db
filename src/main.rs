@@ -1536,9 +1536,14 @@ fn decode_datetime<R: Read>(
 //    }
 //}
 
-#[derive(Default)]
 struct KdbxContext {
     major_version: u16,
+}
+
+impl Default for KdbxContext {
+    fn default() -> Self {
+        KdbxContext { major_version: 4 }
+    }
 }
 
 impl KdbxParse<KdbxContext> for DateTime<Utc> {
@@ -1548,6 +1553,9 @@ impl KdbxParse<KdbxContext> for DateTime<Utc> {
         attributes: Vec<OwnedAttribute>,
         context: &mut KdbxContext,
     ) -> Result<Option<Self>, String> {
+        unsafe {
+            KDBX4 = context.major_version >= 4;
+        };
         decode_optional_datetime(reader, name, attributes)
     }
 }

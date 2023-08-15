@@ -1219,7 +1219,133 @@ struct DateTimeTest {
 
 #[test]
 #[ignore = "What should default datetime be?"]
-fn test_parsing_empty_datetime() {
+fn test_parsing_empty_datetime_kdbx3() {
+    let mut reader = start_document("<root> <Field /> </root>", "root");
+    let mut context = KdbxContext::default();
+    context.major_version = 3;
+    let actual = DateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut context,
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(
+        actual.field,
+        Utc.with_ymd_and_hms(1, 1, 1, 0, 0, 0).unwrap()
+    );
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field></Field> </root>", "root");
+    let mut context = KdbxContext::default();
+    context.major_version = 3;
+    let actual = DateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut context,
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(
+        actual.field,
+        Utc.with_ymd_and_hms(1, 1, 1, 0, 0, 0).unwrap()
+    );
+    end_document(reader);
+
+    let mut reader = start_document(
+        "<root> <Field><!-- This is invisible --></Field> </root>",
+        "root",
+    );
+    let mut context = KdbxContext::default();
+    context.major_version = 3;
+    let actual = DateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut context,
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(
+        actual.field,
+        Utc.with_ymd_and_hms(1, 1, 1, 0, 0, 0).unwrap()
+    );
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_nil_datetime_kdbx3() {
+    let mut reader = start_document("<root> <Field>0001-01-01T00:00:00Z</Field> </root>", "root");
+    let mut context = KdbxContext::default();
+    context.major_version = 3;
+    let actual = DateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut context,
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(
+        actual.field,
+        Utc.with_ymd_and_hms(1, 1, 1, 0, 0, 0).unwrap()
+    );
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_valid_datetime_kdbx3() {
+    let mut reader = start_document("<root> <Field>2021-07-30T21:31:02Z</Field> </root>", "root");
+    let mut context = KdbxContext::default();
+    context.major_version = 3;
+    let actual = DateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut context,
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(
+        actual.field,
+        DateTime::parse_from_rfc3339("2021-07-30T14:31:02-07:00").unwrap()
+    );
+    end_document(reader);
+}
+
+#[test]
+#[ignore = "Serializer needs context"]
+fn test_serializing_nil_datetime_kdbx3() {
+    let doc = write_kdbx_document(&DateTimeTest {
+        field: Utc.with_ymd_and_hms(1, 1, 1, 0, 0, 0).unwrap(),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(
+        actual,
+        "<DateTimeTest><Field>0001-01-01T00:00:00Z</Field></DateTimeTest>"
+    );
+}
+
+#[test]
+#[ignore = "Serializer needs context"]
+fn test_serializing_valid_datetime_kdbx3() {
+    let doc = write_kdbx_document(&DateTimeTest {
+        field: DateTime::parse_from_rfc3339("2021-07-30T14:31:02-07:00")
+            .unwrap()
+            .into(),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(
+        actual,
+        "<DateTimeTest><Field>2021-07-30T21:31:02Z</Field></DateTimeTest>"
+    );
+}
+
+#[test]
+#[ignore = "What should default datetime be?"]
+fn test_parsing_empty_datetime_kdbx41() {
     let mut reader = start_document("<root> <Field /> </root>", "root");
     let actual = DateTimeTest::parse(
         &mut reader,
@@ -1270,7 +1396,7 @@ fn test_parsing_empty_datetime() {
 }
 
 #[test]
-fn test_parsing_nil_datetime() {
+fn test_parsing_nil_datetime_kdbx41() {
     let mut reader = start_document("<root> <Field>AAAAAAAAAAA=</Field> </root>", "root");
     let actual = DateTimeTest::parse(
         &mut reader,
@@ -1288,7 +1414,7 @@ fn test_parsing_nil_datetime() {
 }
 
 #[test]
-fn test_parsing_valid_datetime() {
+fn test_parsing_valid_datetime_kdbx41() {
     let mut reader = start_document("<root> <Field>lmaW2A4AAAA=</Field> </root>", "root");
     let actual = DateTimeTest::parse(
         &mut reader,
@@ -1306,7 +1432,7 @@ fn test_parsing_valid_datetime() {
 }
 
 #[test]
-fn test_serializing_nil_datetime() {
+fn test_serializing_nil_datetime_kdbx41() {
     let doc = write_kdbx_document(&DateTimeTest {
         field: Utc.with_ymd_and_hms(1, 1, 1, 0, 0, 0).unwrap(),
     });
@@ -1318,7 +1444,7 @@ fn test_serializing_nil_datetime() {
 }
 
 #[test]
-fn test_serializing_valid_datetime() {
+fn test_serializing_valid_datetime_kdbx41() {
     let doc = write_kdbx_document(&DateTimeTest {
         field: DateTime::parse_from_rfc3339("2021-07-30T14:31:02-07:00")
             .unwrap()
@@ -1337,7 +1463,136 @@ struct OptionDateTimeTest {
 }
 
 #[test]
-fn test_parsing_optional_empty_datetime() {
+fn test_parsing_optional_empty_datetime_kdbx3() {
+    let mut reader = start_document("<root> <Field /> </root>", "root");
+    let mut context = KdbxContext::default();
+    context.major_version = 3;
+    let actual = OptionDateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut context,
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(actual.field, None);
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field></Field> </root>", "root");
+    let mut context = KdbxContext::default();
+    context.major_version = 3;
+    let actual = OptionDateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut context,
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(actual.field, None);
+    end_document(reader);
+
+    let mut reader = start_document(
+        "<root> <Field><!-- This is invisible --></Field> </root>",
+        "root",
+    );
+    let mut context = KdbxContext::default();
+    context.major_version = 3;
+    let actual = OptionDateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut context,
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(actual.field, None);
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_optional_nil_datetime_kdbx3() {
+    let mut reader = start_document("<root> <Field>0001-01-01T00:00:00Z</Field> </root>", "root");
+    let mut context = KdbxContext::default();
+    context.major_version = 3;
+    let actual = OptionDateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut context,
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(
+        actual.field,
+        Some(Utc.with_ymd_and_hms(1, 1, 1, 0, 0, 0).unwrap())
+    );
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_optional_valid_datetime_kdbx3() {
+    let mut reader = start_document("<root> <Field>2021-07-30T21:31:02Z</Field> </root>", "root");
+    let mut context = KdbxContext::default();
+    context.major_version = 3;
+    let actual = OptionDateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut context,
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(
+        actual.field,
+        Some(
+            DateTime::parse_from_rfc3339("2021-07-30T14:31:02-07:00")
+                .unwrap()
+                .into()
+        )
+    );
+    end_document(reader);
+}
+
+#[test]
+fn test_serializing_optional_empty_datetime_kdbx3() {
+    let doc = write_kdbx_document(&OptionDateTimeTest { field: None });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<OptionDateTimeTest/>");
+}
+
+#[test]
+#[ignore = "Serializer needs context"]
+fn test_serializing_optional_nil_datetime_kdbx3() {
+    let doc = write_kdbx_document(&OptionDateTimeTest {
+        field: Some(Utc.with_ymd_and_hms(1, 1, 1, 0, 0, 0).unwrap()),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(
+        actual,
+        "<OptionDateTimeTest><Field>0001-01-01T00:00:00Z</Field></OptionDateTimeTest>"
+    );
+}
+
+#[test]
+#[ignore = "Serializer needs context"]
+fn test_serializing_optional_valid_datetime_kdbx3() {
+    let doc = write_kdbx_document(&OptionDateTimeTest {
+        field: Some(
+            DateTime::parse_from_rfc3339("2021-07-30T14:31:02-07:00")
+                .unwrap()
+                .into(),
+        ),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(
+        actual,
+        "<OptionDateTimeTest><Field>2021-07-30T21:31:02Z</Field></OptionDateTimeTest>"
+    );
+}
+
+#[test]
+fn test_parsing_optional_empty_datetime_kdbx41() {
     let mut reader = start_document("<root> <Field /> </root>", "root");
     let actual = OptionDateTimeTest::parse(
         &mut reader,
@@ -1379,7 +1634,7 @@ fn test_parsing_optional_empty_datetime() {
 }
 
 #[test]
-fn test_parsing_optional_nil_datetime() {
+fn test_parsing_optional_nil_datetime_kdbx41() {
     let mut reader = start_document("<root> <Field>AAAAAAAAAAA=</Field> </root>", "root");
     let actual = OptionDateTimeTest::parse(
         &mut reader,
@@ -1397,7 +1652,7 @@ fn test_parsing_optional_nil_datetime() {
 }
 
 #[test]
-fn test_parsing_optional_valid_datetime() {
+fn test_parsing_optional_valid_datetime_kdbx41() {
     let mut reader = start_document("<root> <Field>lmaW2A4AAAA=</Field> </root>", "root");
     let actual = OptionDateTimeTest::parse(
         &mut reader,
@@ -1419,14 +1674,14 @@ fn test_parsing_optional_valid_datetime() {
 }
 
 #[test]
-fn test_serializing_optional_empty_datetime() {
+fn test_serializing_optional_empty_datetime_kdbx41() {
     let doc = write_kdbx_document(&OptionDateTimeTest { field: None });
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     assert_eq!(actual, "<OptionDateTimeTest/>");
 }
 
 #[test]
-fn test_serializing_optional_nil_datetime() {
+fn test_serializing_optional_nil_datetime_kdbx41() {
     let doc = write_kdbx_document(&OptionDateTimeTest {
         field: Some(Utc.with_ymd_and_hms(1, 1, 1, 0, 0, 0).unwrap()),
     });
@@ -1438,7 +1693,7 @@ fn test_serializing_optional_nil_datetime() {
 }
 
 #[test]
-fn test_serializing_optional_valid_datetime() {
+fn test_serializing_optional_valid_datetime_kdbx41() {
     let doc = write_kdbx_document(&OptionDateTimeTest {
         field: Some(
             DateTime::parse_from_rfc3339("2021-07-30T14:31:02-07:00")
