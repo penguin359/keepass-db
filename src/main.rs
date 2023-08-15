@@ -94,7 +94,7 @@ use kdbx_derive::{KdbxParse, KdbxSerialize};
 //    }
 //}
 
-trait KdbxParse: Sized + Default {
+trait KdbxParse<C>: Sized + Default {
     //    fn provide_default() -> Self
     //        where Self: Default {
     //        <Self as Default>::default()
@@ -104,6 +104,7 @@ trait KdbxParse: Sized + Default {
         reader: &mut EventReader<R>,
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
+        context: &mut C
     ) -> Result<Option<Self>, String>;
 }
 
@@ -1301,11 +1302,12 @@ fn decode_string<R: Read>(
     decode_optional_string(reader, name, attributes).map(|x| x.unwrap_or_else(|| "".into()))
 }
 
-impl KdbxParse for String {
+impl<C> KdbxParse<C> for String {
     fn parse<R: Read>(
         reader: &mut EventReader<R>,
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
+        context: &mut C,
     ) -> Result<Option<Self>, String> {
         decode_optional_string(reader, name, attributes)
     }
@@ -1345,11 +1347,12 @@ fn decode_bool<R: Read>(
     decode_optional_bool(reader, name, attributes).map(|x| x.unwrap_or(false))
 }
 
-impl KdbxParse for bool {
+impl<C> KdbxParse<C> for bool {
     fn parse<R: Read>(
         reader: &mut EventReader<R>,
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
+        context: &mut C,
     ) -> Result<Option<Self>, String> {
         decode_optional_bool(reader, name, attributes)
     }
@@ -1388,11 +1391,12 @@ fn decode_i64<R: Read>(
     decode_optional_i64(reader, name, attributes).map(|x| x.unwrap_or(0))
 }
 
-impl KdbxParse for i64 {
+impl<C> KdbxParse<C> for i64 {
     fn parse<R: Read>(
         reader: &mut EventReader<R>,
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
+        context: &mut C,
     ) -> Result<Option<Self>, String> {
         Ok(Some(decode_i64(reader, name, attributes)?))
     }
@@ -1408,11 +1412,12 @@ impl KdbxSerialize for i64 {
     }
 }
 
-impl KdbxParse for i32 {
+impl<C> KdbxParse<C> for i32 {
     fn parse<R: Read>(
         reader: &mut EventReader<R>,
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
+        context: &mut C,
     ) -> Result<Option<Self>, String> {
         //decode_i64(reader, name, attributes).map(|v| Some(v as i32))
         Ok(Some(decode_i64(reader, name, attributes)? as i32))
@@ -1425,11 +1430,12 @@ impl KdbxSerialize for i32 {
     }
 }
 
-impl KdbxParse for u32 {
+impl<C> KdbxParse<C> for u32 {
     fn parse<R: Read>(
         reader: &mut EventReader<R>,
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
+        context: &mut C,
     ) -> Result<Option<Self>, String> {
         Ok(Some(decode_i64(reader, name, attributes)? as u32))
     }
@@ -1498,11 +1504,15 @@ fn decode_datetime<R: Read>(
 //    }
 //}
 
-impl KdbxParse for DateTime<Utc> {
+#[derive(Default)]
+struct KdbxContext;
+
+impl KdbxParse<KdbxContext> for DateTime<Utc> {
     fn parse<R: Read>(
         reader: &mut EventReader<R>,
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
+        context: &mut KdbxContext,
     ) -> Result<Option<Self>, String> {
         Ok(Some(decode_datetime(reader, name, attributes)?))
     }
@@ -1553,11 +1563,12 @@ fn encode_uuid<W: Write>(writer: &mut EventWriter<W>, value: Uuid) -> Result<(),
     encode_optional_uuid(writer, Some(value))
 }
 
-impl KdbxParse for Uuid {
+impl<C> KdbxParse<C> for Uuid {
     fn parse<R: Read>(
         reader: &mut EventReader<R>,
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
+        context: &mut C,
     ) -> Result<Option<Self>, String> {
         Ok(Some(decode_uuid(reader, name, attributes)?))
     }
@@ -1702,11 +1713,12 @@ struct Meta {
     custom_data: HashMap<String, String>,
 }
 
-impl KdbxParse for HashMap<String, String> {
+impl<C> KdbxParse<C> for HashMap<String, String> {
     fn parse<R: Read>(
         reader: &mut EventReader<R>,
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
+        context: &mut C,
     ) -> Result<Option<Self>, String> {
         Ok(Some(decode_custom_data(reader, name, attributes)?))
     }
@@ -1980,7 +1992,7 @@ fn decode_meta_old<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String>
             XmlEvent::StartElement {
                 name, attributes, ..
             } if name.local_name == "MemoryProtection" => {
-                memory_protection = MemoryProtection::parse(reader, name, attributes)?.unwrap();
+                memory_protection = MemoryProtection::parse(reader, name, attributes, &mut KdbxContext)?.unwrap();  // TODO Shouldn't need context
                 println!("MemoryProtection: {:?}", memory_protection);
             }
             XmlEvent::StartElement {
@@ -2347,7 +2359,7 @@ fn decode_group<R: Read>(reader: &mut EventReader<R>) -> Result<Group, String> {
             XmlEvent::StartElement {
                 name, attributes, ..
             } if name.local_name == "Times" => {
-                times = Times::parse(reader, name, attributes)?.unwrap();
+                times = Times::parse(reader, name, attributes, &mut KdbxContext)?.unwrap();
                 println!("Times: {:?}", times);
             }
             XmlEvent::StartElement {
@@ -2365,14 +2377,14 @@ fn decode_group<R: Read>(reader: &mut EventReader<R>) -> Result<Group, String> {
             XmlEvent::StartElement {
                 name, attributes, ..
             } if name.local_name == "Entry" => {
-                let entry = Entry::parse(reader, name, attributes)?.unwrap();
+                let entry = Entry::parse(reader, name, attributes, &mut KdbxContext)?.unwrap();
                 println!("Entry: {:?}", entry);
                 entries.push(entry);
             }
             XmlEvent::StartElement {
                 name, attributes, ..
             } if name.local_name == "Group" => {
-                let group = Group::parse(reader, name, attributes)?.unwrap();
+                let group = Group::parse(reader, name, attributes, &mut KdbxContext)?.unwrap();
                 println!("Group: {:?}", group);
                 groups.push(group);
             }
@@ -3620,7 +3632,7 @@ fn main() -> io::Result<()> {
             XmlEvent::StartElement {
                 name, attributes, ..
             } => {
-                let my_doc = crate::KeePassFile::parse(&mut reader, name, attributes)
+                let my_doc = crate::KeePassFile::parse(&mut reader, name, attributes, &mut KdbxContext)
                     .map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?.unwrap();
                 save_file(&my_doc).unwrap();
             }

@@ -278,17 +278,17 @@ struct StringTest {
 #[test]
 fn test_parsing_empty_string() {
     let mut reader = start_document("<root> <Field /> </root>", "root");
-    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, "");
     end_document(reader);
 
     let mut reader = start_document("<root> <Field></Field> </root>", "root");
-    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, "");
     end_document(reader);
 
     let mut reader = start_document("<root> <Field><!-- This is invisible --></Field> </root>", "root");
-    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, "");
     end_document(reader);
 }
@@ -296,7 +296,7 @@ fn test_parsing_empty_string() {
 #[test]
 fn test_parsing_valid_string() {
     let mut reader = start_document("<root> <Field>This is me.</Field> </root>", "root");
-    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, "This is me.");
     end_document(reader);
 }
@@ -304,7 +304,7 @@ fn test_parsing_valid_string() {
 #[test]
 fn test_parsing_whitespace_string() {
     let mut reader = start_document("<root> <Field> \t  </Field> </root>", "root");
-    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, " \t  ");
     end_document(reader);
 }
@@ -312,7 +312,7 @@ fn test_parsing_whitespace_string() {
 #[test]
 fn test_parsing_mixed_string() {
     let mut reader = start_document("<root> <Field>\tA spaced <!--hidden-->string.  </Field> </root>", "root");
-    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, "\tA spaced string.  ");
     end_document(reader);
 }
@@ -320,7 +320,7 @@ fn test_parsing_mixed_string() {
 #[test]
 fn test_parsing_string_ignores_child_elements() {
     let mut reader = start_document("<root> <Field>This <b>is</b> me.</Field> </root>", "root");
-    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, "This  me.");
     end_document(reader);
 }
@@ -371,17 +371,17 @@ struct OptionStringTest {
 #[test]
 fn test_parsing_optional_empty_string() {
     let mut reader = start_document("<root> <Field /> </root>", "root");
-    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field.as_deref(), None);
     end_document(reader);
 
     let mut reader = start_document("<root> <Field></Field> </root>", "root");
-    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field.as_deref(), None);
     end_document(reader);
 
     let mut reader = start_document("<root> <Field><!-- This is invisible --></Field> </root>", "root");
-    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     //assert_eq!(actual.field.as_deref(), Some(""));  // Even a lone comment makes it non-empty
     assert_eq!(actual.field.as_deref(), None);
     end_document(reader);
@@ -390,7 +390,7 @@ fn test_parsing_optional_empty_string() {
 #[test]
 fn test_parsing_optional_valid_string() {
     let mut reader = start_document("<root> <Field>This is me.</Field> </root>", "root");
-    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field.as_deref(), Some("This is me."));
     end_document(reader);
 }
@@ -398,7 +398,7 @@ fn test_parsing_optional_valid_string() {
 #[test]
 fn test_parsing_optional_whitespace_string() {
     let mut reader = start_document("<root> <Field> \t  </Field> </root>", "root");
-    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field.as_deref(), Some(" \t  "));
     end_document(reader);
 }
@@ -406,7 +406,7 @@ fn test_parsing_optional_whitespace_string() {
 #[test]
 fn test_parsing_optional_mixed_string() {
     let mut reader = start_document("<root> <Field>\tA spaced <!--hidden-->string.  </Field> </root>", "root");
-    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field.as_deref(), Some("\tA spaced string.  "));
     end_document(reader);
 }
@@ -463,17 +463,17 @@ struct BoolTest {
 #[test]
 fn test_parsing_empty_bool() {
     let mut reader = start_document("<root> <Field /> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, false);
     end_document(reader);
 
     let mut reader = start_document("<root> <Field></Field> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, false);
     end_document(reader);
 
     let mut reader = start_document("<root> <Field><!-- This is invisible --></Field> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, false);
     end_document(reader);
 }
@@ -481,17 +481,17 @@ fn test_parsing_empty_bool() {
 #[test]
 fn test_parsing_valid_false_bool() {
     let mut reader = start_document("<root> <Field>false</Field> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, false);
     end_document(reader);
 
     let mut reader = start_document("<root> <Field>FALSE</Field> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, false);
     end_document(reader);
 
     let mut reader = start_document("<root> <Field>False</Field> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, false);
     end_document(reader);
 }
@@ -500,7 +500,7 @@ fn test_parsing_valid_false_bool() {
 fn test_parsing_invalid_false_bool() {
     // TODO Test for warnings about invalid values
     let mut reader = start_document("<root> <Field>This is me.</Field> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, false);
     end_document(reader);
 }
@@ -508,17 +508,17 @@ fn test_parsing_invalid_false_bool() {
 #[test]
 fn test_parsing_valid_true_bool() {
     let mut reader = start_document("<root> <Field>true</Field> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, true);
     end_document(reader);
 
     let mut reader = start_document("<root> <Field>TRUE</Field> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, true);
     end_document(reader);
 
     let mut reader = start_document("<root> <Field>True</Field> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, true);
     end_document(reader);
 }
@@ -549,17 +549,17 @@ struct OptionBoolTest {
 #[test]
 fn test_parsing_optional_empty_bool() {
     let mut reader = start_document("<root> <Field /> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, None);
     end_document(reader);
 
     let mut reader = start_document("<root> <Field></Field> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, None);
     end_document(reader);
 
     let mut reader = start_document("<root> <Field><!-- This is invisible --></Field> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, None);
     end_document(reader);
 }
@@ -567,17 +567,17 @@ fn test_parsing_optional_empty_bool() {
 #[test]
 fn test_parsing_optional_valid_false_bool() {
     let mut reader = start_document("<root> <Field>false</Field> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, Some(false));
     end_document(reader);
 
     let mut reader = start_document("<root> <Field>FALSE</Field> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, Some(false));
     end_document(reader);
 
     let mut reader = start_document("<root> <Field>False</Field> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, Some(false));
     end_document(reader);
 }
@@ -586,7 +586,7 @@ fn test_parsing_optional_valid_false_bool() {
 fn test_parsing_optional_invalid_false_bool() {
     // TODO Test for warnings about invalid values
     let mut reader = start_document("<root> <Field>This is me.</Field> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, Some(false));
     end_document(reader);
 }
@@ -594,17 +594,17 @@ fn test_parsing_optional_invalid_false_bool() {
 #[test]
 fn test_parsing_optional_valid_true_bool() {
     let mut reader = start_document("<root> <Field>true</Field> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, Some(true));
     end_document(reader);
 
     let mut reader = start_document("<root> <Field>TRUE</Field> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, Some(true));
     end_document(reader);
 
     let mut reader = start_document("<root> <Field>True</Field> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
     assert_eq!(actual.field, Some(true));
     end_document(reader);
 }
@@ -680,7 +680,7 @@ fn test_decoding_optional_full_string() {
 fn test_decode_memory_protection_empty() {
     let mut reader = start_document("<MemoryProtection/>", "MemoryProtection");
     //assert_eq!(MemoryProtection::parse(&mut reader).expect("No error"), Some(String::from("  This is  Test  of it 4   ")));
-    let mp = MemoryProtection::parse(&mut reader, OwnedName::local("MemoryProtection"), vec![]).expect("No error").unwrap();
+    let mp = MemoryProtection::parse(&mut reader, OwnedName::local("MemoryProtection"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
     end_document(reader);
     assert_eq!(mp.protect_notes, false);
     assert_eq!(mp.protect_password, false);
@@ -699,7 +699,7 @@ fn test_decode_memory_protection_some() {
     <ProtectNotes>False</ProtectNotes>
 </MemoryProtection>
 "#, "MemoryProtection");
-    let mp = MemoryProtection::parse(&mut reader, OwnedName::local("MemoryProtection"), vec![]).expect("No error").unwrap();
+    let mp = MemoryProtection::parse(&mut reader, OwnedName::local("MemoryProtection"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
     end_document(reader);
     assert_eq!(mp.protect_notes, false);
     assert_eq!(mp.protect_password, true);
@@ -718,7 +718,7 @@ fn test_decode_memory_protection_all() {
     <ProtectNotes>True</ProtectNotes>
 </MemoryProtection>
 "#, "MemoryProtection");
-    let mp = MemoryProtection::parse(&mut reader, OwnedName::local("MemoryProtection"), vec![]).expect("No error").unwrap();
+    let mp = MemoryProtection::parse(&mut reader, OwnedName::local("MemoryProtection"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
     end_document(reader);
     assert_eq!(mp.protect_notes, true);
     assert_eq!(mp.protect_password, true);
@@ -761,7 +761,7 @@ fn test_encode_memory_protection_all() {
         XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, root); },
         _ => { panic!("Missing root element start"); },
     }
-    let mp = MemoryProtection::parse(&mut reader, OwnedName::local("MemoryProtection"), vec![]).expect("No error").unwrap();
+    let mp = MemoryProtection::parse(&mut reader, OwnedName::local("MemoryProtection"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
     //end_document(reader);
     assert_eq!(mp.protect_notes, true);
     assert_eq!(mp.protect_password, true);
@@ -813,7 +813,7 @@ fn test_decode_custom_data_simple() {
 #[test]
 fn test_decode_meta_empty() {
     let mut reader = start_document("<Meta/>", "Meta");
-    let meta = Meta::parse(&mut reader, OwnedName::local("Meta"), vec![]).expect("No error").unwrap();
+    let meta = Meta::parse(&mut reader, OwnedName::local("Meta"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
     end_document(reader);
     assert_eq!(meta.database_name, "");
     assert_eq!(meta.default_user_name, "");
@@ -874,7 +874,7 @@ fn test_decode_meta_filled() {
     </CustomData>
 </Meta>
 "#, "Meta");
-    let meta = Meta::parse(&mut reader, OwnedName::local("Meta"), vec![]).expect("No error").unwrap();
+    let meta = Meta::parse(&mut reader, OwnedName::local("Meta"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
     end_document(reader);
     assert_eq!(meta.database_name, "Dummy");
     assert_eq!(meta.default_user_name, "someone");
@@ -901,7 +901,7 @@ fn test_decode_times_filled() {
             <LocationChanged>cOQO2Q4AAAA=</LocationChanged>
         </Times>
     "#, "Times");
-    let times = Times::parse(&mut reader, OwnedName::local("Times"), vec![]).expect("No error").unwrap();
+    let times = Times::parse(&mut reader, OwnedName::local("Times"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
     end_document(reader);
     assert_eq!(times.last_modification_time, DateTime::parse_from_rfc3339("2021-07-30T15:28:12-07:00").unwrap());
     assert_eq!(times.creation_time, DateTime::parse_from_rfc3339("2021-07-30T14:31:02-07:00").unwrap());
@@ -925,14 +925,14 @@ fn test_encode_times_filled() {
     };
     let contents = write_kdbx_document(&expected);
     let mut reader = start_document(&contents, "Times");
-    let actual = Times::parse(&mut reader, OwnedName::local("Times"), vec![]).expect("No error").unwrap();
+    let actual = Times::parse(&mut reader, OwnedName::local("Times"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
     assert_eq!(actual, expected);
 }
 
 #[test]
 fn test_decode_entry_empty() {
     let mut reader = start_document("<Entry/>", "Entry");
-    let entry = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![]).expect("No error").unwrap();
+    let entry = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
     end_document(reader);
     assert_eq!(entry.uuid, ""); //Uuid::nil());
     assert_eq!(entry.icon_id, 0);
@@ -957,7 +957,7 @@ fn test_decode_entry_filled() {
             </History>
     </Entry>
     "#, "Entry");
-    let entry = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![]).expect("No error").unwrap();
+    let entry = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
     end_document(reader);
     let _expected_uuid = uuid!("83d7c620-39d2-47c5-af8c-f049fcbe23b8");
     assert_eq!(entry.uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
@@ -988,7 +988,7 @@ fn test_encode_entry_filled() {
             </History>
     </Entry>
     "#, "Entry");
-    let actual = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![]).expect("No error").unwrap();
+    let actual = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
     end_document(reader);
 
     let buffer = write_kdbx_document(&actual);
@@ -1010,7 +1010,7 @@ fn test_encode_entry_filled() {
         XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, root); },
         _ => { panic!("Missing root element start"); },
     }
-    let entry = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![]).expect("No error").unwrap();
+    let entry = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
 
     assert_eq!(entry.uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
     assert_eq!(entry.icon_id, 12);
@@ -1025,7 +1025,7 @@ fn test_encode_entry_filled() {
 #[test]
 fn test_decode_document_empty() {
     let mut reader = start_document("<KeePassFile/>", "KeePassFile");
-    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![]).expect("No error").unwrap();
+    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
     end_document(reader);
     assert_eq!(document.meta.database_name, "");
     assert_eq!(document.meta.default_user_name, "");
@@ -1056,7 +1056,7 @@ fn test_encode_document_empty() {
         XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, root); },
         _ => { panic!("Missing root element start"); },
     }
-    let actual = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![]).expect("No error").unwrap();
+    let actual = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
     assert_eq!(actual.meta.database_name, "");
     assert_eq!(actual.meta.default_user_name, "");
     assert_eq!(actual.meta.memory_protection.protect_notes, false);
@@ -1074,7 +1074,7 @@ fn test_decode_document_filled() {
     // file.read_to_end(&mut contents);
     let contents = include_str!("../testdata/dummy.xml");
     let mut reader = start_document(contents, "KeePassFile");
-    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![]).expect("No error").unwrap();
+    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
     end_document(reader);
     assert_eq!(document.meta.database_name, "Dummy");
     assert_eq!(document.meta.default_user_name, "someone");
@@ -1115,7 +1115,7 @@ fn test_encode_document_filled() {
         XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, root); },
         _ => { panic!("Missing root element start"); },
     }
-    let actual = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![]).expect("No error").unwrap();
+    let actual = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
     assert_eq!(actual.meta.database_name, "Dummy");
     assert_eq!(actual.meta.default_user_name, "Someone");
     assert_eq!(actual.meta.memory_protection.protect_notes, true);
@@ -1133,7 +1133,7 @@ fn test_decode_document_kdbx41() {
     // file.read_to_end(&mut contents);
     let contents = include_str!("../testdata/dummy-kdbx41.xml");
     let mut reader = start_document(contents, "KeePassFile");
-    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![]).expect("No error").unwrap();
+    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
     end_document(reader);
     assert_eq!(document.meta.generator, "KeePass");
     assert_eq!(document.meta.database_name, "MyDatabase");
@@ -1194,7 +1194,7 @@ fn test_basic_document() {
 fn test_decode_document_filled_contents() {
     let contents = include_str!("../testdata/dummy.xml");
     let mut reader = start_document(contents, "KeePassFile");
-    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![]).expect("No error").unwrap();
+    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
     end_document(reader);
     //assert_eq!(document.meta.database_name, "Dummy");
     //assert_eq!(document.meta.default_user_name, "someone");
@@ -1226,7 +1226,7 @@ fn test_decode_document_filled_contents() {
 fn test_decode_document_filled_group() {
     let contents = include_str!("../testdata/dummy.xml");
     let mut reader = start_document(contents, "KeePassFile");
-    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![]).expect("No error").unwrap();
+    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
     end_document(reader);
     assert_eq!(document.root.len(), 1);
     assert_eq!(document.root[0].entry.len(), 0);
