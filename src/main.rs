@@ -1546,7 +1546,7 @@ impl KdbxParse<KdbxContext> for DateTime<Utc> {
         attributes: Vec<OwnedAttribute>,
         context: &mut KdbxContext,
     ) -> Result<Option<Self>, String> {
-        Ok(Some(decode_datetime(reader, name, attributes)?))
+        decode_optional_datetime(reader, name, attributes)
     }
 }
 

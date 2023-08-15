@@ -1,12 +1,14 @@
 use hex::FromHex;
 
+use chrono::offset::Utc;
+
 use super::*;
 
 // Simple password is asdf
-const PASSWORD_SIMPLE : &str = "61736466";
+const PASSWORD_SIMPLE: &str = "61736466";
 
 // Composite key generated from simple, password-only lock
-const COMPOSITE_KEY_PASSWORD : &str =
+const COMPOSITE_KEY_PASSWORD: &str =
     "fe9a32f5b565da46af951e4aab23c24b8c1565eb0b6603a03118b7d225a21e8c";
 
 #[test]
@@ -14,7 +16,10 @@ fn test_user_password() {
     let data = Vec::from_hex(PASSWORD_SIMPLE).unwrap();
     let mut key = Key::new();
     key.set_user_password(data);
-    assert_eq!(key.composite_key(), Vec::from_hex(COMPOSITE_KEY_PASSWORD).unwrap());
+    assert_eq!(
+        key.composite_key(),
+        Vec::from_hex(COMPOSITE_KEY_PASSWORD).unwrap()
+    );
 }
 
 #[test]
@@ -32,7 +37,7 @@ fn test_argon2() {
         thread_mode: ThreadMode::Parallel,
         secret: &[],
         ad: &[],
-        hash_length: 32
+        hash_length: 32,
     };
     let hash = argon2::hash_encoded(password, salt, &config).unwrap();
     let matches = argon2::verify_encoded(&hash, password).unwrap();
@@ -101,8 +106,7 @@ fn test_argon2_kdf_secret_and_associative() {
 #[test]
 fn test_decode_empty_document() {
     let content = "";
-    let mut reader = ParserConfig::new()
-        .create_reader(Cursor::new(content));
+    let mut reader = ParserConfig::new().create_reader(Cursor::new(content));
     let event = reader.next();
     assert!(event.is_err());
 }
@@ -110,159 +114,248 @@ fn test_decode_empty_document() {
 #[test]
 fn test_decode_minimal_document() {
     let content = "<root/>";
-    let mut reader = ParserConfig::new()
-        .create_reader(Cursor::new(content));
+    let mut reader = ParserConfig::new().create_reader(Cursor::new(content));
     match reader.next().unwrap() {
-        XmlEvent::StartDocument { .. } => {},
-        _ => { panic!("Missing document start"); },
+        XmlEvent::StartDocument { .. } => {}
+        _ => {
+            panic!("Missing document start");
+        }
     }
     match reader.next().unwrap() {
-        XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, "root"); },
-        _ => { panic!("Missing root element start"); },
+        XmlEvent::StartElement { name, .. } => {
+            assert_eq!(name.local_name, "root");
+        }
+        _ => {
+            panic!("Missing root element start");
+        }
     }
     match reader.next().unwrap() {
-        XmlEvent::EndElement { name, .. } => { assert_eq!(name.local_name, "root"); },
-        _ => { panic!("Missing root element end"); },
+        XmlEvent::EndElement { name, .. } => {
+            assert_eq!(name.local_name, "root");
+        }
+        _ => {
+            panic!("Missing root element end");
+        }
     }
     match reader.next().unwrap() {
-        XmlEvent::EndDocument => {},
-        _ => { panic!("Missing document end"); },
+        XmlEvent::EndDocument => {}
+        _ => {
+            panic!("Missing document end");
+        }
     }
 }
 
 #[test]
 fn test_consume_minimal_document() {
     let content = "<root/>";
-    let mut reader = ParserConfig::new()
-        .create_reader(Cursor::new(content));
+    let mut reader = ParserConfig::new().create_reader(Cursor::new(content));
     match reader.next().unwrap() {
-        XmlEvent::StartDocument { .. } => {},
-        _ => { panic!("Missing document start"); },
+        XmlEvent::StartDocument { .. } => {}
+        _ => {
+            panic!("Missing document start");
+        }
     }
     let element = match reader.next().unwrap() {
         XmlEvent::StartElement { name, .. } => name,
-        _ => { panic!("Missing document element"); },
+        _ => {
+            panic!("Missing document element");
+        }
     };
     consume_element(&mut reader, element, vec![]).expect("Failed to consume");
     match reader.next().unwrap() {
-        XmlEvent::EndDocument => {},
-        _ => { panic!("Missing document end"); },
+        XmlEvent::EndDocument => {}
+        _ => {
+            panic!("Missing document end");
+        }
     }
 }
 
 #[test]
 fn test_consume_nested_document() {
     let content = "<root>  <consumed>   <child1>  <!-- Comment --> <grandchild/>Test</child1> <child2>More</child2></consumed> </root>";
-    let mut reader = ParserConfig::new()
-        .create_reader(Cursor::new(content));
+    let mut reader = ParserConfig::new().create_reader(Cursor::new(content));
     match reader.next().unwrap() {
-        XmlEvent::StartDocument { .. } => {},
-        _ => { panic!("Missing document start"); },
+        XmlEvent::StartDocument { .. } => {}
+        _ => {
+            panic!("Missing document start");
+        }
     };
     match reader.next().unwrap() {
-        XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, "root"); },
-        _ => { panic!("Missing root element start"); },
+        XmlEvent::StartElement { name, .. } => {
+            assert_eq!(name.local_name, "root");
+        }
+        _ => {
+            panic!("Missing root element start");
+        }
     };
     match reader.next().unwrap() {
-        XmlEvent::Whitespace(_) => {},
-        _ => { panic!("Missing whitespace"); },
+        XmlEvent::Whitespace(_) => {}
+        _ => {
+            panic!("Missing whitespace");
+        }
     };
     match reader.next().unwrap() {
-        XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, "consumed"); },
-        _ => { panic!("Missing consumed element start"); },
+        XmlEvent::StartElement { name, .. } => {
+            assert_eq!(name.local_name, "consumed");
+        }
+        _ => {
+            panic!("Missing consumed element start");
+        }
     };
     consume_element(&mut reader, OwnedName::local("consumed"), vec![]).expect("Failed to consume");
     match reader.next().unwrap() {
-        XmlEvent::Whitespace(_) => {},
-        _ => { panic!("Missing whitespace"); },
+        XmlEvent::Whitespace(_) => {}
+        _ => {
+            panic!("Missing whitespace");
+        }
     };
     match reader.next().unwrap() {
-        XmlEvent::EndElement { name, .. } => { assert_eq!(name.local_name, "root"); },
-        _ => { panic!("Missing root element end"); },
+        XmlEvent::EndElement { name, .. } => {
+            assert_eq!(name.local_name, "root");
+        }
+        _ => {
+            panic!("Missing root element end");
+        }
     };
     match reader.next().unwrap() {
-        XmlEvent::EndDocument => {},
-        _ => { panic!("Missing document end"); },
+        XmlEvent::EndDocument => {}
+        _ => {
+            panic!("Missing document end");
+        }
     };
 }
 
 #[test]
 fn test_find_next_element_document() {
     let content = "<root>  <consumed>   <child1>  <!-- Comment --> <grandchild/>Test</child1> <child2>More</child2></consumed> </root>";
-    let mut reader = ParserConfig::new()
-        .create_reader(Cursor::new(content));
+    let mut reader = ParserConfig::new().create_reader(Cursor::new(content));
     match reader.next().unwrap() {
-        XmlEvent::StartDocument { .. } => {},
-        _ => { panic!("Missing document start"); },
+        XmlEvent::StartDocument { .. } => {}
+        _ => {
+            panic!("Missing document start");
+        }
     };
     match find_next_element(&mut reader).expect("Valid element") {
-        ElementEvent::StartElement { name, .. } => { assert_eq!(name.local_name, "root", "Need root element"); },
-        _ => { panic!("Missing root element start"); },
+        ElementEvent::StartElement { name, .. } => {
+            assert_eq!(name.local_name, "root", "Need root element");
+        }
+        _ => {
+            panic!("Missing root element start");
+        }
     };
     match find_next_element(&mut reader).expect("Valid element") {
-        ElementEvent::StartElement { name, .. } => { assert_eq!(name.local_name, "consumed"); },
-        _ => { panic!("Missing consumed element start"); },
+        ElementEvent::StartElement { name, .. } => {
+            assert_eq!(name.local_name, "consumed");
+        }
+        _ => {
+            panic!("Missing consumed element start");
+        }
     };
     match find_next_element(&mut reader).expect("Valid element") {
-        ElementEvent::StartElement { name, .. } => { assert_eq!(name.local_name, "child1"); },
-        _ => { panic!("Missing child1 element start"); },
+        ElementEvent::StartElement { name, .. } => {
+            assert_eq!(name.local_name, "child1");
+        }
+        _ => {
+            panic!("Missing child1 element start");
+        }
     };
     match find_next_element(&mut reader).expect("Valid element") {
-        ElementEvent::StartElement { name, .. } => { assert_eq!(name.local_name, "grandchild"); },
-        _ => { panic!("Missing grandchild element start"); },
+        ElementEvent::StartElement { name, .. } => {
+            assert_eq!(name.local_name, "grandchild");
+        }
+        _ => {
+            panic!("Missing grandchild element start");
+        }
     };
     match find_next_element(&mut reader).expect("Valid element") {
-        ElementEvent::EndElement { name, .. } => { assert_eq!(name.local_name, "grandchild"); },
-        _ => { panic!("Missing grandchild element end"); },
+        ElementEvent::EndElement { name, .. } => {
+            assert_eq!(name.local_name, "grandchild");
+        }
+        _ => {
+            panic!("Missing grandchild element end");
+        }
     };
     match find_next_element(&mut reader).expect("Valid element") {
-        ElementEvent::EndElement { name, .. } => { assert_eq!(name.local_name, "child1"); },
-        _ => { panic!("Missing child1 element end"); },
+        ElementEvent::EndElement { name, .. } => {
+            assert_eq!(name.local_name, "child1");
+        }
+        _ => {
+            panic!("Missing child1 element end");
+        }
     };
     match find_next_element(&mut reader).expect("Valid element") {
-        ElementEvent::StartElement { name, .. } => { assert_eq!(name.local_name, "child2"); },
-        _ => { panic!("Missing child2 element start"); },
+        ElementEvent::StartElement { name, .. } => {
+            assert_eq!(name.local_name, "child2");
+        }
+        _ => {
+            panic!("Missing child2 element start");
+        }
     };
     match find_next_element(&mut reader).expect("Valid element") {
-        ElementEvent::EndElement { name, .. } => { assert_eq!(name.local_name, "child2"); },
-        _ => { panic!("Missing child2 element end"); },
+        ElementEvent::EndElement { name, .. } => {
+            assert_eq!(name.local_name, "child2");
+        }
+        _ => {
+            panic!("Missing child2 element end");
+        }
     };
     match find_next_element(&mut reader).expect("Valid element") {
-        ElementEvent::EndElement { name, .. } => { assert_eq!(name.local_name, "consumed"); },
-        _ => { panic!("Missing root element end"); },
+        ElementEvent::EndElement { name, .. } => {
+            assert_eq!(name.local_name, "consumed");
+        }
+        _ => {
+            panic!("Missing root element end");
+        }
     };
     match find_next_element(&mut reader).expect("Valid element") {
-        ElementEvent::EndElement { name, .. } => { assert_eq!(name.local_name, "root"); },
-        _ => { panic!("Missing root element end"); },
+        ElementEvent::EndElement { name, .. } => {
+            assert_eq!(name.local_name, "root");
+        }
+        _ => {
+            panic!("Missing root element end");
+        }
     };
     match reader.next().unwrap() {
-        XmlEvent::EndDocument => {},
-        _ => { panic!("Missing document end"); },
+        XmlEvent::EndDocument => {}
+        _ => {
+            panic!("Missing document end");
+        }
     };
 }
 
 //fn start_document<'a>(contents: &'a (impl AsRef<[u8]> + ?Sized), root: &str) -> EventReader<Cursor<&'a [u8]>> {
-fn start_document<'a, C: AsRef<[u8]> + ?Sized>(contents: &'a C, root: &str) -> EventReader<Cursor<&'a [u8]>> {
-//fn start_document_raw<'a>(contents: &'a [u8], root: &str) -> EventReader<Cursor<&'a [u8]>> {
+fn start_document<'a, C: AsRef<[u8]> + ?Sized>(
+    contents: &'a C,
+    root: &str,
+) -> EventReader<Cursor<&'a [u8]>> {
+    //fn start_document_raw<'a>(contents: &'a [u8], root: &str) -> EventReader<Cursor<&'a [u8]>> {
     let mut reader = ParserConfig::new()
         .ignore_comments(false)
         //.ignore_root_level_whitespace(false)
         .create_reader(Cursor::new(contents.as_ref()));
     match reader.next().unwrap() {
-        XmlEvent::StartDocument { .. } => {},
-        _ => { panic!("Missing document start"); },
+        XmlEvent::StartDocument { .. } => {}
+        _ => {
+            panic!("Missing document start");
+        }
     };
     match reader.next().unwrap() {
-        XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, root); },
-        _ => { panic!("Missing root element start"); },
+        XmlEvent::StartElement { name, .. } => {
+            assert_eq!(name.local_name, root);
+        }
+        _ => {
+            panic!("Missing root element start");
+        }
     }
     return reader;
 }
 
 fn end_document(mut reader: EventReader<Cursor<&[u8]>>) {
     match reader.next().unwrap() {
-        XmlEvent::EndDocument => {},
-        _ => { panic!("Missing document end"); },
+        XmlEvent::EndDocument => {}
+        _ => {
+            panic!("Missing document end");
+        }
     };
 }
 
@@ -278,17 +371,41 @@ struct StringTest {
 #[test]
 fn test_parsing_empty_string() {
     let mut reader = start_document("<root> <Field /> </root>", "root");
-    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = StringTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, "");
     end_document(reader);
 
     let mut reader = start_document("<root> <Field></Field> </root>", "root");
-    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = StringTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, "");
     end_document(reader);
 
-    let mut reader = start_document("<root> <Field><!-- This is invisible --></Field> </root>", "root");
-    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let mut reader = start_document(
+        "<root> <Field><!-- This is invisible --></Field> </root>",
+        "root",
+    );
+    let actual = StringTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, "");
     end_document(reader);
 }
@@ -296,7 +413,14 @@ fn test_parsing_empty_string() {
 #[test]
 fn test_parsing_valid_string() {
     let mut reader = start_document("<root> <Field>This is me.</Field> </root>", "root");
-    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = StringTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, "This is me.");
     end_document(reader);
 }
@@ -304,15 +428,32 @@ fn test_parsing_valid_string() {
 #[test]
 fn test_parsing_whitespace_string() {
     let mut reader = start_document("<root> <Field> \t  </Field> </root>", "root");
-    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = StringTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, " \t  ");
     end_document(reader);
 }
 
 #[test]
 fn test_parsing_mixed_string() {
-    let mut reader = start_document("<root> <Field>\tA spaced <!--hidden-->string.  </Field> </root>", "root");
-    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let mut reader = start_document(
+        "<root> <Field>\tA spaced <!--hidden-->string.  </Field> </root>",
+        "root",
+    );
+    let actual = StringTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, "\tA spaced string.  ");
     end_document(reader);
 }
@@ -320,7 +461,14 @@ fn test_parsing_mixed_string() {
 #[test]
 fn test_parsing_string_ignores_child_elements() {
     let mut reader = start_document("<root> <Field>This <b>is</b> me.</Field> </root>", "root");
-    let actual = StringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = StringTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, "This  me.");
     end_document(reader);
 }
@@ -341,7 +489,10 @@ fn test_serializing_valid_string() {
         field: "This is valid.".to_string(),
     });
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
-    assert_eq!(actual, "<StringTest><Field>This is valid.</Field></StringTest>");
+    assert_eq!(
+        actual,
+        "<StringTest><Field>This is valid.</Field></StringTest>"
+    );
 }
 
 #[test]
@@ -360,7 +511,10 @@ fn test_serializing_mixed_string() {
     });
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     //assert_eq!(actual, "<StringTest><Field/></StringTest>");  // TODO This should be normalized
-    assert_eq!(actual, "<StringTest><Field> This &lt;b>is&lt;/b> valid.\t</Field></StringTest>");
+    assert_eq!(
+        actual,
+        "<StringTest><Field> This &lt;b>is&lt;/b> valid.\t</Field></StringTest>"
+    );
 }
 
 #[derive(Clone, Default, KdbxParse, KdbxSerialize)]
@@ -371,17 +525,41 @@ struct OptionStringTest {
 #[test]
 fn test_parsing_optional_empty_string() {
     let mut reader = start_document("<root> <Field /> </root>", "root");
-    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = OptionStringTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field.as_deref(), None);
     end_document(reader);
 
     let mut reader = start_document("<root> <Field></Field> </root>", "root");
-    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = OptionStringTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field.as_deref(), None);
     end_document(reader);
 
-    let mut reader = start_document("<root> <Field><!-- This is invisible --></Field> </root>", "root");
-    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let mut reader = start_document(
+        "<root> <Field><!-- This is invisible --></Field> </root>",
+        "root",
+    );
+    let actual = OptionStringTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     //assert_eq!(actual.field.as_deref(), Some(""));  // Even a lone comment makes it non-empty
     assert_eq!(actual.field.as_deref(), None);
     end_document(reader);
@@ -390,7 +568,14 @@ fn test_parsing_optional_empty_string() {
 #[test]
 fn test_parsing_optional_valid_string() {
     let mut reader = start_document("<root> <Field>This is me.</Field> </root>", "root");
-    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = OptionStringTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field.as_deref(), Some("This is me."));
     end_document(reader);
 }
@@ -398,24 +583,39 @@ fn test_parsing_optional_valid_string() {
 #[test]
 fn test_parsing_optional_whitespace_string() {
     let mut reader = start_document("<root> <Field> \t  </Field> </root>", "root");
-    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = OptionStringTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field.as_deref(), Some(" \t  "));
     end_document(reader);
 }
 
 #[test]
 fn test_parsing_optional_mixed_string() {
-    let mut reader = start_document("<root> <Field>\tA spaced <!--hidden-->string.  </Field> </root>", "root");
-    let actual = OptionStringTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let mut reader = start_document(
+        "<root> <Field>\tA spaced <!--hidden-->string.  </Field> </root>",
+        "root",
+    );
+    let actual = OptionStringTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field.as_deref(), Some("\tA spaced string.  "));
     end_document(reader);
 }
 
 #[test]
 fn test_serializing_optional_empty_string() {
-    let doc = write_kdbx_document(&OptionStringTest {
-        field: None,
-    });
+    let doc = write_kdbx_document(&OptionStringTest { field: None });
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     assert_eq!(actual, "<OptionStringTest/>");
 
@@ -424,7 +624,10 @@ fn test_serializing_optional_empty_string() {
     });
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     //assert_eq!(actual, "<OptionStringTest><Field/></OptionStringTest>");  // TODO This should be normalized
-    assert_eq!(actual, "<OptionStringTest><Field></Field></OptionStringTest>");
+    assert_eq!(
+        actual,
+        "<OptionStringTest><Field></Field></OptionStringTest>"
+    );
 }
 
 #[test]
@@ -433,7 +636,10 @@ fn test_serializing_optional_valid_string() {
         field: Some("This is valid.".to_string()),
     });
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
-    assert_eq!(actual, "<OptionStringTest><Field>This is valid.</Field></OptionStringTest>");
+    assert_eq!(
+        actual,
+        "<OptionStringTest><Field>This is valid.</Field></OptionStringTest>"
+    );
 }
 
 #[test]
@@ -442,7 +648,10 @@ fn test_serializing_optional_whitespace_string() {
         field: Some("  \t ".to_string()),
     });
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
-    assert_eq!(actual, "<OptionStringTest><Field>  \t </Field></OptionStringTest>");
+    assert_eq!(
+        actual,
+        "<OptionStringTest><Field>  \t </Field></OptionStringTest>"
+    );
 }
 
 #[test]
@@ -452,7 +661,10 @@ fn test_serializing_optional_mixed_string() {
     });
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     //assert_eq!(actual, "<OptionStringTest><Field/></OptionStringTest>");  // TODO This should be normalized
-    assert_eq!(actual, "<OptionStringTest><Field> This &lt;b>is&lt;/b> valid.\t</Field></OptionStringTest>");
+    assert_eq!(
+        actual,
+        "<OptionStringTest><Field> This &lt;b>is&lt;/b> valid.\t</Field></OptionStringTest>"
+    );
 }
 
 #[derive(Clone, Default, KdbxParse, KdbxSerialize)]
@@ -463,17 +675,41 @@ struct BoolTest {
 #[test]
 fn test_parsing_empty_bool() {
     let mut reader = start_document("<root> <Field /> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, false);
     end_document(reader);
 
     let mut reader = start_document("<root> <Field></Field> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, false);
     end_document(reader);
 
-    let mut reader = start_document("<root> <Field><!-- This is invisible --></Field> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let mut reader = start_document(
+        "<root> <Field><!-- This is invisible --></Field> </root>",
+        "root",
+    );
+    let actual = BoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, false);
     end_document(reader);
 }
@@ -481,17 +717,38 @@ fn test_parsing_empty_bool() {
 #[test]
 fn test_parsing_valid_false_bool() {
     let mut reader = start_document("<root> <Field>false</Field> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, false);
     end_document(reader);
 
     let mut reader = start_document("<root> <Field>FALSE</Field> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, false);
     end_document(reader);
 
     let mut reader = start_document("<root> <Field>False</Field> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, false);
     end_document(reader);
 }
@@ -500,7 +757,14 @@ fn test_parsing_valid_false_bool() {
 fn test_parsing_invalid_false_bool() {
     // TODO Test for warnings about invalid values
     let mut reader = start_document("<root> <Field>This is me.</Field> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, false);
     end_document(reader);
 }
@@ -508,35 +772,52 @@ fn test_parsing_invalid_false_bool() {
 #[test]
 fn test_parsing_valid_true_bool() {
     let mut reader = start_document("<root> <Field>true</Field> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, true);
     end_document(reader);
 
     let mut reader = start_document("<root> <Field>TRUE</Field> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, true);
     end_document(reader);
 
     let mut reader = start_document("<root> <Field>True</Field> </root>", "root");
-    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = BoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, true);
     end_document(reader);
 }
 
 #[test]
 fn test_serializing_false_bool() {
-    let doc = write_kdbx_document(&BoolTest {
-        field: false,
-    });
+    let doc = write_kdbx_document(&BoolTest { field: false });
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     assert_eq!(actual, "<BoolTest><Field>False</Field></BoolTest>");
 }
 
 #[test]
 fn test_serializing_true_bool() {
-    let doc = write_kdbx_document(&BoolTest {
-        field: true,
-    });
+    let doc = write_kdbx_document(&BoolTest { field: true });
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     assert_eq!(actual, "<BoolTest><Field>True</Field></BoolTest>");
 }
@@ -549,17 +830,41 @@ struct OptionBoolTest {
 #[test]
 fn test_parsing_optional_empty_bool() {
     let mut reader = start_document("<root> <Field /> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, None);
     end_document(reader);
 
     let mut reader = start_document("<root> <Field></Field> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, None);
     end_document(reader);
 
-    let mut reader = start_document("<root> <Field><!-- This is invisible --></Field> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let mut reader = start_document(
+        "<root> <Field><!-- This is invisible --></Field> </root>",
+        "root",
+    );
+    let actual = OptionBoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, None);
     end_document(reader);
 }
@@ -567,17 +872,38 @@ fn test_parsing_optional_empty_bool() {
 #[test]
 fn test_parsing_optional_valid_false_bool() {
     let mut reader = start_document("<root> <Field>false</Field> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, Some(false));
     end_document(reader);
 
     let mut reader = start_document("<root> <Field>FALSE</Field> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, Some(false));
     end_document(reader);
 
     let mut reader = start_document("<root> <Field>False</Field> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, Some(false));
     end_document(reader);
 }
@@ -586,7 +912,14 @@ fn test_parsing_optional_valid_false_bool() {
 fn test_parsing_optional_invalid_false_bool() {
     // TODO Test for warnings about invalid values
     let mut reader = start_document("<root> <Field>This is me.</Field> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, Some(false));
     end_document(reader);
 }
@@ -594,46 +927,67 @@ fn test_parsing_optional_invalid_false_bool() {
 #[test]
 fn test_parsing_optional_valid_true_bool() {
     let mut reader = start_document("<root> <Field>true</Field> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, Some(true));
     end_document(reader);
 
     let mut reader = start_document("<root> <Field>TRUE</Field> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, Some(true));
     end_document(reader);
 
     let mut reader = start_document("<root> <Field>True</Field> </root>", "root");
-    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = OptionBoolTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, Some(true));
     end_document(reader);
 }
 
 #[test]
 fn test_serializing_optional_empty_bool() {
-    let doc = write_kdbx_document(&OptionBoolTest {
-        field: None,
-    });
+    let doc = write_kdbx_document(&OptionBoolTest { field: None });
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     assert_eq!(actual, "<OptionBoolTest/>");
 }
 
 #[test]
 fn test_serializing_optional_false_bool() {
-    let doc = write_kdbx_document(&OptionBoolTest {
-        field: Some(false),
-    });
+    let doc = write_kdbx_document(&OptionBoolTest { field: Some(false) });
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
-    assert_eq!(actual, "<OptionBoolTest><Field>False</Field></OptionBoolTest>");
+    assert_eq!(
+        actual,
+        "<OptionBoolTest><Field>False</Field></OptionBoolTest>"
+    );
 }
 
 #[test]
 fn test_serializing_optional_true_bool() {
-    let doc = write_kdbx_document(&OptionBoolTest {
-        field: Some(true),
-    });
+    let doc = write_kdbx_document(&OptionBoolTest { field: Some(true) });
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
-    assert_eq!(actual, "<OptionBoolTest><Field>True</Field></OptionBoolTest>");
+    assert_eq!(
+        actual,
+        "<OptionBoolTest><Field>True</Field></OptionBoolTest>"
+    );
 }
 
 #[derive(Clone, Default, KdbxParse, KdbxSerialize)]
@@ -644,44 +998,89 @@ struct UuidTest {
 #[test]
 fn test_parsing_empty_uuid() {
     let mut reader = start_document("<root> <Field /> </root>", "root");
-    let actual = UuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = UuidTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, Uuid::nil());
     end_document(reader);
 
     let mut reader = start_document("<root> <Field></Field> </root>", "root");
-    let actual = UuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = UuidTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, Uuid::nil());
     end_document(reader);
 
-    let mut reader = start_document("<root> <Field><!-- This is invisible --></Field> </root>", "root");
-    let actual = UuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let mut reader = start_document(
+        "<root> <Field><!-- This is invisible --></Field> </root>",
+        "root",
+    );
+    let actual = UuidTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, Uuid::nil());
     end_document(reader);
 }
 
 #[test]
 fn test_parsing_nil_uuid() {
-    let mut reader = start_document("<root> <Field>AAAAAAAAAAAAAAAAAAAAAA==</Field> </root>", "root");
-    let actual = UuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let mut reader = start_document(
+        "<root> <Field>AAAAAAAAAAAAAAAAAAAAAA==</Field> </root>",
+        "root",
+    );
+    let actual = UuidTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, Uuid::nil());
     end_document(reader);
 }
 
 #[test]
 fn test_parsing_valid_uuid() {
-    let mut reader = start_document("<root> <Field>MZ3RgvukSfWAAWlPEBQOzA==</Field> </root>", "root");
-    let actual = UuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let mut reader = start_document(
+        "<root> <Field>MZ3RgvukSfWAAWlPEBQOzA==</Field> </root>",
+        "root",
+    );
+    let actual = UuidTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, uuid!("319dd182-fba4-49f5-8001-694f10140ecc"));
     end_document(reader);
 }
 
 #[test]
 fn test_serializing_nil_uuid() {
-    let doc = write_kdbx_document(&UuidTest {
-        field: Uuid::nil(),
-    });
+    let doc = write_kdbx_document(&UuidTest { field: Uuid::nil() });
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
-    assert_eq!(actual, "<UuidTest><Field>AAAAAAAAAAAAAAAAAAAAAA==</Field></UuidTest>");
+    assert_eq!(
+        actual,
+        "<UuidTest><Field>AAAAAAAAAAAAAAAAAAAAAA==</Field></UuidTest>"
+    );
 }
 
 #[test]
@@ -690,7 +1089,10 @@ fn test_serializing_valid_uuid() {
         field: uuid!("319dd182-fba4-49f5-8001-694f10140ecc"),
     });
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
-    assert_eq!(actual, "<UuidTest><Field>MZ3RgvukSfWAAWlPEBQOzA==</Field></UuidTest>");
+    assert_eq!(
+        actual,
+        "<UuidTest><Field>MZ3RgvukSfWAAWlPEBQOzA==</Field></UuidTest>"
+    );
 }
 
 #[derive(Clone, Default, KdbxParse, KdbxSerialize)]
@@ -701,42 +1103,87 @@ struct OptionUuidTest {
 #[test]
 fn test_parsing_optional_empty_uuid() {
     let mut reader = start_document("<root> <Field /> </root>", "root");
-    let actual = OptionUuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = OptionUuidTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, None);
     end_document(reader);
 
     let mut reader = start_document("<root> <Field></Field> </root>", "root");
-    let actual = OptionUuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let actual = OptionUuidTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, None);
     end_document(reader);
 
-    let mut reader = start_document("<root> <Field><!-- This is invisible --></Field> </root>", "root");
-    let actual = OptionUuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let mut reader = start_document(
+        "<root> <Field><!-- This is invisible --></Field> </root>",
+        "root",
+    );
+    let actual = OptionUuidTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, None);
     end_document(reader);
 }
 
 #[test]
 fn test_parsing_optional_nil_uuid() {
-    let mut reader = start_document("<root> <Field>AAAAAAAAAAAAAAAAAAAAAA==</Field> </root>", "root");
-    let actual = OptionUuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
+    let mut reader = start_document(
+        "<root> <Field>AAAAAAAAAAAAAAAAAAAAAA==</Field> </root>",
+        "root",
+    );
+    let actual = OptionUuidTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
     assert_eq!(actual.field, Some(Uuid::nil()));
     end_document(reader);
 }
 
 #[test]
 fn test_parsing_optional_valid_uuid() {
-    let mut reader = start_document("<root> <Field>MZ3RgvukSfWAAWlPEBQOzA==</Field> </root>", "root");
-    let actual = OptionUuidTest::parse(&mut reader, OwnedName::local("root"), vec![], &mut KdbxContext::default()).expect("Parsing error").expect("Missing object");
-    assert_eq!(actual.field, Some(uuid!("319dd182-fba4-49f5-8001-694f10140ecc")));
+    let mut reader = start_document(
+        "<root> <Field>MZ3RgvukSfWAAWlPEBQOzA==</Field> </root>",
+        "root",
+    );
+    let actual = OptionUuidTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(
+        actual.field,
+        Some(uuid!("319dd182-fba4-49f5-8001-694f10140ecc"))
+    );
     end_document(reader);
 }
 
 #[test]
 fn test_serializing_optional_empty_uuid() {
-    let doc = write_kdbx_document(&OptionUuidTest {
-        field: None,
-    });
+    let doc = write_kdbx_document(&OptionUuidTest { field: None });
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     assert_eq!(actual, "<OptionUuidTest/>");
 }
@@ -747,7 +1194,10 @@ fn test_serializing_optional_nil_uuid() {
         field: Some(Uuid::nil()),
     });
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
-    assert_eq!(actual, "<OptionUuidTest><Field>AAAAAAAAAAAAAAAAAAAAAA==</Field></OptionUuidTest>");
+    assert_eq!(
+        actual,
+        "<OptionUuidTest><Field>AAAAAAAAAAAAAAAAAAAAAA==</Field></OptionUuidTest>"
+    );
 }
 
 #[test]
@@ -756,62 +1206,329 @@ fn test_serializing_optional_valid_uuid() {
         field: Some(uuid!("319dd182-fba4-49f5-8001-694f10140ecc")),
     });
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
-    assert_eq!(actual, "<OptionUuidTest><Field>MZ3RgvukSfWAAWlPEBQOzA==</Field></OptionUuidTest>");
+    assert_eq!(
+        actual,
+        "<OptionUuidTest><Field>MZ3RgvukSfWAAWlPEBQOzA==</Field></OptionUuidTest>"
+    );
 }
+
+#[derive(Clone, Default, KdbxParse, KdbxSerialize)]
+struct DateTimeTest {
+    field: DateTime<Utc>,
+}
+
+#[test]
+#[ignore = "What should default datetime be?"]
+fn test_parsing_empty_datetime() {
+    let mut reader = start_document("<root> <Field /> </root>", "root");
+    let actual = DateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(
+        actual.field,
+        Utc.with_ymd_and_hms(1, 1, 1, 0, 0, 0).unwrap()
+    );
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field></Field> </root>", "root");
+    let actual = DateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(
+        actual.field,
+        Utc.with_ymd_and_hms(1, 1, 1, 0, 0, 0).unwrap()
+    );
+    end_document(reader);
+
+    let mut reader = start_document(
+        "<root> <Field><!-- This is invisible --></Field> </root>",
+        "root",
+    );
+    let actual = DateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(
+        actual.field,
+        Utc.with_ymd_and_hms(1, 1, 1, 0, 0, 0).unwrap()
+    );
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_nil_datetime() {
+    let mut reader = start_document("<root> <Field>AAAAAAAAAAA=</Field> </root>", "root");
+    let actual = DateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(
+        actual.field,
+        Utc.with_ymd_and_hms(1, 1, 1, 0, 0, 0).unwrap()
+    );
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_valid_datetime() {
+    let mut reader = start_document("<root> <Field>lmaW2A4AAAA=</Field> </root>", "root");
+    let actual = DateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(
+        actual.field,
+        DateTime::parse_from_rfc3339("2021-07-30T14:31:02-07:00").unwrap()
+    );
+    end_document(reader);
+}
+
+#[test]
+fn test_serializing_nil_datetime() {
+    let doc = write_kdbx_document(&DateTimeTest {
+        field: Utc.with_ymd_and_hms(1, 1, 1, 0, 0, 0).unwrap(),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(
+        actual,
+        "<DateTimeTest><Field>AAAAAAAAAAA=</Field></DateTimeTest>"
+    );
+}
+
+#[test]
+fn test_serializing_valid_datetime() {
+    let doc = write_kdbx_document(&DateTimeTest {
+        field: DateTime::parse_from_rfc3339("2021-07-30T14:31:02-07:00")
+            .unwrap()
+            .into(),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(
+        actual,
+        "<DateTimeTest><Field>lmaW2A4AAAA=</Field></DateTimeTest>"
+    );
+}
+
+#[derive(Clone, Default, KdbxParse, KdbxSerialize)]
+struct OptionDateTimeTest {
+    field: Option<DateTime<Utc>>,
+}
+
+#[test]
+fn test_parsing_optional_empty_datetime() {
+    let mut reader = start_document("<root> <Field /> </root>", "root");
+    let actual = OptionDateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(actual.field, None);
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field></Field> </root>", "root");
+    let actual = OptionDateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(actual.field, None);
+    end_document(reader);
+
+    let mut reader = start_document(
+        "<root> <Field><!-- This is invisible --></Field> </root>",
+        "root",
+    );
+    let actual = OptionDateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(actual.field, None);
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_optional_nil_datetime() {
+    let mut reader = start_document("<root> <Field>AAAAAAAAAAA=</Field> </root>", "root");
+    let actual = OptionDateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(
+        actual.field,
+        Some(Utc.with_ymd_and_hms(1, 1, 1, 0, 0, 0).unwrap())
+    );
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_optional_valid_datetime() {
+    let mut reader = start_document("<root> <Field>lmaW2A4AAAA=</Field> </root>", "root");
+    let actual = OptionDateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(
+        actual.field,
+        Some(
+            DateTime::parse_from_rfc3339("2021-07-30T14:31:02-07:00")
+                .unwrap()
+                .into()
+        )
+    );
+    end_document(reader);
+}
+
+#[test]
+fn test_serializing_optional_empty_datetime() {
+    let doc = write_kdbx_document(&OptionDateTimeTest { field: None });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<OptionDateTimeTest/>");
+}
+
+#[test]
+fn test_serializing_optional_nil_datetime() {
+    let doc = write_kdbx_document(&OptionDateTimeTest {
+        field: Some(Utc.with_ymd_and_hms(1, 1, 1, 0, 0, 0).unwrap()),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(
+        actual,
+        "<OptionDateTimeTest><Field>AAAAAAAAAAA=</Field></OptionDateTimeTest>"
+    );
+}
+
+#[test]
+fn test_serializing_optional_valid_datetime() {
+    let doc = write_kdbx_document(&OptionDateTimeTest {
+        field: Some(
+            DateTime::parse_from_rfc3339("2021-07-30T14:31:02-07:00")
+                .unwrap()
+                .into(),
+        ),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(
+        actual,
+        "<OptionDateTimeTest><Field>lmaW2A4AAAA=</Field></OptionDateTimeTest>"
+    );
+}
+
+// TODO Test negative timestamps
 
 #[test]
 fn test_decode_optional_empty_string() {
     let mut reader = start_document("<root/>", "root");
-    assert_eq!(decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
-        None);
+    assert_eq!(
+        decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        None
+    );
     end_document(reader);
 }
 
 #[test]
 fn test_decode_optional_basic_string() {
     let mut reader = start_document("<root>  This is a test of it 1   </root>", "root");
-    assert_eq!(decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
-        Some(String::from("  This is a test of it 1   ")));
+    assert_eq!(
+        decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        Some(String::from("  This is a test of it 1   "))
+    );
     end_document(reader);
 }
 
 #[test]
 fn test_decode_optional_whitespace_string() {
     let mut reader = start_document("<root>     </root>", "root");
-    assert_eq!(decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
-        Some(String::from("     ")));
+    assert_eq!(
+        decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        Some(String::from("     "))
+    );
     end_document(reader);
 }
 
 #[test]
 fn test_decode_optional_cdata_string() {
     let mut reader = start_document("<root><![CDATA[This is a test of it 3]]></root>", "root");
-    assert_eq!(decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
-        Some(String::from("This is a test of it 3")));
+    assert_eq!(
+        decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        Some(String::from("This is a test of it 3"))
+    );
     end_document(reader);
 }
 
 #[test]
 fn test_decode_optional_full_string() {
-    let mut reader = start_document("<root>  This is <![CDATA[ Test ]]> of it 4   </root>", "root");
-    assert_eq!(decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
-        Some(String::from("  This is  Test  of it 4   ")));
+    let mut reader = start_document(
+        "<root>  This is <![CDATA[ Test ]]> of it 4   </root>",
+        "root",
+    );
+    assert_eq!(
+        decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        Some(String::from("  This is  Test  of it 4   "))
+    );
     end_document(reader);
 }
 
 #[test]
 fn test_decode_optional_empty_base64() {
     let mut reader = start_document("<root/>", "root");
-    assert_eq!(decode_optional_base64(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
-        None);
+    assert_eq!(
+        decode_optional_base64(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        None
+    );
     end_document(reader);
 }
 
 #[test]
 fn test_decode_optional_valid_base64() {
     let mut reader = start_document("<root>/u3erb7vyv4=</root>", "root");
-    assert_eq!(decode_optional_base64(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
-        Some([0xfeu8, 0xed, 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe].as_ref().to_owned()));
+    assert_eq!(
+        decode_optional_base64(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        Some(
+            [0xfeu8, 0xed, 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe]
+                .as_ref()
+                .to_owned()
+        )
+    );
     end_document(reader);
 }
 
@@ -826,23 +1543,31 @@ fn test_encode_optional_empty_base64() {
         .cdata_to_characters(true)
         .pad_self_closing(false)
         .create_writer(buffer);
-    writer.write(xml::writer::XmlEvent::start_element("root")).expect("Failed to write start tag!");
+    writer
+        .write(xml::writer::XmlEvent::start_element("root"))
+        .expect("Failed to write start tag!");
     encode_optional_base64::<_, &[u8]>(&mut writer, None).expect("Writing value");
-    writer.write(xml::writer::XmlEvent::end_element()).expect("Failed to write end tag!");
+    writer
+        .write(xml::writer::XmlEvent::end_element())
+        .expect("Failed to write end tag!");
     let doc = writer.into_inner();
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     assert_eq!(actual, "<root/>");
 
     let buffer = vec![];
-    let mut writer   = xml::writer::EmitterConfig::new()
+    let mut writer = xml::writer::EmitterConfig::new()
         .write_document_declaration(false)
         .normalize_empty_elements(true)
         .cdata_to_characters(true)
         .pad_self_closing(false)
         .create_writer(buffer);
-    writer.write(xml::writer::XmlEvent::start_element("root")).expect("Failed to write start tag!");
+    writer
+        .write(xml::writer::XmlEvent::start_element("root"))
+        .expect("Failed to write start tag!");
     encode_optional_base64(&mut writer, Some(vec![])).expect("Writing value");
-    writer.write(xml::writer::XmlEvent::end_element()).expect("Failed to write end tag!");
+    writer
+        .write(xml::writer::XmlEvent::end_element())
+        .expect("Failed to write end tag!");
     let doc = writer.into_inner();
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     //assert_eq!(actual, "<root/>");  // TODO This should be normalized
@@ -852,15 +1577,23 @@ fn test_encode_optional_empty_base64() {
 #[test]
 fn test_encode_optional_valid_base64() {
     let buffer = vec![];
-    let mut writer   = xml::writer::EmitterConfig::new()
+    let mut writer = xml::writer::EmitterConfig::new()
         .write_document_declaration(false)
         .normalize_empty_elements(true)
         .cdata_to_characters(true)
         .pad_self_closing(false)
         .create_writer(buffer);
-    writer.write(xml::writer::XmlEvent::start_element("root")).expect("Failed to write start tag!");
-    encode_optional_base64(&mut writer, Some([0xfeu8, 0xed, 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe])).expect("Writing value");
-    writer.write(xml::writer::XmlEvent::end_element()).expect("Failed to write end tag!");
+    writer
+        .write(xml::writer::XmlEvent::start_element("root"))
+        .expect("Failed to write start tag!");
+    encode_optional_base64(
+        &mut writer,
+        Some([0xfeu8, 0xed, 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe]),
+    )
+    .expect("Writing value");
+    writer
+        .write(xml::writer::XmlEvent::end_element())
+        .expect("Failed to write end tag!");
     let doc = writer.into_inner();
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     assert_eq!(actual, "<root>/u3erb7vyv4=</root>");
@@ -869,31 +1602,41 @@ fn test_encode_optional_valid_base64() {
 #[test]
 fn test_decode_empty_base64() {
     let mut reader = start_document("<root/>", "root");
-    assert_eq!(decode_base64(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
-        vec![]);
+    assert_eq!(
+        decode_base64(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        vec![]
+    );
     end_document(reader);
 }
 
 #[test]
 fn test_decode_valid_base64() {
     let mut reader = start_document("<root>/u3erb7vyv4=</root>", "root");
-    assert_eq!(decode_base64(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
-        [0xfeu8, 0xed, 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe].as_ref().to_owned());
+    assert_eq!(
+        decode_base64(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        [0xfeu8, 0xed, 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe]
+            .as_ref()
+            .to_owned()
+    );
     end_document(reader);
 }
 
 #[test]
 fn test_encode_empty_base64() {
     let buffer = vec![];
-    let mut writer   = xml::writer::EmitterConfig::new()
+    let mut writer = xml::writer::EmitterConfig::new()
         .write_document_declaration(false)
         .normalize_empty_elements(true)
         .cdata_to_characters(true)
         .pad_self_closing(false)
         .create_writer(buffer);
-    writer.write(xml::writer::XmlEvent::start_element("root")).expect("Failed to write start tag!");
+    writer
+        .write(xml::writer::XmlEvent::start_element("root"))
+        .expect("Failed to write start tag!");
     encode_base64(&mut writer, vec![]).expect("Writing value");
-    writer.write(xml::writer::XmlEvent::end_element()).expect("Failed to write end tag!");
+    writer
+        .write(xml::writer::XmlEvent::end_element())
+        .expect("Failed to write end tag!");
     let doc = writer.into_inner();
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     //assert_eq!(actual, "<root/>");  // TODO This should be normalized
@@ -903,15 +1646,23 @@ fn test_encode_empty_base64() {
 #[test]
 fn test_encode_valid_base64() {
     let buffer = vec![];
-    let mut writer   = xml::writer::EmitterConfig::new()
+    let mut writer = xml::writer::EmitterConfig::new()
         .write_document_declaration(false)
         .normalize_empty_elements(true)
         .cdata_to_characters(true)
         .pad_self_closing(false)
         .create_writer(buffer);
-    writer.write(xml::writer::XmlEvent::start_element("root")).expect("Failed to write start tag!");
-    encode_base64(&mut writer, [0xfeu8, 0xed, 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe]).expect("Writing value");
-    writer.write(xml::writer::XmlEvent::end_element()).expect("Failed to write end tag!");
+    writer
+        .write(xml::writer::XmlEvent::start_element("root"))
+        .expect("Failed to write start tag!");
+    encode_base64(
+        &mut writer,
+        [0xfeu8, 0xed, 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe],
+    )
+    .expect("Writing value");
+    writer
+        .write(xml::writer::XmlEvent::end_element())
+        .expect("Failed to write end tag!");
     let doc = writer.into_inner();
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     assert_eq!(actual, "<root>/u3erb7vyv4=</root>");
@@ -921,7 +1672,14 @@ fn test_encode_valid_base64() {
 fn test_decode_memory_protection_empty() {
     let mut reader = start_document("<MemoryProtection/>", "MemoryProtection");
     //assert_eq!(MemoryProtection::parse(&mut reader).expect("No error"), Some(String::from("  This is  Test  of it 4   ")));
-    let mp = MemoryProtection::parse(&mut reader, OwnedName::local("MemoryProtection"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+    let mp = MemoryProtection::parse(
+        &mut reader,
+        OwnedName::local("MemoryProtection"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
     end_document(reader);
     assert_eq!(mp.protect_notes, false);
     assert_eq!(mp.protect_password, false);
@@ -932,15 +1690,25 @@ fn test_decode_memory_protection_empty() {
 
 #[test]
 fn test_decode_memory_protection_some() {
-    let mut reader = start_document(r#"		<MemoryProtection>
+    let mut reader = start_document(
+        r#"		<MemoryProtection>
     <ProtectTitle>False</ProtectTitle>
     <ProtectUserName>False</ProtectUserName>
     <ProtectPassword>True</ProtectPassword>
     <ProtectURL>False</ProtectURL>
     <ProtectNotes>False</ProtectNotes>
 </MemoryProtection>
-"#, "MemoryProtection");
-    let mp = MemoryProtection::parse(&mut reader, OwnedName::local("MemoryProtection"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+"#,
+        "MemoryProtection",
+    );
+    let mp = MemoryProtection::parse(
+        &mut reader,
+        OwnedName::local("MemoryProtection"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
     end_document(reader);
     assert_eq!(mp.protect_notes, false);
     assert_eq!(mp.protect_password, true);
@@ -951,15 +1719,25 @@ fn test_decode_memory_protection_some() {
 
 #[test]
 fn test_decode_memory_protection_all() {
-    let mut reader = start_document(r#"		<MemoryProtection>
+    let mut reader = start_document(
+        r#"		<MemoryProtection>
     <ProtectTitle>True</ProtectTitle>
     <ProtectUserName>True</ProtectUserName>
     <ProtectPassword>True</ProtectPassword>
     <ProtectURL>True</ProtectURL>
     <ProtectNotes>True</ProtectNotes>
 </MemoryProtection>
-"#, "MemoryProtection");
-    let mp = MemoryProtection::parse(&mut reader, OwnedName::local("MemoryProtection"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+"#,
+        "MemoryProtection",
+    );
+    let mp = MemoryProtection::parse(
+        &mut reader,
+        OwnedName::local("MemoryProtection"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
     end_document(reader);
     assert_eq!(mp.protect_notes, true);
     assert_eq!(mp.protect_password, true);
@@ -976,9 +1754,15 @@ fn write_kdbx_document<K: KdbxSerialize + Clone>(expected: &K) -> Vec<u8> {
         .cdata_to_characters(true)
         .pad_self_closing(false)
         .create_writer(buffer);
-    writer.write(xml::writer::XmlEvent::start_element(std::any::type_name::<K>().rsplit(":").nth(0).unwrap())).expect("Success!");
+    writer
+        .write(xml::writer::XmlEvent::start_element(
+            std::any::type_name::<K>().rsplit(":").nth(0).unwrap(),
+        ))
+        .expect("Success!");
     K::serialize2(&mut writer, expected.clone()).expect("No error");
-    writer.write(xml::writer::XmlEvent::end_element()).expect("Success!");
+    writer
+        .write(xml::writer::XmlEvent::end_element())
+        .expect("Success!");
     writer.into_inner()
 }
 
@@ -991,18 +1775,30 @@ fn test_encode_memory_protection_all() {
         protect_url: true,
         protect_user_name: true,
     });
-    let mut reader = ParserConfig::new()
-        .create_reader(Cursor::new(buffer));
+    let mut reader = ParserConfig::new().create_reader(Cursor::new(buffer));
     match reader.next().unwrap() {
-        XmlEvent::StartDocument { .. } => {},
-        _ => { panic!("Missing document start"); },
+        XmlEvent::StartDocument { .. } => {}
+        _ => {
+            panic!("Missing document start");
+        }
     };
     let root = "MemoryProtection";
     match reader.next().unwrap() {
-        XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, root); },
-        _ => { panic!("Missing root element start"); },
+        XmlEvent::StartElement { name, .. } => {
+            assert_eq!(name.local_name, root);
+        }
+        _ => {
+            panic!("Missing root element start");
+        }
     }
-    let mp = MemoryProtection::parse(&mut reader, OwnedName::local("MemoryProtection"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+    let mp = MemoryProtection::parse(
+        &mut reader,
+        OwnedName::local("MemoryProtection"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
     //end_document(reader);
     assert_eq!(mp.protect_notes, true);
     assert_eq!(mp.protect_password, true);
@@ -1022,7 +1818,10 @@ fn test_decode_item_empty() {
 
 #[test]
 fn test_decode_item_pair() {
-    let mut reader = start_document("  <Item>  <Value>mexican</Value>  <Key>food</Key>   </Item>  ", "Item");
+    let mut reader = start_document(
+        "  <Item>  <Value>mexican</Value>  <Key>food</Key>   </Item>  ",
+        "Item",
+    );
     let result = decode_item(&mut reader, OwnedName::local("Item"), vec![]);
     if result.is_err() {
         assert!(false, "Decoding returned error: {:?}", result.unwrap_err());
@@ -1036,15 +1835,20 @@ fn test_decode_item_pair() {
 #[test]
 fn test_decode_custom_data_empty() {
     let mut reader = start_document("<CustomData/>", "CustomData");
-    let custom_data = decode_custom_data(&mut reader, OwnedName::local("CustomData"), vec![]).expect("No error");
+    let custom_data =
+        decode_custom_data(&mut reader, OwnedName::local("CustomData"), vec![]).expect("No error");
     end_document(reader);
     assert_eq!(custom_data.len(), 0);
 }
 
 #[test]
 fn test_decode_custom_data_simple() {
-    let mut reader = start_document("<CustomData><Item><Key>one</Key><Value>1</Value></Item></CustomData>", "CustomData");
-    let custom_data = decode_custom_data(&mut reader, OwnedName::local("CustomData"), vec![]).expect("No error");
+    let mut reader = start_document(
+        "<CustomData><Item><Key>one</Key><Value>1</Value></Item></CustomData>",
+        "CustomData",
+    );
+    let custom_data =
+        decode_custom_data(&mut reader, OwnedName::local("CustomData"), vec![]).expect("No error");
     end_document(reader);
     assert_eq!(custom_data.len(), 1);
     assert!(custom_data.contains_key("one"), "Has appropriate key");
@@ -1054,7 +1858,14 @@ fn test_decode_custom_data_simple() {
 #[test]
 fn test_decode_meta_empty() {
     let mut reader = start_document("<Meta/>", "Meta");
-    let meta = Meta::parse(&mut reader, OwnedName::local("Meta"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+    let meta = Meta::parse(
+        &mut reader,
+        OwnedName::local("Meta"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
     end_document(reader);
     assert_eq!(meta.database_name, "");
     assert_eq!(meta.default_user_name, "");
@@ -1067,7 +1878,8 @@ fn test_decode_meta_empty() {
 
 #[test]
 fn test_decode_meta_filled() {
-    let mut reader = start_document(r#"
+    let mut reader = start_document(
+        r#"
     <Meta>
     <Generator>KeePassXC</Generator>
     <DatabaseName>Dummy</DatabaseName>
@@ -1114,8 +1926,17 @@ fn test_decode_meta_filled() {
         </Item>
     </CustomData>
 </Meta>
-"#, "Meta");
-    let meta = Meta::parse(&mut reader, OwnedName::local("Meta"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+"#,
+        "Meta",
+    );
+    let meta = Meta::parse(
+        &mut reader,
+        OwnedName::local("Meta"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
     end_document(reader);
     assert_eq!(meta.database_name, "Dummy");
     assert_eq!(meta.default_user_name, "someone");
@@ -1124,14 +1945,26 @@ fn test_decode_meta_filled() {
     assert_eq!(meta.memory_protection.protect_title, false);
     assert_eq!(meta.memory_protection.protect_url, false);
     assert_eq!(meta.memory_protection.protect_user_name, false);
-    assert_eq!(meta.custom_data.len(), 3, "Correct number of custom data fields");
-    assert!(meta.custom_data.contains_key("KPXC_DECRYPTION_TIME_PREFERENCE"), "Missing a custom data field");
-    assert_eq!(meta.custom_data["KPXC_DECRYPTION_TIME_PREFERENCE"], "100", "Custom data field has wrong value");
+    assert_eq!(
+        meta.custom_data.len(),
+        3,
+        "Correct number of custom data fields"
+    );
+    assert!(
+        meta.custom_data
+            .contains_key("KPXC_DECRYPTION_TIME_PREFERENCE"),
+        "Missing a custom data field"
+    );
+    assert_eq!(
+        meta.custom_data["KPXC_DECRYPTION_TIME_PREFERENCE"], "100",
+        "Custom data field has wrong value"
+    );
 }
 
 #[test]
 fn test_decode_times_filled() {
-    let mut reader = start_document(r#"
+    let mut reader = start_document(
+        r#"
         <Times>
             <CreationTime>lmaW2A4AAAA=</CreationTime>
             <LastModificationTime>/HOW2A4AAAA=</LastModificationTime>
@@ -1141,39 +1974,87 @@ fn test_decode_times_filled() {
             <UsageCount>56</UsageCount>
             <LocationChanged>cOQO2Q4AAAA=</LocationChanged>
         </Times>
-    "#, "Times");
-    let times = Times::parse(&mut reader, OwnedName::local("Times"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+    "#,
+        "Times",
+    );
+    let times = Times::parse(
+        &mut reader,
+        OwnedName::local("Times"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
     end_document(reader);
-    assert_eq!(times.last_modification_time, DateTime::parse_from_rfc3339("2021-07-30T15:28:12-07:00").unwrap());
-    assert_eq!(times.creation_time, DateTime::parse_from_rfc3339("2021-07-30T14:31:02-07:00").unwrap());
-    assert_eq!(times.last_access_time, DateTime::parse_from_rfc3339("2021-07-30T15:55:38-07:00").unwrap());
-    assert_eq!(times.expiry_time, DateTime::parse_from_rfc3339("2021-07-30T14:42:20-07:00").unwrap());
+    assert_eq!(
+        times.last_modification_time,
+        DateTime::parse_from_rfc3339("2021-07-30T15:28:12-07:00").unwrap()
+    );
+    assert_eq!(
+        times.creation_time,
+        DateTime::parse_from_rfc3339("2021-07-30T14:31:02-07:00").unwrap()
+    );
+    assert_eq!(
+        times.last_access_time,
+        DateTime::parse_from_rfc3339("2021-07-30T15:55:38-07:00").unwrap()
+    );
+    assert_eq!(
+        times.expiry_time,
+        DateTime::parse_from_rfc3339("2021-07-30T14:42:20-07:00").unwrap()
+    );
     assert_eq!(times.expires, true);
     assert_eq!(times.usage_count, 56);
-    assert_eq!(times.location_changed, DateTime::parse_from_rfc3339("2021-10-30T00:00:00-07:00").unwrap());
+    assert_eq!(
+        times.location_changed,
+        DateTime::parse_from_rfc3339("2021-10-30T00:00:00-07:00").unwrap()
+    );
 }
 
 #[test]
 fn test_encode_times_filled() {
     let expected = Times {
-        last_modification_time: DateTime::parse_from_rfc3339("2021-07-30T15:28:12-07:00").unwrap().with_timezone(&Utc),
-        creation_time: DateTime::parse_from_rfc3339("2021-07-30T14:31:02-07:00").unwrap().with_timezone(&Utc),
-        last_access_time: DateTime::parse_from_rfc3339("2021-07-30T15:55:38-07:00").unwrap().with_timezone(&Utc),
-        expiry_time: DateTime::parse_from_rfc3339("2021-07-30T14:42:20-07:00").unwrap().with_timezone(&Utc),
+        last_modification_time: DateTime::parse_from_rfc3339("2021-07-30T15:28:12-07:00")
+            .unwrap()
+            .with_timezone(&Utc),
+        creation_time: DateTime::parse_from_rfc3339("2021-07-30T14:31:02-07:00")
+            .unwrap()
+            .with_timezone(&Utc),
+        last_access_time: DateTime::parse_from_rfc3339("2021-07-30T15:55:38-07:00")
+            .unwrap()
+            .with_timezone(&Utc),
+        expiry_time: DateTime::parse_from_rfc3339("2021-07-30T14:42:20-07:00")
+            .unwrap()
+            .with_timezone(&Utc),
         expires: true,
         usage_count: 56,
-        location_changed: DateTime::parse_from_rfc3339("2021-10-30T00:00:00-07:00").unwrap().with_timezone(&Utc),
+        location_changed: DateTime::parse_from_rfc3339("2021-10-30T00:00:00-07:00")
+            .unwrap()
+            .with_timezone(&Utc),
     };
     let contents = write_kdbx_document(&expected);
     let mut reader = start_document(&contents, "Times");
-    let actual = Times::parse(&mut reader, OwnedName::local("Times"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+    let actual = Times::parse(
+        &mut reader,
+        OwnedName::local("Times"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
     assert_eq!(actual, expected);
 }
 
 #[test]
 fn test_decode_entry_empty() {
     let mut reader = start_document("<Entry/>", "Entry");
-    let entry = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+    let entry = Entry::parse(
+        &mut reader,
+        OwnedName::local("Entry"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
     end_document(reader);
     assert_eq!(entry.uuid, ""); //Uuid::nil());
     assert_eq!(entry.icon_id, 0);
@@ -1182,7 +2063,8 @@ fn test_decode_entry_empty() {
 
 #[test]
 fn test_decode_entry_filled() {
-    let mut reader = start_document(r#"
+    let mut reader = start_document(
+        r#"
     <Entry>
             <UUID>g9fGIDnSR8WvjPBJ/L4juA==</UUID>
             <IconID>12</IconID>
@@ -1197,8 +2079,17 @@ fn test_decode_entry_filled() {
                     </Entry>
             </History>
     </Entry>
-    "#, "Entry");
-    let entry = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+    "#,
+        "Entry",
+    );
+    let entry = Entry::parse(
+        &mut reader,
+        OwnedName::local("Entry"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
     end_document(reader);
     let _expected_uuid = uuid!("83d7c620-39d2-47c5-af8c-f049fcbe23b8");
     assert_eq!(entry.uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
@@ -1213,7 +2104,8 @@ fn test_decode_entry_filled() {
 
 #[test]
 fn test_encode_entry_filled() {
-    let mut reader = start_document(r#"
+    let mut reader = start_document(
+        r#"
     <Entry>
             <UUID>g9fGIDnSR8WvjPBJ/L4juA==</UUID>
             <IconID>12</IconID>
@@ -1228,30 +2120,51 @@ fn test_encode_entry_filled() {
                     </Entry>
             </History>
     </Entry>
-    "#, "Entry");
-    let actual = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+    "#,
+        "Entry",
+    );
+    let actual = Entry::parse(
+        &mut reader,
+        OwnedName::local("Entry"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
     end_document(reader);
 
     let buffer = write_kdbx_document(&actual);
-//    Entry {
-//        protect_notes: true,
-//        protect_password: true,
-//        protect_title: true,
-//        protect_url: true,
-//        protect_user_name: true,
-//    }).expect("No error");
-    let mut reader = ParserConfig::new()
-        .create_reader(Cursor::new(buffer));
+    //    Entry {
+    //        protect_notes: true,
+    //        protect_password: true,
+    //        protect_title: true,
+    //        protect_url: true,
+    //        protect_user_name: true,
+    //    }).expect("No error");
+    let mut reader = ParserConfig::new().create_reader(Cursor::new(buffer));
     match reader.next().unwrap() {
-        XmlEvent::StartDocument { .. } => {},
-        _ => { panic!("Missing document start"); },
+        XmlEvent::StartDocument { .. } => {}
+        _ => {
+            panic!("Missing document start");
+        }
     };
     let root = "Entry";
     match reader.next().unwrap() {
-        XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, root); },
-        _ => { panic!("Missing root element start"); },
+        XmlEvent::StartElement { name, .. } => {
+            assert_eq!(name.local_name, root);
+        }
+        _ => {
+            panic!("Missing root element start");
+        }
     }
-    let entry = Entry::parse(&mut reader, OwnedName::local("Entry"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+    let entry = Entry::parse(
+        &mut reader,
+        OwnedName::local("Entry"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
 
     assert_eq!(entry.uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
     assert_eq!(entry.icon_id, 12);
@@ -1266,7 +2179,14 @@ fn test_encode_entry_filled() {
 #[test]
 fn test_decode_document_empty() {
     let mut reader = start_document("<KeePassFile/>", "KeePassFile");
-    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+    let document = KeePassFile::parse(
+        &mut reader,
+        OwnedName::local("KeePassFile"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
     end_document(reader);
     assert_eq!(document.meta.database_name, "");
     assert_eq!(document.meta.default_user_name, "");
@@ -1282,22 +2202,38 @@ fn test_encode_document_empty() {
     let expected = KeePassFile::default();
     let buffer = vec![];
     let mut writer = xml::writer::EventWriter::new(buffer);
-    writer.write(xml::writer::XmlEvent::start_element("KeePassFile")).expect("Success!");
+    writer
+        .write(xml::writer::XmlEvent::start_element("KeePassFile"))
+        .expect("Success!");
     KeePassFile::serialize2(&mut writer, expected).expect("No error");
-    writer.write(xml::writer::XmlEvent::end_element()).expect("Success!");
+    writer
+        .write(xml::writer::XmlEvent::end_element())
+        .expect("Success!");
     let buffer = writer.into_inner();
-    let mut reader = ParserConfig::new()
-        .create_reader(Cursor::new(buffer));
+    let mut reader = ParserConfig::new().create_reader(Cursor::new(buffer));
     match reader.next().unwrap() {
-        XmlEvent::StartDocument { .. } => {},
-        _ => { panic!("Missing document start"); },
+        XmlEvent::StartDocument { .. } => {}
+        _ => {
+            panic!("Missing document start");
+        }
     };
     let root = "KeePassFile";
     match reader.next().unwrap() {
-        XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, root); },
-        _ => { panic!("Missing root element start"); },
+        XmlEvent::StartElement { name, .. } => {
+            assert_eq!(name.local_name, root);
+        }
+        _ => {
+            panic!("Missing root element start");
+        }
     }
-    let actual = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+    let actual = KeePassFile::parse(
+        &mut reader,
+        OwnedName::local("KeePassFile"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
     assert_eq!(actual.meta.database_name, "");
     assert_eq!(actual.meta.default_user_name, "");
     assert_eq!(actual.meta.memory_protection.protect_notes, false);
@@ -1315,7 +2251,14 @@ fn test_decode_document_filled() {
     // file.read_to_end(&mut contents);
     let contents = include_str!("../testdata/dummy.xml");
     let mut reader = start_document(contents, "KeePassFile");
-    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+    let document = KeePassFile::parse(
+        &mut reader,
+        OwnedName::local("KeePassFile"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
     end_document(reader);
     assert_eq!(document.meta.database_name, "Dummy");
     assert_eq!(document.meta.default_user_name, "someone");
@@ -1324,9 +2267,22 @@ fn test_decode_document_filled() {
     assert_eq!(document.meta.memory_protection.protect_title, false);
     assert_eq!(document.meta.memory_protection.protect_url, false);
     assert_eq!(document.meta.memory_protection.protect_user_name, false);
-    assert_eq!(document.meta.custom_data.len(), 3, "Correct number of custom data fields");
-    assert!(document.meta.custom_data.contains_key("KPXC_DECRYPTION_TIME_PREFERENCE"), "Missing a custom data field");
-    assert_eq!(document.meta.custom_data["KPXC_DECRYPTION_TIME_PREFERENCE"], "100", "Custom data field has wrong value");
+    assert_eq!(
+        document.meta.custom_data.len(),
+        3,
+        "Correct number of custom data fields"
+    );
+    assert!(
+        document
+            .meta
+            .custom_data
+            .contains_key("KPXC_DECRYPTION_TIME_PREFERENCE"),
+        "Missing a custom data field"
+    );
+    assert_eq!(
+        document.meta.custom_data["KPXC_DECRYPTION_TIME_PREFERENCE"], "100",
+        "Custom data field has wrong value"
+    );
 }
 
 #[test]
@@ -1341,22 +2297,38 @@ fn test_encode_document_filled() {
     expected.meta.memory_protection.protect_user_name = true;
     let buffer = vec![];
     let mut writer = xml::writer::EventWriter::new(buffer);
-    writer.write(xml::writer::XmlEvent::start_element("KeePassFile")).expect("Success!");
+    writer
+        .write(xml::writer::XmlEvent::start_element("KeePassFile"))
+        .expect("Success!");
     KeePassFile::serialize2(&mut writer, expected).expect("No error");
-    writer.write(xml::writer::XmlEvent::end_element()).expect("Success!");
+    writer
+        .write(xml::writer::XmlEvent::end_element())
+        .expect("Success!");
     let buffer = writer.into_inner();
-    let mut reader = ParserConfig::new()
-        .create_reader(Cursor::new(buffer));
+    let mut reader = ParserConfig::new().create_reader(Cursor::new(buffer));
     match reader.next().unwrap() {
-        XmlEvent::StartDocument { .. } => {},
-        _ => { panic!("Missing document start"); },
+        XmlEvent::StartDocument { .. } => {}
+        _ => {
+            panic!("Missing document start");
+        }
     };
     let root = "KeePassFile";
     match reader.next().unwrap() {
-        XmlEvent::StartElement { name, .. } => { assert_eq!(name.local_name, root); },
-        _ => { panic!("Missing root element start"); },
+        XmlEvent::StartElement { name, .. } => {
+            assert_eq!(name.local_name, root);
+        }
+        _ => {
+            panic!("Missing root element start");
+        }
     }
-    let actual = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+    let actual = KeePassFile::parse(
+        &mut reader,
+        OwnedName::local("KeePassFile"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
     assert_eq!(actual.meta.database_name, "Dummy");
     assert_eq!(actual.meta.default_user_name, "Someone");
     assert_eq!(actual.meta.memory_protection.protect_notes, true);
@@ -1374,18 +2346,56 @@ fn test_decode_document_kdbx41() {
     // file.read_to_end(&mut contents);
     let contents = include_str!("../testdata/dummy-kdbx41.xml");
     let mut reader = start_document(contents, "KeePassFile");
-    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+    let document = KeePassFile::parse(
+        &mut reader,
+        OwnedName::local("KeePassFile"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
     end_document(reader);
     assert_eq!(document.meta.generator, "KeePass");
     assert_eq!(document.meta.database_name, "MyDatabase");
-    assert_eq!(document.meta.database_name_changed, Some(DateTime::parse_from_rfc3339("2021-07-30T21:33:09+00:00").unwrap().with_timezone(&Utc)));
-    assert_eq!(document.meta.database_description, "A KDBX 4.1 Database from KeePass 2.48.1.");
-    assert_eq!(document.meta.database_description_changed, Some(DateTime::parse_from_rfc3339("2021-07-30T21:33:09+00:00").unwrap().with_timezone(&Utc)));
+    assert_eq!(
+        document.meta.database_name_changed,
+        Some(
+            DateTime::parse_from_rfc3339("2021-07-30T21:33:09+00:00")
+                .unwrap()
+                .with_timezone(&Utc)
+        )
+    );
+    assert_eq!(
+        document.meta.database_description,
+        "A KDBX 4.1 Database from KeePass 2.48.1."
+    );
+    assert_eq!(
+        document.meta.database_description_changed,
+        Some(
+            DateTime::parse_from_rfc3339("2021-07-30T21:33:09+00:00")
+                .unwrap()
+                .with_timezone(&Utc)
+        )
+    );
     assert_eq!(document.meta.default_user_name, "user");
-    assert_eq!(document.meta.default_user_name_changed, Some(DateTime::parse_from_rfc3339("2021-07-30T21:33:09+00:00").unwrap().with_timezone(&Utc)));
+    assert_eq!(
+        document.meta.default_user_name_changed,
+        Some(
+            DateTime::parse_from_rfc3339("2021-07-30T21:33:09+00:00")
+                .unwrap()
+                .with_timezone(&Utc)
+        )
+    );
     assert_eq!(document.meta.maintenance_history_days, 365);
     //assert_eq!(document.meta.color, Color::rgb(0xFF, 0x00, 0x3F));
-    assert_eq!(document.meta.master_key_changed, Some(DateTime::parse_from_rfc3339("2021-07-31T00:02:45+00:00").unwrap().with_timezone(&Utc)));
+    assert_eq!(
+        document.meta.master_key_changed,
+        Some(
+            DateTime::parse_from_rfc3339("2021-07-31T00:02:45+00:00")
+                .unwrap()
+                .with_timezone(&Utc)
+        )
+    );
     assert_eq!(document.meta.master_key_change_rec, 182);
     assert_eq!(document.meta.master_key_change_force, 365);
     assert_eq!(document.meta.memory_protection.protect_notes, false);
@@ -1393,8 +2403,19 @@ fn test_decode_document_kdbx41() {
     assert_eq!(document.meta.memory_protection.protect_title, false);
     assert_eq!(document.meta.memory_protection.protect_url, false);
     assert_eq!(document.meta.memory_protection.protect_user_name, false);
-    assert_eq!(document.meta.settings_changed, Some(DateTime::parse_from_rfc3339("2021-07-31T00:03:06+00:00").unwrap().with_timezone(&Utc)));
-    assert_eq!(document.meta.custom_data.len(), 0, "Correct number of custom data fields");
+    assert_eq!(
+        document.meta.settings_changed,
+        Some(
+            DateTime::parse_from_rfc3339("2021-07-31T00:03:06+00:00")
+                .unwrap()
+                .with_timezone(&Utc)
+        )
+    );
+    assert_eq!(
+        document.meta.custom_data.len(),
+        0,
+        "Correct number of custom data fields"
+    );
     // <CustomIcons>
     //     <Icon>
     //         <UUID>abfkJtfYxkaUtH41POXBww==</UUID>
@@ -1435,7 +2456,14 @@ fn test_basic_document() {
 fn test_decode_document_filled_contents() {
     let contents = include_str!("../testdata/dummy.xml");
     let mut reader = start_document(contents, "KeePassFile");
-    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+    let document = KeePassFile::parse(
+        &mut reader,
+        OwnedName::local("KeePassFile"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
     end_document(reader);
     //assert_eq!(document.meta.database_name, "Dummy");
     //assert_eq!(document.meta.default_user_name, "someone");
@@ -1451,13 +2479,36 @@ fn test_decode_document_filled_contents() {
     assert_eq!(document.root[0].entry.len(), 0);
     assert_eq!(document.root[0].group.len(), 1);
     assert_eq!(document.root[0].group[0].entry.len(), 1);
-    assert_eq!(document.root[0].group[0].entry[0].history.as_ref().unwrap().len(), 2, "{:#?}", document.root[0].group[0].entry[0].history);
+    assert_eq!(
+        document.root[0].group[0].entry[0]
+            .history
+            .as_ref()
+            .unwrap()
+            .len(),
+        2,
+        "{:#?}",
+        document.root[0].group[0].entry[0].history
+    );
     assert_eq!(document.root[0].group[0].group.len(), 2);
     assert_eq!(document.root[0].group[0].group[0].entry.len(), 1);
-    assert_eq!(document.root[0].group[0].group[0].entry[0].history.as_ref().unwrap().len(), 2);
+    assert_eq!(
+        document.root[0].group[0].group[0].entry[0]
+            .history
+            .as_ref()
+            .unwrap()
+            .len(),
+        2
+    );
     assert_eq!(document.root[0].group[0].group[0].group.len(), 1);
     assert_eq!(document.root[0].group[0].group[0].group[0].entry.len(), 1);
-    assert_eq!(document.root[0].group[0].group[0].group[0].entry[0].history.as_ref().unwrap().len(), 0);
+    assert_eq!(
+        document.root[0].group[0].group[0].group[0].entry[0]
+            .history
+            .as_ref()
+            .unwrap()
+            .len(),
+        0
+    );
     assert_eq!(document.root[0].group[0].group[0].group[0].group.len(), 0);
     assert_eq!(document.root[0].group[0].group[1].entry.len(), 0);
     assert_eq!(document.root[0].group[0].group[1].group.len(), 0);
@@ -1467,7 +2518,14 @@ fn test_decode_document_filled_contents() {
 fn test_decode_document_filled_group() {
     let contents = include_str!("../testdata/dummy.xml");
     let mut reader = start_document(contents, "KeePassFile");
-    let document = KeePassFile::parse(&mut reader, OwnedName::local("KeePassFile"), vec![], &mut KdbxContext::default()).expect("No error").unwrap();
+    let document = KeePassFile::parse(
+        &mut reader,
+        OwnedName::local("KeePassFile"),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("No error")
+    .unwrap();
     end_document(reader);
     assert_eq!(document.root.len(), 1);
     assert_eq!(document.root[0].entry.len(), 0);
@@ -1477,13 +2535,28 @@ fn test_decode_document_filled_group() {
     assert_eq!(group.name, "Root");
     assert_eq!(group.notes, "");
     assert_eq!(group.icon_id, 48);
-    assert_eq!(group.times.last_modification_time, DateTime::parse_from_rfc3339("2019-12-20T01:24:29+00:00").unwrap());
-    assert_eq!(group.times.creation_time, DateTime::parse_from_rfc3339("2019-12-20T01:24:29+00:00").unwrap());
-    assert_eq!(group.times.last_access_time, DateTime::parse_from_rfc3339("2019-12-20T01:24:29+00:00").unwrap());
-    assert_eq!(group.times.expiry_time, DateTime::parse_from_rfc3339("2019-12-20T01:24:29+00:00").unwrap());
+    assert_eq!(
+        group.times.last_modification_time,
+        DateTime::parse_from_rfc3339("2019-12-20T01:24:29+00:00").unwrap()
+    );
+    assert_eq!(
+        group.times.creation_time,
+        DateTime::parse_from_rfc3339("2019-12-20T01:24:29+00:00").unwrap()
+    );
+    assert_eq!(
+        group.times.last_access_time,
+        DateTime::parse_from_rfc3339("2019-12-20T01:24:29+00:00").unwrap()
+    );
+    assert_eq!(
+        group.times.expiry_time,
+        DateTime::parse_from_rfc3339("2019-12-20T01:24:29+00:00").unwrap()
+    );
     assert_eq!(group.times.expires, false);
     assert_eq!(group.times.usage_count, 0);
-    assert_eq!(group.times.location_changed, DateTime::parse_from_rfc3339("2019-12-20T01:24:29+00:00").unwrap());
+    assert_eq!(
+        group.times.location_changed,
+        DateTime::parse_from_rfc3339("2019-12-20T01:24:29+00:00").unwrap()
+    );
     assert_eq!(group.is_expanded, true);
     //<DefaultAutoTypeSequence/>
     //<EnableAutoType>null</EnableAutoType>
@@ -1526,7 +2599,7 @@ fn test_block_writer() {
 }
 
 #[test]
-#[ignore="Recent regression 2023-08-10"]
+#[ignore = "Recent regression 2023-08-10"]
 fn test_crypto_writer() {
     let test_string = [
         "This is a t",
@@ -1544,7 +2617,8 @@ fn test_crypto_writer() {
     {
         let cursor: Cursor<&mut Vec<u8>> = Cursor::new(&mut buf);
         eprintln!("AES Test Key: {:0x?}", &key);
-        let mut writer = Crypto::new(cipher, &key, Some(&iv), cursor).expect("Failed to create crypto");
+        let mut writer =
+            Crypto::new(cipher, &key, Some(&iv), cursor).expect("Failed to create crypto");
         for string in test_string {
             writer.write_all(string.as_bytes()).unwrap();
             writer.flush().unwrap();
@@ -1553,7 +2627,7 @@ fn test_crypto_writer() {
     //let expected = test_string.chain(["a".to_string()].iter()).join("");
     let expected = test_string.join("");
     eprintln!("Block output: {}", String::from_utf8_lossy(&buf));
-    assert_eq!(buf.len(), (expected.len() + 15)/16*16);
+    assert_eq!(buf.len(), (expected.len() + 15) / 16 * 16);
     let actual = decrypt(cipher, &key, Some(&iv), &buf).expect("Failed to decrypt");
     // let cursor = Cursor::new(&mut buf);
     // let mut reader = BlockReader::new(&key, cursor);
@@ -1570,11 +2644,11 @@ fn test_save_tlvs_ver3() {
     map.insert(1, vec![vec![0u8, 1u8, 2u8, 3u8]]);
     map.insert(2, vec![vec![3u8, 4u8], vec![5u8, 6u8]]);
     let expected = vec![
-        1u8, 4, 0, 0, 1, 2, 3,  // TLV 1 = [0,1,2,3]
-        2, 2, 0, 3, 4,  // TLV 2 = [3, 4]
-        2, 2, 0, 5, 6,  // TLV 2 = [5, 6]
-        3, 3, 0, 9, 8, 7,  // TLV 3 =  [9, 8, 7]
-        0, 0, 0,  // TLV END
+        1u8, 4, 0, 0, 1, 2, 3, // TLV 1 = [0,1,2,3]
+        2, 2, 0, 3, 4, // TLV 2 = [3, 4]
+        2, 2, 0, 5, 6, // TLV 2 = [5, 6]
+        3, 3, 0, 9, 8, 7, // TLV 3 =  [9, 8, 7]
+        0, 0, 0, // TLV END
     ];
     let actual = save_tlvs(&mut buf, &map, 3).expect("Failed to write tlvs");
     assert_eq!(expected, actual);
@@ -1584,11 +2658,11 @@ fn test_save_tlvs_ver3() {
 #[test]
 fn test_load_tlvs_ver3() {
     let mut buf = Cursor::new(vec![
-        2, 2, 0, 3, 4,  // TLV 2 = [3, 4]
-        3, 3, 0, 9, 8, 7,  // TLV 3 =  [9, 8, 7]
-        1u8, 4, 0, 0, 1, 2, 3,  // TLV 1 = [0,1,2,3]
-        2, 2, 0, 5, 6,  // TLV 2 = [5, 6]
-        0, 0, 0,  // TLV END
+        2, 2, 0, 3, 4, // TLV 2 = [3, 4]
+        3, 3, 0, 9, 8, 7, // TLV 3 =  [9, 8, 7]
+        1u8, 4, 0, 0, 1, 2, 3, // TLV 1 = [0,1,2,3]
+        2, 2, 0, 5, 6, // TLV 2 = [5, 6]
+        0, 0, 0, // TLV END
     ]);
     let (actual, bytes) = load_tlvs(&mut buf, 3).expect("Failed to read tlvs");
     assert_eq!(bytes, buf.into_inner());
@@ -1609,11 +2683,11 @@ fn test_save_tlvs_ver4() {
     map.insert(1, vec![vec![0u8, 1u8, 2u8, 3u8]]);
     map.insert(2, vec![vec![3u8, 4u8], vec![5u8, 6u8]]);
     let expected = vec![
-        1u8, 4, 0, 0, 0, 0, 1, 2, 3,  // TLV 1 = [0,1,2,3]
-        2, 2, 0, 0, 0, 3, 4,  // TLV 2 = [3, 4]
-        2, 2, 0, 0, 0, 5, 6,  // TLV 2 = [5, 6]
-        3, 3, 0, 0, 0, 9, 8, 7,  // TLV 3 =  [9, 8, 7]
-        0, 0, 0, 0, 0,  // TLV END
+        1u8, 4, 0, 0, 0, 0, 1, 2, 3, // TLV 1 = [0,1,2,3]
+        2, 2, 0, 0, 0, 3, 4, // TLV 2 = [3, 4]
+        2, 2, 0, 0, 0, 5, 6, // TLV 2 = [5, 6]
+        3, 3, 0, 0, 0, 9, 8, 7, // TLV 3 =  [9, 8, 7]
+        0, 0, 0, 0, 0, // TLV END
     ];
     let actual = save_tlvs(&mut buf, &map, 4).expect("Failed to write tlvs");
     assert_eq!(expected, actual);
@@ -1623,11 +2697,11 @@ fn test_save_tlvs_ver4() {
 #[test]
 fn test_load_tlvs_ver4() {
     let mut buf = Cursor::new(vec![
-        2, 2, 0, 0, 0, 3, 4,  // TLV 2 = [3, 4]
-        3, 3, 0, 0, 0, 9, 8, 7,  // TLV 3 =  [9, 8, 7]
-        1u8, 4, 0, 0, 0, 0, 1, 2, 3,  // TLV 1 = [0,1,2,3]
-        2, 2, 0, 0, 0, 5, 6,  // TLV 2 = [5, 6]
-        0, 0, 0, 0, 0,  // TLV END
+        2, 2, 0, 0, 0, 3, 4, // TLV 2 = [3, 4]
+        3, 3, 0, 0, 0, 9, 8, 7, // TLV 3 =  [9, 8, 7]
+        1u8, 4, 0, 0, 0, 0, 1, 2, 3, // TLV 1 = [0,1,2,3]
+        2, 2, 0, 0, 0, 5, 6, // TLV 2 = [5, 6]
+        0, 0, 0, 0, 0, // TLV END
     ]);
     let (actual, bytes) = load_tlvs(&mut buf, 4).expect("Failed to read tlvs");
     assert_eq!(bytes, buf.into_inner());
@@ -1643,8 +2717,8 @@ fn test_load_tlvs_ver4() {
 #[test]
 fn test_load_variant_map_empty() {
     let buf = vec![
-        0u8, 1,  // Version 1.0
-        0x0,  // End
+        0u8, 1,   // Version 1.0
+        0x0, // End
     ];
     let map = load_map(&buf).expect("Error decoding map");
     assert_eq!(map.len(), 0);
@@ -1653,10 +2727,10 @@ fn test_load_variant_map_empty() {
 #[test]
 fn test_load_variant_map_bool() {
     let buf = vec![
-        0u8, 1,  // Version 1.0
-        0x08, 4, 0, 0, 0, 0x42, 0x4f, 0x4f, 0x4c, 1, 0, 0, 0, 1,  // BOOL = true
-        0x08, 2, 0, 0, 0, 0x6e, 0x6f, 1, 0, 0, 0, 0,  // no = true
-        0x0,  // End
+        0u8, 1, // Version 1.0
+        0x08, 4, 0, 0, 0, 0x42, 0x4f, 0x4f, 0x4c, 1, 0, 0, 0, 1, // BOOL = true
+        0x08, 2, 0, 0, 0, 0x6e, 0x6f, 1, 0, 0, 0, 0,   // no = true
+        0x0, // End
     ];
     let map = load_map(&buf).expect("Error decoding map");
     assert_eq!(map.len(), 2);
@@ -1669,9 +2743,10 @@ fn test_load_variant_map_bool() {
 #[test]
 fn test_load_variant_map_bytes() {
     let buf = vec![
-        0u8, 1,  // Version 1.0
-        0x42, 5, 0, 0, 0, 0x62, 0x79, 0x74, 0x65, 0x73, 4, 0, 0, 0, 1, 2, 3, 4,  // bytes = [1, 2, 3, 4]
-        0x0,  // End
+        0u8, 1, // Version 1.0
+        0x42, 5, 0, 0, 0, 0x62, 0x79, 0x74, 0x65, 0x73, 4, 0, 0, 0, 1, 2, 3,
+        4,   // bytes = [1, 2, 3, 4]
+        0x0, // End
     ];
     let map = load_map(&buf).expect("Error decoding map");
     assert_eq!(map.len(), 1);
@@ -1682,16 +2757,18 @@ fn test_load_variant_map_bytes() {
 #[test]
 fn test_load_variant_map() {
     let buf = vec![
-        0u8, 1,  // Version 1.0
-        0x04, 3, 0, 0, 0, 0x55, 0x33, 0x32, 4, 0, 0, 0, 0, 0, 0, 0x80,  // U32 = 0x80000000
-        0x05, 3, 0, 0, 0, 0x55, 0x36, 0x34, 8, 0, 0, 0, 123, 0, 0, 0, 0, 0, 0, 0,  // U64 = 123
-        0x08, 4, 0, 0, 0, 0x42, 0x4f, 0x4f, 0x4c, 1, 0, 0, 0, 1,  // BOOL = true
-        0x08, 2, 0, 0, 0, 0x6e, 0x6f, 1, 0, 0, 0, 0,  // no = true
-        0x0c, 3, 0, 0, 0, 0x49, 0x33, 0x32, 4, 0, 0, 0, 0xff, 0xff, 0xff, 0xff,  // I32 = -1
-        0x0d, 3, 0, 0, 0, 0x49, 0x36, 0x34, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x80,  // I64 = uint64::min
-        0x18, 2, 0, 0, 0, 0x68, 0x69, 3, 0, 0, 0, 0x62, 0x79, 0x65,  // hi = bye
-        0x42, 5, 0, 0, 0, 0x62, 0x79, 0x74, 0x65, 0x73, 4, 0, 0, 0, 1, 2, 3, 4,  // bytes = [1, 2, 3, 4]
-        0x0,  // End
+        0u8, 1, // Version 1.0
+        0x04, 3, 0, 0, 0, 0x55, 0x33, 0x32, 4, 0, 0, 0, 0, 0, 0, 0x80, // U32 = 0x80000000
+        0x05, 3, 0, 0, 0, 0x55, 0x36, 0x34, 8, 0, 0, 0, 123, 0, 0, 0, 0, 0, 0, 0, // U64 = 123
+        0x08, 4, 0, 0, 0, 0x42, 0x4f, 0x4f, 0x4c, 1, 0, 0, 0, 1, // BOOL = true
+        0x08, 2, 0, 0, 0, 0x6e, 0x6f, 1, 0, 0, 0, 0, // no = true
+        0x0c, 3, 0, 0, 0, 0x49, 0x33, 0x32, 4, 0, 0, 0, 0xff, 0xff, 0xff, 0xff, // I32 = -1
+        0x0d, 3, 0, 0, 0, 0x49, 0x36, 0x34, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0x80, // I64 = uint64::min
+        0x18, 2, 0, 0, 0, 0x68, 0x69, 3, 0, 0, 0, 0x62, 0x79, 0x65, // hi = bye
+        0x42, 5, 0, 0, 0, 0x62, 0x79, 0x74, 0x65, 0x73, 4, 0, 0, 0, 1, 2, 3,
+        4,   // bytes = [1, 2, 3, 4]
+        0x0, // End
     ];
     let map = load_map(&buf).expect("Error decoding map");
     assert_eq!(map.len(), 8);
