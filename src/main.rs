@@ -1537,7 +1537,9 @@ fn decode_datetime<R: Read>(
 //}
 
 #[derive(Default)]
-struct KdbxContext;
+struct KdbxContext {
+    major_version: u16,
+}
 
 impl KdbxParse<KdbxContext> for DateTime<Utc> {
     fn parse<R: Read>(
@@ -2024,7 +2026,7 @@ fn decode_meta_old<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String>
             XmlEvent::StartElement {
                 name, attributes, ..
             } if name.local_name == "MemoryProtection" => {
-                memory_protection = MemoryProtection::parse(reader, name, attributes, &mut KdbxContext)?.unwrap();  // TODO Shouldn't need context
+                memory_protection = MemoryProtection::parse(reader, name, attributes, &mut KdbxContext::default())?.unwrap();  // TODO Shouldn't need context
                 println!("MemoryProtection: {:?}", memory_protection);
             }
             XmlEvent::StartElement {
@@ -2391,7 +2393,7 @@ fn decode_group<R: Read>(reader: &mut EventReader<R>) -> Result<Group, String> {
             XmlEvent::StartElement {
                 name, attributes, ..
             } if name.local_name == "Times" => {
-                times = Times::parse(reader, name, attributes, &mut KdbxContext)?.unwrap();
+                times = Times::parse(reader, name, attributes, &mut KdbxContext::default())?.unwrap();
                 println!("Times: {:?}", times);
             }
             XmlEvent::StartElement {
@@ -2409,14 +2411,14 @@ fn decode_group<R: Read>(reader: &mut EventReader<R>) -> Result<Group, String> {
             XmlEvent::StartElement {
                 name, attributes, ..
             } if name.local_name == "Entry" => {
-                let entry = Entry::parse(reader, name, attributes, &mut KdbxContext)?.unwrap();
+                let entry = Entry::parse(reader, name, attributes, &mut KdbxContext::default())?.unwrap();
                 println!("Entry: {:?}", entry);
                 entries.push(entry);
             }
             XmlEvent::StartElement {
                 name, attributes, ..
             } if name.local_name == "Group" => {
-                let group = Group::parse(reader, name, attributes, &mut KdbxContext)?.unwrap();
+                let group = Group::parse(reader, name, attributes, &mut KdbxContext::default())?.unwrap();
                 println!("Group: {:?}", group);
                 groups.push(group);
             }
@@ -2723,6 +2725,7 @@ fn main() -> io::Result<()> {
     }
 
     let mut custom_data = HashMap::<String, Vec<u8>>::new();
+    let mut custom_data2 = HashMap::<_, _>::new();
 
     match magic_type {
         KDBX1_MAGIC_TYPE => {
@@ -3202,10 +3205,12 @@ fn main() -> io::Result<()> {
                 break;
             }
             5 => {
-                custom_data.insert(KDF_PARAM_SALT.to_string(), tlv_data);
+                custom_data.insert(KDF_PARAM_SALT.to_string(), tlv_data.clone());
+                custom_data2.insert(KDF_PARAM_SALT.to_string(), MapValue::ByteArray(tlv_data));
             }
             6 => {
-                custom_data.insert(KDF_PARAM_ROUNDS.to_string(), tlv_data);
+                custom_data.insert(KDF_PARAM_ROUNDS.to_string(), tlv_data.clone());
+                custom_data2.insert(KDF_PARAM_ROUNDS.to_string(), MapValue::UInt64(u64::from_le_bytes(tlv_data[0..8].try_into().unwrap())));
             }
             8 => {
                 inner_tlvs.insert(2u8, tlv_data);
@@ -3214,7 +3219,7 @@ fn main() -> io::Result<()> {
                 inner_tlvs.insert(1u8, tlv_data);
             }
             11 => {
-                tlvs.insert(tlv_type, tlv_data.clone());
+                custom_data2 = load_map(&tlv_data).unwrap();
                 let kdf_parameters = &tlv_data;
                 let mut c = Cursor::new(kdf_parameters);
                 let variant_minor = c.read_u8()?;
@@ -3312,9 +3317,8 @@ fn main() -> io::Result<()> {
 
     let transform_key = match kdf_id {
         x if x == KDF_AES_KDBX3 => {
-            let custom_data = load_map(&tlvs[&11]).unwrap();
             //unimplemented!("KDBX 3 AES-KDF not supported!");
-            AesKdf::load(&custom_data)?.transform_key(&composite_key)?
+            AesKdf::load(&custom_data2)?.transform_key(&composite_key)?
             // transform_aes_kdf(&composite_key, &custom_data)?
         }
         x if x == KDF_AES_KDBX4 => {
@@ -3664,7 +3668,7 @@ fn main() -> io::Result<()> {
             XmlEvent::StartElement {
                 name, attributes, ..
             } => {
-                let my_doc = crate::KeePassFile::parse(&mut reader, name, attributes, &mut KdbxContext)
+                let my_doc = crate::KeePassFile::parse(&mut reader, name, attributes, &mut KdbxContext::default())
                     .map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?.unwrap();
                 save_file(&my_doc).unwrap();
             }
