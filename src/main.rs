@@ -1334,7 +1334,7 @@ fn encode_optional_bool<W: Write>(
     writer: &mut EventWriter<W>,
     value: Option<bool>,
 ) -> Result<(), String> {
-    encode_optional_string(writer, value.map(|x| if x { "true" } else { "false" }))
+    encode_optional_string(writer, value.map(|x| if x { "True" } else { "False" }))
 }
 
 fn decode_bool<R: Read>(
@@ -1351,7 +1351,7 @@ impl KdbxParse for bool {
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
     ) -> Result<Option<Self>, String> {
-        Ok(Some(decode_bool(reader, name, attributes)?))
+        decode_optional_bool(reader, name, attributes)
     }
 }
 

@@ -7,7 +7,10 @@
 			"problemMatcher": [
 				"$rustc"
 			],
-			"group": "build",
+			"group": {
+				"kind": "test",
+				"isDefault": true
+			},
 			"label": "rust: cargo test"
 		},
 		{
@@ -16,7 +19,7 @@
 			"problemMatcher": [
 				"$rustc"
 			],
-			"group": "build",
+			"group": "test",
 			"label": "rust: cargo check"
 		},
 		{
@@ -26,7 +29,8 @@
 				"KDBX_PASSWORD": "asdf"
 			},
 			"args": [
-				"testdata/dummy.kdbx"
+				//"testdata/dummy.kdbx"
+				"testdata/dummy-kdbx41.kdbx"
 			],
 			"problemMatcher": [
 				"$rustc"

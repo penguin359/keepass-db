@@ -455,6 +455,187 @@ fn test_serializing_optional_mixed_string() {
     assert_eq!(actual, "<OptionStringTest><Field> This &lt;b>is&lt;/b> valid.\t</Field></OptionStringTest>");
 }
 
+#[derive(Clone, Default, KdbxParse, KdbxSerialize)]
+struct BoolTest {
+    field: bool,
+}
+
+#[test]
+fn test_parsing_empty_bool() {
+    let mut reader = start_document("<root> <Field /> </root>", "root");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, false);
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field></Field> </root>", "root");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, false);
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field><!-- This is invisible --></Field> </root>", "root");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, false);
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_valid_false_bool() {
+    let mut reader = start_document("<root> <Field>false</Field> </root>", "root");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, false);
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field>FALSE</Field> </root>", "root");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, false);
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field>False</Field> </root>", "root");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, false);
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_invalid_false_bool() {
+    // TODO Test for warnings about invalid values
+    let mut reader = start_document("<root> <Field>This is me.</Field> </root>", "root");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, false);
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_valid_true_bool() {
+    let mut reader = start_document("<root> <Field>true</Field> </root>", "root");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, true);
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field>TRUE</Field> </root>", "root");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, true);
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field>True</Field> </root>", "root");
+    let actual = BoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, true);
+    end_document(reader);
+}
+
+#[test]
+fn test_serializing_false_bool() {
+    let doc = write_kdbx_document(&BoolTest {
+        field: false,
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<BoolTest><Field>False</Field></BoolTest>");
+}
+
+#[test]
+fn test_serializing_true_bool() {
+    let doc = write_kdbx_document(&BoolTest {
+        field: true,
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<BoolTest><Field>True</Field></BoolTest>");
+}
+
+#[derive(Clone, Default, KdbxParse, KdbxSerialize)]
+struct OptionBoolTest {
+    field: Option<bool>,
+}
+
+#[test]
+fn test_parsing_optional_empty_bool() {
+    let mut reader = start_document("<root> <Field /> </root>", "root");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, None);
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field></Field> </root>", "root");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, None);
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field><!-- This is invisible --></Field> </root>", "root");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, None);
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_optional_valid_false_bool() {
+    let mut reader = start_document("<root> <Field>false</Field> </root>", "root");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, Some(false));
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field>FALSE</Field> </root>", "root");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, Some(false));
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field>False</Field> </root>", "root");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, Some(false));
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_optional_invalid_false_bool() {
+    // TODO Test for warnings about invalid values
+    let mut reader = start_document("<root> <Field>This is me.</Field> </root>", "root");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, Some(false));
+    end_document(reader);
+}
+
+#[test]
+fn test_parsing_optional_valid_true_bool() {
+    let mut reader = start_document("<root> <Field>true</Field> </root>", "root");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, Some(true));
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field>TRUE</Field> </root>", "root");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, Some(true));
+    end_document(reader);
+
+    let mut reader = start_document("<root> <Field>True</Field> </root>", "root");
+    let actual = OptionBoolTest::parse(&mut reader, OwnedName::local("root"), vec![]).expect("Parsing error").expect("Missing object");
+    assert_eq!(actual.field, Some(true));
+    end_document(reader);
+}
+
+#[test]
+fn test_serializing_optional_empty_bool() {
+    let doc = write_kdbx_document(&OptionBoolTest {
+        field: None,
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<OptionBoolTest/>");
+}
+
+#[test]
+fn test_serializing_optional_false_bool() {
+    let doc = write_kdbx_document(&OptionBoolTest {
+        field: Some(false),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<OptionBoolTest><Field>False</Field></OptionBoolTest>");
+}
+
+#[test]
+fn test_serializing_optional_true_bool() {
+    let doc = write_kdbx_document(&OptionBoolTest {
+        field: Some(true),
+    });
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<OptionBoolTest><Field>True</Field></OptionBoolTest>");
+}
+
 #[test]
 fn test_decoding_optional_empty_string() {
     let mut reader = start_document("<root/>", "root");
