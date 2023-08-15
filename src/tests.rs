@@ -99,7 +99,7 @@ fn test_argon2_kdf_secret_and_associative() {
 }
 
 #[test]
-fn test_decoding_empty_document() {
+fn test_decode_empty_document() {
     let content = "";
     let mut reader = ParserConfig::new()
         .create_reader(Cursor::new(content));
@@ -108,7 +108,7 @@ fn test_decoding_empty_document() {
 }
 
 #[test]
-fn test_decoding_minimal_document() {
+fn test_decode_minimal_document() {
     let content = "<root/>";
     let mut reader = ParserConfig::new()
         .create_reader(Cursor::new(content));
@@ -637,7 +637,7 @@ fn test_serializing_optional_true_bool() {
 }
 
 #[test]
-fn test_decoding_optional_empty_string() {
+fn test_decode_optional_empty_string() {
     let mut reader = start_document("<root/>", "root");
     assert_eq!(decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
         None);
@@ -645,7 +645,7 @@ fn test_decoding_optional_empty_string() {
 }
 
 #[test]
-fn test_decoding_optional_basic_string() {
+fn test_decode_optional_basic_string() {
     let mut reader = start_document("<root>  This is a test of it 1   </root>", "root");
     assert_eq!(decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
         Some(String::from("  This is a test of it 1   ")));
@@ -653,7 +653,7 @@ fn test_decoding_optional_basic_string() {
 }
 
 #[test]
-fn test_decoding_optional_whitespace_string() {
+fn test_decode_optional_whitespace_string() {
     let mut reader = start_document("<root>     </root>", "root");
     assert_eq!(decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
         Some(String::from("     ")));
@@ -661,7 +661,7 @@ fn test_decoding_optional_whitespace_string() {
 }
 
 #[test]
-fn test_decoding_optional_cdata_string() {
+fn test_decode_optional_cdata_string() {
     let mut reader = start_document("<root><![CDATA[This is a test of it 3]]></root>", "root");
     assert_eq!(decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
         Some(String::from("This is a test of it 3")));
@@ -669,11 +669,129 @@ fn test_decoding_optional_cdata_string() {
 }
 
 #[test]
-fn test_decoding_optional_full_string() {
+fn test_decode_optional_full_string() {
     let mut reader = start_document("<root>  This is <![CDATA[ Test ]]> of it 4   </root>", "root");
     assert_eq!(decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
         Some(String::from("  This is  Test  of it 4   ")));
     end_document(reader);
+}
+
+#[test]
+fn test_decode_optional_empty_base64() {
+    let mut reader = start_document("<root/>", "root");
+    assert_eq!(decode_optional_base64(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        None);
+    end_document(reader);
+}
+
+#[test]
+fn test_decode_optional_valid_base64() {
+    let mut reader = start_document("<root>/u3erb7vyv4=</root>", "root");
+    assert_eq!(decode_optional_base64(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        Some([0xfeu8, 0xed, 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe].as_ref().to_owned()));
+    end_document(reader);
+}
+
+// TODO Test malformed base64
+
+#[test]
+fn test_encode_optional_empty_base64() {
+    let buffer = vec![];
+    let mut writer = xml::writer::EmitterConfig::new()
+        .write_document_declaration(false)
+        .normalize_empty_elements(true)
+        .cdata_to_characters(true)
+        .pad_self_closing(false)
+        .create_writer(buffer);
+    writer.write(xml::writer::XmlEvent::start_element("root")).expect("Failed to write start tag!");
+    encode_optional_base64::<_, &[u8]>(&mut writer, None).expect("Writing value");
+    writer.write(xml::writer::XmlEvent::end_element()).expect("Failed to write end tag!");
+    let doc = writer.into_inner();
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<root/>");
+
+    let buffer = vec![];
+    let mut writer   = xml::writer::EmitterConfig::new()
+        .write_document_declaration(false)
+        .normalize_empty_elements(true)
+        .cdata_to_characters(true)
+        .pad_self_closing(false)
+        .create_writer(buffer);
+    writer.write(xml::writer::XmlEvent::start_element("root")).expect("Failed to write start tag!");
+    encode_optional_base64(&mut writer, Some(vec![])).expect("Writing value");
+    writer.write(xml::writer::XmlEvent::end_element()).expect("Failed to write end tag!");
+    let doc = writer.into_inner();
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    //assert_eq!(actual, "<root/>");  // TODO This should be normalized
+    assert_eq!(actual, "<root></root>");
+}
+
+#[test]
+fn test_encode_optional_valid_base64() {
+    let buffer = vec![];
+    let mut writer   = xml::writer::EmitterConfig::new()
+        .write_document_declaration(false)
+        .normalize_empty_elements(true)
+        .cdata_to_characters(true)
+        .pad_self_closing(false)
+        .create_writer(buffer);
+    writer.write(xml::writer::XmlEvent::start_element("root")).expect("Failed to write start tag!");
+    encode_optional_base64(&mut writer, Some([0xfeu8, 0xed, 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe])).expect("Writing value");
+    writer.write(xml::writer::XmlEvent::end_element()).expect("Failed to write end tag!");
+    let doc = writer.into_inner();
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<root>/u3erb7vyv4=</root>");
+}
+
+#[test]
+fn test_decode_empty_base64() {
+    let mut reader = start_document("<root/>", "root");
+    assert_eq!(decode_base64(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        vec![]);
+    end_document(reader);
+}
+
+#[test]
+fn test_decode_valid_base64() {
+    let mut reader = start_document("<root>/u3erb7vyv4=</root>", "root");
+    assert_eq!(decode_base64(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        [0xfeu8, 0xed, 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe].as_ref().to_owned());
+    end_document(reader);
+}
+
+#[test]
+fn test_encode_empty_base64() {
+    let buffer = vec![];
+    let mut writer   = xml::writer::EmitterConfig::new()
+        .write_document_declaration(false)
+        .normalize_empty_elements(true)
+        .cdata_to_characters(true)
+        .pad_self_closing(false)
+        .create_writer(buffer);
+    writer.write(xml::writer::XmlEvent::start_element("root")).expect("Failed to write start tag!");
+    encode_base64(&mut writer, vec![]).expect("Writing value");
+    writer.write(xml::writer::XmlEvent::end_element()).expect("Failed to write end tag!");
+    let doc = writer.into_inner();
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    //assert_eq!(actual, "<root/>");  // TODO This should be normalized
+    assert_eq!(actual, "<root></root>");
+}
+
+#[test]
+fn test_encode_valid_base64() {
+    let buffer = vec![];
+    let mut writer   = xml::writer::EmitterConfig::new()
+        .write_document_declaration(false)
+        .normalize_empty_elements(true)
+        .cdata_to_characters(true)
+        .pad_self_closing(false)
+        .create_writer(buffer);
+    writer.write(xml::writer::XmlEvent::start_element("root")).expect("Failed to write start tag!");
+    encode_base64(&mut writer, [0xfeu8, 0xed, 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe]).expect("Writing value");
+    writer.write(xml::writer::XmlEvent::end_element()).expect("Failed to write end tag!");
+    let doc = writer.into_inner();
+    let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
+    assert_eq!(actual, "<root>/u3erb7vyv4=</root>");
 }
 
 #[test]

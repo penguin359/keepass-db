@@ -1323,6 +1323,38 @@ impl KdbxSerialize for String {
     }
 }
 
+fn decode_optional_base64<R: Read>(
+    reader: &mut EventReader<R>,
+    name: OwnedName,
+    attributes: Vec<OwnedAttribute>,
+) -> Result<Option<Vec<u8>>, String> {
+    Ok(decode_optional_string(reader, name, attributes)?.map(|x| decode(&x).unwrap()/* .as_bytes().into() */))
+}
+
+fn encode_optional_base64<W: Write, T: AsRef<[u8]>>(
+    writer: &mut EventWriter<W>,
+    value: Option<T>,
+) -> Result<(), String> {
+    // let bytes = value.map(|x| encode(x.as_ref()));
+    // encode_optional_string(writer, bytes.map(|x| x.as_str()))
+    encode_optional_string(writer, value.map(|x| encode(x.as_ref())).as_deref())
+}
+
+fn decode_base64<R: Read>(
+    reader: &mut EventReader<R>,
+    name: OwnedName,
+    attributes: Vec<OwnedAttribute>,
+) -> Result<Vec<u8>, String> {
+    Ok(decode_optional_base64(reader, name, attributes)?.unwrap_or_default())
+}
+
+fn encode_base64<W: Write, T: AsRef<[u8]>>(
+    writer: &mut EventWriter<W>,
+    value: T,
+) -> Result<(), String> {
+    encode_optional_base64(writer, Some(value))
+}
+
 fn decode_optional_bool<R: Read>(
     reader: &mut EventReader<R>,
     name: OwnedName,
