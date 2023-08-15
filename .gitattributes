@@ -1,0 +1,2 @@
+testdata/dummy-kdbx3.kdbx filter=lfs diff=lfs merge=lfs -text
+testdata/test.kdb filter=lfs diff=lfs merge=lfs -text
