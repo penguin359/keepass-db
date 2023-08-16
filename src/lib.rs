@@ -1,3 +1,5 @@
+//! Read, modify and write KeePass 2.x databases
+
 #[cfg(feature = "rust-argon2")]
 extern crate argon2;
 #[cfg(feature = "argonautica")]
@@ -268,7 +270,7 @@ enum MapType {
 }
 
 #[derive(PartialEq, Eq, Debug)]
-enum MapValue {
+pub enum MapValue {
     UInt32(u32),
     UInt64(u64),
     Bool(bool),
@@ -704,14 +706,14 @@ impl<R: Read> CryptoReader<R> {
 //     }
 // }
 
-struct Key {
+pub struct Key {
     user_password: Option<Vec<u8>>,
     keyfile: Option<Vec<u8>>,
     windows_credentials: Option<Vec<u8>>,
 }
 
 impl Key {
-    fn new() -> Key {
+    pub fn new() -> Key {
         Key {
             user_password: None,
             keyfile: None,
@@ -719,7 +721,7 @@ impl Key {
         }
     }
 
-    fn set_user_password<T>(&mut self, user_password: T)
+    pub fn set_user_password<T>(&mut self, user_password: T)
     where
         T: AsRef<[u8]>,
     {
@@ -729,7 +731,7 @@ impl Key {
     }
 
     /* TODO Use this function */
-    fn set_keyfile<T>(&mut self, keyfile: T)
+    pub fn set_keyfile<T>(&mut self, keyfile: T)
     where
         T: AsRef<[u8]>,
     {
@@ -748,7 +750,7 @@ impl Key {
         self.windows_credentials = Some(context.finish().as_ref().to_owned());
     }
 
-    fn composite_key(&self) -> Vec<u8> {
+    pub fn composite_key(&self) -> Vec<u8> {
         let mut context = Context::new(&SHA256);
 
         if let Some(key) = &self.user_password {
@@ -782,14 +784,14 @@ impl Key {
     }
 }
 
-trait Kdf {
+pub trait Kdf {
     fn uuid(&self) -> Uuid;
     fn randomize(&mut self);
     fn transform_key(&self, composite_key: &[u8]) -> io::Result<Vec<u8>>;
     fn save(&self, custom_data: &mut HashMap<String, MapValue>);
 }
 
-struct AesKdf {
+pub struct AesKdf {
     salt: [u8; 32],
     rounds: u64,
 }
@@ -888,7 +890,7 @@ fn transform_aes_kdf(
     Ok(context.finish().as_ref().to_owned())
 }
 
-const KDF_PARAM_UUID: &str = "$UUID"; // UUID, KDF used to derive master key
+pub const KDF_PARAM_UUID: &str = "$UUID"; // UUID, KDF used to derive master key
 const KDF_PARAM_SALT: &str = "S"; // Byte[], Generates 32 bytes, required
 const KDF_PARAM_ROUNDS: &str = "R"; // Byte[], Generates 32 bytes, required
 const KDF_PARAM_PARALLELISM: &str = "P"; // UInt32, Default, required
@@ -1113,7 +1115,7 @@ fn decode_datetime_kdb1(content: &[u8]) -> NaiveDateTime {
     )
 }
 
-const KDF_AES_KDBX3: Uuid = uuid!("c9d9f39a-628a-4460-bf74-0d08c18a4fea");
+pub const KDF_AES_KDBX3: Uuid = uuid!("c9d9f39a-628a-4460-bf74-0d08c18a4fea");
 const KDF_AES_KDBX4: Uuid = uuid!("7c02bb82-79a7-4ac0-927d-114a00648238");
 const KDF_ARGON2_D: Uuid = uuid!("ef636ddf-8c29-444b-91f7-a9a403e30a0c");
 const KDF_ARGON2_ID: Uuid = uuid!("9e298b19-56db-4773-b23d-fc3ec6f0a1e6");
@@ -2681,6 +2683,11 @@ fn save_file(doc: &KeePassFile) -> io::Result<()> {
     Ok(())
 }
 
+/// This is a temporary solution until a proper API is ready
+/// ```
+/// assert!(true);
+/// ```
+/// Does it work?
 pub fn lib_main() -> io::Result<()> {
     env_logger::init();
 
