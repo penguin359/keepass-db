@@ -2681,7 +2681,7 @@ fn save_file(doc: &KeePassFile) -> io::Result<()> {
     Ok(())
 }
 
-fn main() -> io::Result<()> {
+pub fn lib_main() -> io::Result<()> {
     env_logger::init();
 
     let mut stderr = io::stderr();
