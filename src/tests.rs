@@ -1316,11 +1316,12 @@ fn test_parsing_valid_datetime_kdbx3() {
 }
 
 #[test]
-#[ignore = "Serializer needs context"]
 fn test_serializing_nil_datetime_kdbx3() {
-    let doc = write_kdbx_document(&DateTimeTest {
+    let mut context = KdbxContext::default();
+    context.major_version = 3;
+    let doc = write_kdbx_document_with_context(&DateTimeTest {
         field: Utc.with_ymd_and_hms(1, 1, 1, 0, 0, 0).unwrap(),
-    });
+    }, &mut context);
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     assert_eq!(
         actual,
@@ -1329,13 +1330,14 @@ fn test_serializing_nil_datetime_kdbx3() {
 }
 
 #[test]
-#[ignore = "Serializer needs context"]
 fn test_serializing_valid_datetime_kdbx3() {
-    let doc = write_kdbx_document(&DateTimeTest {
+    let mut context = KdbxContext::default();
+    context.major_version = 3;
+    let doc = write_kdbx_document_with_context(&DateTimeTest {
         field: DateTime::parse_from_rfc3339("2021-07-30T14:31:02-07:00")
             .unwrap()
             .into(),
-    });
+    }, &mut context);
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     assert_eq!(
         actual,
@@ -1556,17 +1558,20 @@ fn test_parsing_optional_valid_datetime_kdbx3() {
 
 #[test]
 fn test_serializing_optional_empty_datetime_kdbx3() {
-    let doc = write_kdbx_document(&OptionDateTimeTest { field: None });
+    let mut context = KdbxContext::default();
+    context.major_version = 3;
+    let doc = write_kdbx_document_with_context(&OptionDateTimeTest { field: None }, &mut context);
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     assert_eq!(actual, "<OptionDateTimeTest/>");
 }
 
 #[test]
-#[ignore = "Serializer needs context"]
 fn test_serializing_optional_nil_datetime_kdbx3() {
-    let doc = write_kdbx_document(&OptionDateTimeTest {
+    let mut context = KdbxContext::default();
+    context.major_version = 3;
+    let doc = write_kdbx_document_with_context(&OptionDateTimeTest {
         field: Some(Utc.with_ymd_and_hms(1, 1, 1, 0, 0, 0).unwrap()),
-    });
+    }, &mut context);
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     assert_eq!(
         actual,
@@ -1575,15 +1580,16 @@ fn test_serializing_optional_nil_datetime_kdbx3() {
 }
 
 #[test]
-#[ignore = "Serializer needs context"]
 fn test_serializing_optional_valid_datetime_kdbx3() {
-    let doc = write_kdbx_document(&OptionDateTimeTest {
+    let mut context = KdbxContext::default();
+    context.major_version = 3;
+    let doc = write_kdbx_document_with_context(&OptionDateTimeTest {
         field: Some(
             DateTime::parse_from_rfc3339("2021-07-30T14:31:02-07:00")
                 .unwrap()
                 .into(),
         ),
-    });
+    }, &mut context);
     let actual = std::str::from_utf8(&doc).expect("Valid UTF-8");
     assert_eq!(
         actual,
@@ -2001,7 +2007,11 @@ fn test_decode_memory_protection_all() {
     assert_eq!(mp.protect_user_name, true);
 }
 
-fn write_kdbx_document<K: KdbxSerialize + Clone>(expected: &K) -> Vec<u8> {
+fn write_kdbx_document<K: KdbxSerialize<KdbxContext> + Clone>(expected: &K) -> Vec<u8> {
+    write_kdbx_document_with_context(expected, &mut KdbxContext::default())
+}
+
+fn write_kdbx_document_with_context<K: KdbxSerialize<C> + Clone, C>(expected: &K, context: &mut C) -> Vec<u8> {
     let buffer = vec![];
     let mut writer = xml::writer::EmitterConfig::new()
         .write_document_declaration(false)
@@ -2014,7 +2024,7 @@ fn write_kdbx_document<K: KdbxSerialize + Clone>(expected: &K) -> Vec<u8> {
             std::any::type_name::<K>().rsplit(":").nth(0).unwrap(),
         ))
         .expect("Success!");
-    K::serialize2(&mut writer, expected.clone()).expect("No error");
+    K::serialize2(&mut writer, expected.clone(), context).expect("No error");
     writer
         .write(xml::writer::XmlEvent::end_element())
         .expect("Success!");
@@ -2460,7 +2470,7 @@ fn test_encode_document_empty() {
     writer
         .write(xml::writer::XmlEvent::start_element("KeePassFile"))
         .expect("Success!");
-    KeePassFile::serialize2(&mut writer, expected).expect("No error");
+    KeePassFile::serialize2(&mut writer, expected, &mut KdbxContext::default()).expect("No error");
     writer
         .write(xml::writer::XmlEvent::end_element())
         .expect("Success!");
@@ -2555,7 +2565,7 @@ fn test_encode_document_filled() {
     writer
         .write(xml::writer::XmlEvent::start_element("KeePassFile"))
         .expect("Success!");
-    KeePassFile::serialize2(&mut writer, expected).expect("No error");
+    KeePassFile::serialize2(&mut writer, expected, &mut KdbxContext::default()).expect("No error");
     writer
         .write(xml::writer::XmlEvent::end_element())
         .expect("Success!");

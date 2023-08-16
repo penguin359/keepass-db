@@ -426,7 +426,7 @@ pub fn derive_serializer(input: TS1) -> TS1 {
                     for item in value.#name {
                         writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
                         //<#my_type as KdbxSerialize>::serialize(writer, value.#name)?;
-                        #my_type::serialize2(writer, item)?;
+                        #my_type::serialize2(writer, item, context)?;
                         writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
                     }
                     // writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
@@ -439,7 +439,7 @@ pub fn derive_serializer(input: TS1) -> TS1 {
                             for item in inner {
                                 writer.write(xml::writer::XmlEvent::start_element(#match_name)).map_err(|_|"")?;
                                 //<#my_type as KdbxSerialize>::serialize(writer, inner)?;
-                                #my_type::serialize2(writer, item)?;
+                                #my_type::serialize2(writer, item, context)?;
                                 writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
                             }
                             writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
@@ -451,7 +451,7 @@ pub fn derive_serializer(input: TS1) -> TS1 {
                         for item in value.#name {
                             writer.write(xml::writer::XmlEvent::start_element(#match_name)).map_err(|_|"")?;
                             //<#my_type as KdbxSerialize>::serialize(writer, value.#name)?;
-                            #my_type::serialize2(writer, item)?;
+                            #my_type::serialize2(writer, item, context)?;
                             writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
                         }
                         writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
@@ -463,7 +463,7 @@ pub fn derive_serializer(input: TS1) -> TS1 {
                 quote! {
                     if let Some(inner) = value.#name {
                         writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
-                        <#inner_type as KdbxSerialize>::serialize2(writer, inner)?;
+                        <#inner_type as KdbxSerialize<KdbxContext>>::serialize2(writer, inner, context)?;
                         writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
                     }
                 }
@@ -471,8 +471,8 @@ pub fn derive_serializer(input: TS1) -> TS1 {
                 quote! {
                     writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
                     //<#my_type as KdbxSerialize>::serialize(writer, value.#name)?;
-                    //#full_type::serialize2(writer, value.#name)?;
-                    <#full_type as KdbxSerialize>::serialize2(writer, value.#name)?;
+                    //#full_type::serialize2(writer, value.#name, context)?;
+                    <#full_type as KdbxSerialize<KdbxContext>>::serialize2(writer, value.#name, context)?;
                     writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
                 }
             }
@@ -483,8 +483,8 @@ pub fn derive_serializer(input: TS1) -> TS1 {
     let debug_string = format!("Encode {}...", outer_type.to_string());
     // let names = impl_block.iter().map(|r| &r.name);
     let results = quote! {
-        impl KdbxSerialize for #outer_type {
-            fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: #outer_type) -> Result<(), String> {
+        impl KdbxSerialize<KdbxContext> for #outer_type {
+            fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: #outer_type, context: &mut KdbxContext) -> Result<(), String> {
                 println!(#debug_string);
                 #elements
                 Ok(())

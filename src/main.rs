@@ -112,8 +112,8 @@ trait KdbxParse<C>: Sized + Default {
 //    where T: KdbxParse + Default {
 //    fn default() -> Self {
 
-trait KdbxSerialize: Sized {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String>;
+trait KdbxSerialize<C>: Sized {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut C) -> Result<(), String>;
 }
 
 #[cfg(test)]
@@ -1317,8 +1317,8 @@ fn encode_string<W: Write>(writer: &mut EventWriter<W>, value: &str) -> Result<(
     encode_optional_string(writer, Some(value))
 }
 
-impl KdbxSerialize for String {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
+impl<C> KdbxSerialize<C> for String {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut C) -> Result<(), String> {
         encode_string(writer, &value)
     }
 }
@@ -1394,8 +1394,8 @@ fn encode_bool<W: Write>(writer: &mut EventWriter<W>, value: bool) -> Result<(),
     encode_optional_bool(writer, Some(value))
 }
 
-impl KdbxSerialize for bool {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
+impl<C> KdbxSerialize<C> for bool {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut C) -> Result<(), String> {
         encode_bool(writer, value)
     }
 }
@@ -1438,8 +1438,8 @@ fn encode_i64<W: Write>(writer: &mut EventWriter<W>, value: i64) -> Result<(), S
     encode_optional_i64(writer, Some(value))
 }
 
-impl KdbxSerialize for i64 {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
+impl<C> KdbxSerialize<C> for i64 {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut C) -> Result<(), String> {
         encode_i64(writer, value)
     }
 }
@@ -1456,8 +1456,8 @@ impl<C> KdbxParse<C> for i32 {
     }
 }
 
-impl KdbxSerialize for i32 {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
+impl<C> KdbxSerialize<C> for i32 {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut C) -> Result<(), String> {
         encode_i64(writer, value as i64)
     }
 }
@@ -1473,8 +1473,8 @@ impl<C> KdbxParse<C> for u32 {
     }
 }
 
-impl KdbxSerialize for u32 {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
+impl<C> KdbxSerialize<C> for u32 {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut C) -> Result<(), String> {
         encode_i64(writer, value as i64)
     }
 }
@@ -1567,9 +1567,13 @@ fn encode_datetime<W: Write>(
     encode_optional_datetime(writer, Some(value))
 }
 
-impl KdbxSerialize for DateTime<Utc> {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
-        encode_datetime(writer, value)
+impl KdbxSerialize<KdbxContext> for DateTime<Utc> {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut KdbxContext) -> Result<(), String> {
+        if context.major_version >= 4 {
+            encode_datetime(writer, value)
+        } else {
+            encode_string(writer, value.format("%FT%TZ").to_string().as_str())
+        }
     }
 }
 
@@ -1616,8 +1620,8 @@ impl<C> KdbxParse<C> for Uuid {
     }
 }
 
-impl KdbxSerialize for Uuid {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
+impl<C> KdbxSerialize<C> for Uuid {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut C) -> Result<(), String> {
         encode_uuid(writer, value)
     }
 }
@@ -1766,8 +1770,8 @@ impl<C> KdbxParse<C> for HashMap<String, String> {
     }
 }
 
-impl KdbxSerialize for HashMap<String, String> {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self) -> Result<(), String> {
+impl<C> KdbxSerialize<C> for HashMap<String, String> {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut C) -> Result<(), String> {
         encode_custom_data(writer, value)
     }
 }
@@ -2665,7 +2669,7 @@ fn save_file(doc: &KeePassFile) -> io::Result<()> {
     writer
         .write(xml::writer::XmlEvent::start_element("KeePassFile"))
         .expect("Success!");
-    KeePassFile::serialize2(&mut writer, doc.clone()).unwrap();
+    KeePassFile::serialize2(&mut writer, doc.clone(), &mut KdbxContext::default()).unwrap();
     writer
         .write(xml::writer::XmlEvent::end_element())
         .expect("Success!");
@@ -3676,7 +3680,9 @@ fn main() -> io::Result<()> {
             XmlEvent::StartElement {
                 name, attributes, ..
             } => {
-                let my_doc = crate::KeePassFile::parse(&mut reader, name, attributes, &mut KdbxContext::default())
+                let mut context = KdbxContext::default();
+                context.major_version = major_version;
+                let my_doc = crate::KeePassFile::parse(&mut reader, name, attributes, &mut context)
                     .map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?.unwrap();
                 save_file(&my_doc).unwrap();
             }
