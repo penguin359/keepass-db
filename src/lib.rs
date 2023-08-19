@@ -18,13 +18,8 @@ extern crate log;
 extern crate num_derive;
 extern crate clap;
 extern crate rand;
-extern crate serde;
-extern crate serde_xml_rs;
 extern crate xml;
 extern crate yaserde;
-
-//#[macro_use]
-//extern crate serde_derive;
 
 #[macro_use]
 extern crate yaserde_derive;
@@ -1786,7 +1781,6 @@ fn decode_meta_old<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String>
                 custom_icons: String,
                 #[yaserde(rename = "RecycleBinEnabled")]
                 recycle_bin_enabled: String,
-                //#[serde(rename = "RecycleBinUUID")]
                 #[yaserde(rename = "RecycleBinUUID")]
                 recycle_bin_uuid: Option<String>,
                 #[yaserde(rename = "RecycleBinChanged")]
@@ -3393,11 +3387,8 @@ pub fn lib_main() -> io::Result<()> {
         }
     }
 
-    //#[derive(Debug, Serialize, Deserialize, YaSerialize, YaDeserialize, PartialEq)]
     #[derive(Debug, YaSerialize, YaDeserialize, PartialEq)]
-    //#[serde(rename_all = "PascalCase")]
     struct KeePassFile {
-        //#[serde(rename = "Meta")]
         #[yaserde(rename = "Meta")]
         meta: Meta,
         #[yaserde(rename = "Root")]
@@ -3657,9 +3648,7 @@ pub fn lib_main() -> io::Result<()> {
         }
     }
 
-    //#[derive(Debug, Default, Serialize, Deserialize, YaSerialize, YaDeserialize, PartialEq)]
     #[derive(Debug, Default, YaSerialize, YaDeserialize, PartialEq)]
-    //#[serde(rename_all = "PascalCase", default)]
     struct Meta {
         #[yaserde(rename = "Generator")]
         generator: String,
@@ -3691,7 +3680,6 @@ pub fn lib_main() -> io::Result<()> {
         custom_icons: String,
         #[yaserde(rename = "RecycleBinEnabled")]
         recycle_bin_enabled: String,
-        //#[serde(rename = "RecycleBinUUID")]
         #[yaserde(rename = "RecycleBinUUID")]
         recycle_bin_uuid: Option<String>,
         #[yaserde(rename = "RecycleBinChanged")]
@@ -3773,9 +3761,7 @@ pub fn lib_main() -> io::Result<()> {
         custom_data: CustomData,
     }
 
-    //#[derive(Debug, Default, Serialize, Deserialize, YaSerialize, YaDeserialize, PartialEq)]
     #[derive(Debug, Default, YaSerialize, YaDeserialize, PartialEq)]
-    //#[serde(rename_all = "PascalCase", default)]
     #[yaserde(default)]
     struct MemoryProtection {
         #[yaserde(rename = "ProtectTitle")]
