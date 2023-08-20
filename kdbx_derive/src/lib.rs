@@ -8,7 +8,7 @@ use proc_macro2::{token_stream::IntoIter, Delimiter, Ident, Span, TokenStream, T
 use quote::quote;
 
 use change_case::pascal_case;
-use syn::{Attribute, Type, TypePath};
+use syn::{Attribute, Expr, ExprLit, Lit, Type, TypeArray, TypePath};
 
 #[cfg(test)]
 mod tests {
@@ -85,6 +85,8 @@ enum TypeCategory<'a> {
     Basic(Ident),
     Option(&'a Type),
     Vec(&'a Type),
+    //Array(&'a Type, usize),
+    Array(&'a Type),
 }
 
 fn get_type(t: &Type) -> TypeCategory {
@@ -121,7 +123,16 @@ fn get_type(t: &Type) -> TypeCategory {
                 _ => TypeCategory::Basic(r#type),
             }
         }
-        _ => unimplemented!("Odd type: {:?}", t)
+        //syn::Type::Array(TypeArray {elem, len, ..}) => {
+        //    if let Expr::Lit(ExprLit { lit: Lit::Int(literal), .. }) = len {
+        //        TypeCategory::Array(elem, literal.base10_parse().unwrap())
+        //    } else {
+        //        unimplemented!("Array size must be an integer literal: {:#?}", len)
+        //    }
+        //}
+        //syn::Type::Array(x) => TypeCategory::Array(syn::Type::Array(x))
+        syn::Type::Array(x) => TypeCategory::Array(t),
+        _ => unimplemented!("Unsupported type: {:?}", t)
     }
 }
 
@@ -144,7 +155,7 @@ fn decode_struct(ast: &syn::DeriveInput) -> Vec<KdbxField> {
                         TypeCategory::Vec(inner_type) => {
                             let subtype = match get_type(inner_type) {
                                 TypeCategory::Basic(t) => t,
-                                _ => panic!("Only basic types supported for Vec<_>"),
+                                _ => unimplemented!("Only basic types supported for Vec<_>"),
                             };
                             KdbxField {
                                 name,
@@ -169,6 +180,7 @@ fn decode_struct(ast: &syn::DeriveInput) -> Vec<KdbxField> {
                                 flatten,
                             },
                             TypeCategory::Vec(inner_type) => {
+                                // TODO recursively call get_type() here
                                 if let syn::Type::Path(ref tp) = inner_type {
                                     KdbxField {
                                         name,
@@ -180,9 +192,11 @@ fn decode_struct(ast: &syn::DeriveInput) -> Vec<KdbxField> {
                                         option: true,
                                         flatten,
                                     }
-                                } else { unimplemented!() }
+                                } else {
+                                    unimplemented!("Only basic inner types supported for Option<Vec<_>>")
+                                }
                             }
-                            _ => panic!("Only basic and Vec types supported for Option<_>")
+                            _ => unimplemented!("Only basic and Vec types supported for Option<_>")
                         },
                         TypeCategory::Basic(t) => KdbxField {
                             name,
@@ -194,13 +208,30 @@ fn decode_struct(ast: &syn::DeriveInput) -> Vec<KdbxField> {
                             option: false,
                             flatten,
                         },
+                        //TypeCategory::Array(inner_type, size) => {
+                        TypeCategory::Array(inner_type) => {
+                            let subtype = match get_type(inner_type) {
+                                TypeCategory::Basic(t) => t,
+                                _ => unimplemented!("Only basic types supported for arrays"),
+                            };
+                            KdbxField {
+                                name,
+                                r#type: subtype,
+                                element_name: big_name,
+                                inner_type: inner_type.clone(),
+                                full_type: field.ty.clone(),
+                                array: true,
+                                option: false,
+                                flatten,
+                            }
+                        }
                     }
                 })
                 .collect::<Vec<KdbxField>>();
             // eprintln!("Fields done: {:?}.", &v);
             v
         }
-        _ => unimplemented!()
+        _ => unimplemented!("Only structs currently supported for derive")
     }
 }
 
