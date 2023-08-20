@@ -83,48 +83,45 @@ impl KdbxAttributes {
 
 enum TypeCategory<'a> {
     Basic(Ident),
-    Option(&'a Type, &'a TypePath),
-    Vec(&'a Type, &'a TypePath),
+    Option(&'a Type),
+    Vec(&'a Type),
 }
 
-fn get_type(p: &TypePath) -> TypeCategory {
-    let r#type = p.path.segments.last().unwrap().ident.clone();
-    match r#type.to_string().as_str() {
-        "Vec" => {
-            if let syn::PathArguments::AngleBracketed(ref args) =
-                p.path.segments.last().unwrap().arguments
-            {
-                if let Some(syn::GenericArgument::Type(inner_type)) = args.args.first() {
-                    if let Type::Path(ref path) = inner_type {
-                        TypeCategory::Vec(inner_type, path)
+fn get_type(t: &Type) -> TypeCategory {
+    match t {
+        syn::Type::Path(ref p) => {
+            let r#type = p.path.segments.last().unwrap().ident.clone();
+            match r#type.to_string().as_str() {
+                "Vec" => {
+                    if let syn::PathArguments::AngleBracketed(ref args) =
+                        p.path.segments.last().unwrap().arguments
+                    {
+                        if let Some(syn::GenericArgument::Type(inner_type)) = args.args.first() {
+                            TypeCategory::Vec(inner_type)
+                        } else {
+                            unimplemented!("Only support type arguments for Vec: {:#?}", args.args.first())
+                        }
                     } else {
-                        unimplemented!()
+                        unimplemented!("Only support angle-brackets args for Vec: {:#?}", p.path.segments.last().unwrap().arguments)
                     }
-                } else {
-                    unimplemented!()
                 }
-            } else {
-                unimplemented!()
+                "Option" => {
+                    if let syn::PathArguments::AngleBracketed(ref args) =
+                        p.path.segments.last().unwrap().arguments
+                    {
+                        if let Some(syn::GenericArgument::Type(inner_type)) = args.args.first() {
+                            TypeCategory::Option(inner_type)
+                        } else {
+                            unimplemented!("Only support type arguments for Option: {:#?}", args.args.first())
+                        }
+                    } else {
+                        unimplemented!("Only support angle-brackets args for Option: {:#?}", p.path.segments.last().unwrap().arguments)
+                    }
+                }
+                _ => TypeCategory::Basic(r#type),
             }
         }
-        "Option" => {
-            if let syn::PathArguments::AngleBracketed(ref args) =
-                p.path.segments.last().unwrap().arguments
-            {
-                if let Some(syn::GenericArgument::Type(inner_type)) = args.args.first() {
-                    if let Type::Path(ref path) = inner_type {
-                        TypeCategory::Option(inner_type, path)
-                    } else {
-                        unimplemented!()
-                    }
-                } else {
-                    unimplemented!()
-                }
-            } else {
-                unimplemented!()
-            }
-        }
-        _ => TypeCategory::Basic(r#type),
+        _ => unimplemented!("Odd type: {:?}", t)
     }
 }
 
@@ -143,71 +140,67 @@ fn decode_struct(ast: &syn::DeriveInput) -> Vec<KdbxField> {
                         .clone()
                         .unwrap_or_else(|| pascal_case(&name.to_string()));
                     let flatten = attrs.flatten;
-                    match field.ty {
-                        syn::Type::Path(ref p) => match get_type(p) {
-                            TypeCategory::Vec(inner_type, tp) => {
-                                let subtype = match get_type(tp) {
-                                    TypeCategory::Basic(t) => t,
-                                    _ => panic!("Only basic types supported for Vec<_>"),
-                                };
-                                KdbxField {
-                                    name,
-                                    r#type: subtype,
-                                    element_name: big_name,
-                                    inner_type: inner_type.clone(),
-                                    full_type: field.ty.clone(),
-                                    array: true,
-                                    option: false,
-                                    flatten,
-                                }
+                    match get_type(&field.ty) {
+                        TypeCategory::Vec(inner_type) => {
+                            let subtype = match get_type(inner_type) {
+                                TypeCategory::Basic(t) => t,
+                                _ => panic!("Only basic types supported for Vec<_>"),
+                            };
+                            KdbxField {
+                                name,
+                                r#type: subtype,
+                                element_name: big_name,
+                                inner_type: inner_type.clone(),
+                                full_type: field.ty.clone(),
+                                array: true,
+                                option: false,
+                                flatten,
                             }
-                            TypeCategory::Option(inner_type, tp) => match get_type(tp) {
-                                TypeCategory::Basic(t) => KdbxField {
-                                    name,
-                                    r#type: t,
-                                    element_name: big_name,
-                                    inner_type: inner_type.clone(),
-                                    full_type: field.ty.clone(),
-                                    array: false,
-                                    option: true,
-                                    flatten,
-                                },
-                                TypeCategory::Vec(inner_type, tp) => KdbxField {
-                                    name,
-                                    r#type: tp.path.segments.last().unwrap().ident.clone(),
-                                    element_name: big_name,
-                                    inner_type: inner_type.clone(),
-                                    full_type: field.ty.clone(),
-                                    array: true,
-                                    option: true,
-                                    flatten,
-                                },
-                                _ => panic!("Only basic and Vec types supported for Option<_>"),
-                            },
+                        }
+                        TypeCategory::Option(inner_type) => match get_type(inner_type) {
                             TypeCategory::Basic(t) => KdbxField {
                                 name,
                                 r#type: t,
                                 element_name: big_name,
-                                inner_type: field.ty.clone(),
+                                inner_type: inner_type.clone(),
                                 full_type: field.ty.clone(),
                                 array: false,
-                                option: false,
+                                option: true,
                                 flatten,
                             },
+                            TypeCategory::Vec(inner_type) => {
+                                if let syn::Type::Path(ref tp) = inner_type {
+                                    KdbxField {
+                                        name,
+                                        r#type: tp.path.segments.last().unwrap().ident.clone(),
+                                        element_name: big_name,
+                                        inner_type: inner_type.clone(),
+                                        full_type: field.ty.clone(),
+                                        array: true,
+                                        option: true,
+                                        flatten,
+                                    }
+                                } else { unimplemented!() }
+                            }
+                            _ => panic!("Only basic and Vec types supported for Option<_>")
                         },
-                        _ => {
-                            unimplemented!("Odd type: {:?}", field.ty);
-                            // unimplemented!("Odd type");
-                        }
+                        TypeCategory::Basic(t) => KdbxField {
+                            name,
+                            r#type: t,
+                            element_name: big_name,
+                            inner_type: field.ty.clone(),
+                            full_type: field.ty.clone(),
+                            array: false,
+                            option: false,
+                            flatten,
+                        },
                     }
                 })
                 .collect::<Vec<KdbxField>>();
             // eprintln!("Fields done: {:?}.", &v);
             v
         }
-        _ => {
-            unimplemented!();
-        }
+        _ => unimplemented!()
     }
 }
 
