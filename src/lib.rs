@@ -1421,6 +1421,7 @@ struct MemoryProtection {
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
 struct Meta {
     generator: String,
+    header_hash: [u8; 32],
     database_name: String,
     database_name_changed: Option<DateTime<Utc>>,
     database_description: String,
@@ -1446,6 +1447,25 @@ struct Meta {
     history_max_size: String,
     settings_changed: Option<DateTime<Utc>>,
     custom_data: HashMap<String, String>,
+}
+
+impl<C> KdbxParse<C> for [u8; 32] {
+    fn parse<R: Read>(
+        reader: &mut EventReader<R>,
+        name: OwnedName,
+        attributes: Vec<OwnedAttribute>,
+        context: &mut C,
+    ) -> Result<Option<Self>, String> {
+        //decode_optional_string(reader, name, attributes)
+        //Ok(decode_base64(reader, name, attributes)?.map(|v| Some(v.try_into().map_err(|_| "")?))?)
+        Ok(Some(decode_base64(reader, name, attributes)?.try_into().map_err(|_| "")?))
+    }
+}
+
+impl<C> KdbxSerialize<C> for [u8; 32] {
+    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut C) -> Result<(), String> {
+        encode_base64(writer, value)
+    }
 }
 
 impl<C> KdbxParse<C> for HashMap<String, String> {
@@ -1621,6 +1641,7 @@ fn decode_meta_old<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String>
     //elements.push(::xml::name::OwnedName::from_str("Foo").unwrap());
 
     let mut generator = String::new();
+    let mut header_hash = [0; 32];
     let mut database_name = String::new();
     let mut database_name_changed = None;
     let mut database_description = String::new();
@@ -1822,6 +1843,7 @@ fn decode_meta_old<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String>
     }
     Ok(Meta {
         generator,
+        header_hash,
         database_name,
         database_name_changed,
         database_description,

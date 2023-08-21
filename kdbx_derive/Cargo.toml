@@ -10,7 +10,7 @@ edition = "2018"
 change-case = "0.2.0"
 proc-macro2 = "1.0.37"
 quote = "1.0.18"
-syn = "1.0.91"
+syn = { version = "1.0.91", features = ["extra-traits"] }
 xml-rs = "0.8.15"
 
 [lib]

@@ -1720,7 +1720,7 @@ fn test_serializing_optional_valid_datetime_kdbx41() {
 fn test_decode_optional_empty_string() {
     let mut reader = start_document("<root/>", "root");
     assert_eq!(
-        decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("Failed parsing"),
         None
     );
     end_document(reader);
@@ -1730,7 +1730,7 @@ fn test_decode_optional_empty_string() {
 fn test_decode_optional_basic_string() {
     let mut reader = start_document("<root>  This is a test of it 1   </root>", "root");
     assert_eq!(
-        decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("Failed parsing"),
         Some(String::from("  This is a test of it 1   "))
     );
     end_document(reader);
@@ -1740,7 +1740,7 @@ fn test_decode_optional_basic_string() {
 fn test_decode_optional_whitespace_string() {
     let mut reader = start_document("<root>     </root>", "root");
     assert_eq!(
-        decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("Failed parsing"),
         Some(String::from("     "))
     );
     end_document(reader);
@@ -1750,7 +1750,7 @@ fn test_decode_optional_whitespace_string() {
 fn test_decode_optional_cdata_string() {
     let mut reader = start_document("<root><![CDATA[This is a test of it 3]]></root>", "root");
     assert_eq!(
-        decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("Failed parsing"),
         Some(String::from("This is a test of it 3"))
     );
     end_document(reader);
@@ -1763,7 +1763,7 @@ fn test_decode_optional_full_string() {
         "root",
     );
     assert_eq!(
-        decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        decode_optional_string(&mut reader, OwnedName::local("root"), vec![]).expect("Failed parsing"),
         Some(String::from("  This is  Test  of it 4   "))
     );
     end_document(reader);
@@ -1773,7 +1773,7 @@ fn test_decode_optional_full_string() {
 fn test_decode_optional_empty_base64() {
     let mut reader = start_document("<root/>", "root");
     assert_eq!(
-        decode_optional_base64(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        decode_optional_base64(&mut reader, OwnedName::local("root"), vec![]).expect("Failed parsing"),
         None
     );
     end_document(reader);
@@ -1783,7 +1783,7 @@ fn test_decode_optional_empty_base64() {
 fn test_decode_optional_valid_base64() {
     let mut reader = start_document("<root>/u3erb7vyv4=</root>", "root");
     assert_eq!(
-        decode_optional_base64(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        decode_optional_base64(&mut reader, OwnedName::local("root"), vec![]).expect("Failed parsing"),
         Some(
             [0xfeu8, 0xed, 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe]
                 .as_ref()
@@ -1864,7 +1864,7 @@ fn test_encode_optional_valid_base64() {
 fn test_decode_empty_base64() {
     let mut reader = start_document("<root/>", "root");
     assert_eq!(
-        decode_base64(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        decode_base64(&mut reader, OwnedName::local("root"), vec![]).expect("Failed parsing"),
         vec![]
     );
     end_document(reader);
@@ -1874,7 +1874,7 @@ fn test_decode_empty_base64() {
 fn test_decode_valid_base64() {
     let mut reader = start_document("<root>/u3erb7vyv4=</root>", "root");
     assert_eq!(
-        decode_base64(&mut reader, OwnedName::local("root"), vec![]).expect("No error"),
+        decode_base64(&mut reader, OwnedName::local("root"), vec![]).expect("Failed parsing"),
         [0xfeu8, 0xed, 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe]
             .as_ref()
             .to_owned()
@@ -1932,14 +1932,14 @@ fn test_encode_valid_base64() {
 #[test]
 fn test_decode_memory_protection_empty() {
     let mut reader = start_document("<MemoryProtection/>", "MemoryProtection");
-    //assert_eq!(MemoryProtection::parse(&mut reader).expect("No error"), Some(String::from("  This is  Test  of it 4   ")));
+    //assert_eq!(MemoryProtection::parse(&mut reader).expect("Failed parsing"), Some(String::from("  This is  Test  of it 4   ")));
     let mp = MemoryProtection::parse(
         &mut reader,
         OwnedName::local("MemoryProtection"),
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
     end_document(reader);
     assert_eq!(mp.protect_notes, false);
@@ -1968,7 +1968,7 @@ fn test_decode_memory_protection_some() {
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
     end_document(reader);
     assert_eq!(mp.protect_notes, false);
@@ -1997,7 +1997,7 @@ fn test_decode_memory_protection_all() {
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
     end_document(reader);
     assert_eq!(mp.protect_notes, true);
@@ -2024,7 +2024,7 @@ fn write_kdbx_document_with_context<K: KdbxSerialize<C> + Clone, C>(expected: &K
             std::any::type_name::<K>().rsplit(":").nth(0).unwrap(),
         ))
         .expect("Success!");
-    K::serialize2(&mut writer, expected.clone(), context).expect("No error");
+    K::serialize2(&mut writer, expected.clone(), context).expect("Failed serializing");
     writer
         .write(xml::writer::XmlEvent::end_element())
         .expect("Success!");
@@ -2062,7 +2062,7 @@ fn test_encode_memory_protection_all() {
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
     //end_document(reader);
     assert_eq!(mp.protect_notes, true);
@@ -2075,7 +2075,7 @@ fn test_encode_memory_protection_all() {
 #[test]
 fn test_decode_item_empty() {
     let mut reader = start_document("<Item/>", "Item");
-    let item = decode_item(&mut reader, OwnedName::local("Item"), vec![]).expect("No error");
+    let item = decode_item(&mut reader, OwnedName::local("Item"), vec![]).expect("Failed parsing");
     end_document(reader);
     assert_eq!(item.0, "");
     assert_eq!(item.1, "");
@@ -2101,7 +2101,7 @@ fn test_decode_item_pair() {
 fn test_decode_custom_data_empty() {
     let mut reader = start_document("<CustomData/>", "CustomData");
     let custom_data =
-        decode_custom_data(&mut reader, OwnedName::local("CustomData"), vec![]).expect("No error");
+        decode_custom_data(&mut reader, OwnedName::local("CustomData"), vec![]).expect("Failed parsing");
     end_document(reader);
     assert_eq!(custom_data.len(), 0);
 }
@@ -2113,7 +2113,7 @@ fn test_decode_custom_data_simple() {
         "CustomData",
     );
     let custom_data =
-        decode_custom_data(&mut reader, OwnedName::local("CustomData"), vec![]).expect("No error");
+        decode_custom_data(&mut reader, OwnedName::local("CustomData"), vec![]).expect("Failed parsing");
     end_document(reader);
     assert_eq!(custom_data.len(), 1);
     assert!(custom_data.contains_key("one"), "Has appropriate key");
@@ -2129,7 +2129,7 @@ fn test_decode_meta_empty() {
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
     end_document(reader);
     assert_eq!(meta.database_name, "");
@@ -2200,7 +2200,7 @@ fn test_decode_meta_filled() {
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
     end_document(reader);
     assert_eq!(meta.database_name, "Dummy");
@@ -2248,7 +2248,7 @@ fn test_decode_times_filled() {
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
     end_document(reader);
     assert_eq!(
@@ -2304,7 +2304,7 @@ fn test_encode_times_filled() {
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
     assert_eq!(actual, expected);
 }
@@ -2318,7 +2318,7 @@ fn test_decode_entry_empty() {
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
     end_document(reader);
     assert_eq!(entry.uuid, ""); //Uuid::nil());
@@ -2353,7 +2353,7 @@ fn test_decode_entry_filled() {
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
     end_document(reader);
     let _expected_uuid = uuid!("83d7c620-39d2-47c5-af8c-f049fcbe23b8");
@@ -2394,7 +2394,7 @@ fn test_encode_entry_filled() {
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
     end_document(reader);
 
@@ -2405,7 +2405,7 @@ fn test_encode_entry_filled() {
     //        protect_title: true,
     //        protect_url: true,
     //        protect_user_name: true,
-    //    }).expect("No error");
+    //    }).expect("Failed parsing");
     let mut reader = ParserConfig::new().create_reader(Cursor::new(buffer));
     match reader.next().unwrap() {
         XmlEvent::StartDocument { .. } => {}
@@ -2428,7 +2428,7 @@ fn test_encode_entry_filled() {
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
 
     assert_eq!(entry.uuid, "g9fGIDnSR8WvjPBJ/L4juA==");
@@ -2450,7 +2450,7 @@ fn test_decode_document_empty() {
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
     end_document(reader);
     assert_eq!(document.meta.database_name, "");
@@ -2470,7 +2470,7 @@ fn test_encode_document_empty() {
     writer
         .write(xml::writer::XmlEvent::start_element("KeePassFile"))
         .expect("Success!");
-    KeePassFile::serialize2(&mut writer, expected, &mut KdbxContext::default()).expect("No error");
+    KeePassFile::serialize2(&mut writer, expected, &mut KdbxContext::default()).expect("Failed serializing");
     writer
         .write(xml::writer::XmlEvent::end_element())
         .expect("Success!");
@@ -2497,7 +2497,7 @@ fn test_encode_document_empty() {
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
     assert_eq!(actual.meta.database_name, "");
     assert_eq!(actual.meta.default_user_name, "");
@@ -2522,7 +2522,7 @@ fn test_decode_document_filled() {
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
     end_document(reader);
     assert_eq!(document.meta.database_name, "Dummy");
@@ -2565,7 +2565,7 @@ fn test_encode_document_filled() {
     writer
         .write(xml::writer::XmlEvent::start_element("KeePassFile"))
         .expect("Success!");
-    KeePassFile::serialize2(&mut writer, expected, &mut KdbxContext::default()).expect("No error");
+    KeePassFile::serialize2(&mut writer, expected, &mut KdbxContext::default()).expect("Failed serializing");
     writer
         .write(xml::writer::XmlEvent::end_element())
         .expect("Success!");
@@ -2592,7 +2592,7 @@ fn test_encode_document_filled() {
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
     assert_eq!(actual.meta.database_name, "Dummy");
     assert_eq!(actual.meta.default_user_name, "Someone");
@@ -2617,7 +2617,7 @@ fn test_decode_document_kdbx41() {
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
     end_document(reader);
     assert_eq!(document.meta.generator, "KeePass");
@@ -2727,7 +2727,7 @@ fn test_decode_document_filled_contents() {
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
     end_document(reader);
     //assert_eq!(document.meta.database_name, "Dummy");
@@ -2789,7 +2789,7 @@ fn test_decode_document_filled_group() {
         vec![],
         &mut KdbxContext::default(),
     )
-    .expect("No error")
+    .expect("Failed parsing")
     .unwrap();
     end_document(reader);
     assert_eq!(document.root.len(), 1);

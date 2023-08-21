@@ -208,23 +208,16 @@ fn decode_struct(ast: &syn::DeriveInput) -> Vec<KdbxField> {
                             option: false,
                             flatten,
                         },
-                        //TypeCategory::Array(inner_type, size) => {
-                        TypeCategory::Array(inner_type) => {
-                            let subtype = match get_type(inner_type) {
-                                TypeCategory::Basic(t) => t,
-                                _ => unimplemented!("Only basic types supported for arrays"),
-                            };
-                            KdbxField {
-                                name,
-                                r#type: subtype,
-                                element_name: big_name,
-                                inner_type: inner_type.clone(),
-                                full_type: field.ty.clone(),
-                                array: true,
-                                option: false,
-                                flatten,
-                            }
-                        }
+                        TypeCategory::Array(inner_type) => KdbxField {
+                            name,
+                            r#type: Ident::new("u8", Span::call_site()),
+                            element_name: big_name,
+                            inner_type: field.ty.clone(),
+                            full_type: field.ty.clone(),
+                            array: false,
+                            option: false,
+                            flatten,
+                        },
                     }
                 })
                 .collect::<Vec<KdbxField>>();
@@ -360,7 +353,7 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
                 quote! {
                     XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
                         //#mangled_name = <#my_type as KdbxParse>::parse(reader, name, attributes, context)?;
-                        #mangled_name = match #my_type::parse(reader, name, attributes, context)? {
+                        #mangled_name = match <#full_type>::parse(reader, name, attributes, context)? {
                             Some(v) => v,
                             None => <#full_type as ::std::default::Default>::default(),
                         };
@@ -424,7 +417,11 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
 
 #[proc_macro_derive(KdbxSerialize, attributes(kdbx))]
 pub fn derive_serializer(input: TS1) -> TS1 {
-    let ast: syn::DeriveInput = syn::parse(input).expect("bad parsing");
+    derive_serializer2(input.into()).into()
+}
+
+fn derive_serializer2(input: TokenStream) -> TokenStream {
+    let ast: syn::DeriveInput = syn::parse2(input).expect("bad parsing");
     let outer_type = &ast.ident;
     let attrs = &ast.attrs;
     // let _data = &ast.data;
@@ -516,5 +513,39 @@ pub fn derive_serializer(input: TS1) -> TS1 {
         }
     };
     // eprintln!("Serialize macros: {}", results);
-    results.into()
+    results
+}
+
+#[test]
+fn parse() {
+    //derive_serializer2(quote! { struct ASD ( fds, f ); });
+    derive_serializer2(quote! { struct One { field: i32, string: String } });
+}
+
+#[test]
+fn quote_expand() {
+    let var = "hello";
+    assert_eq!(quote! { test #var insert }.to_string(), r#"test "hello" insert"#);
+}
+
+#[test]
+fn quote_expand_vec() {
+    let var = vec!["hello", "world"];
+    assert_eq!(quote! { test #(#var)* insert }.to_string(), r#"test "hello" "world" insert"#);
+}
+
+#[test]
+fn quote_expand_multi_vec() {
+    let var = vec!["hello", "world"];
+    let var2 = vec!["one", "two", "three"];
+    assert_eq!(quote! { test #(#var = #var2)* insert }.to_string(),
+    r#"test "hello" = "one" "world" = "two" insert"#);
+}
+
+#[test]
+fn quote_expand_multi_vec_with_separator() {
+    let var = vec!["hello", "world"];
+    let var2 = vec!["one", "two", "three"];
+    assert_eq!(quote! { test #(#var = #var2),* insert }.to_string(),
+    r#"test "hello" = "one" , "world" = "two" insert"#);
 }
