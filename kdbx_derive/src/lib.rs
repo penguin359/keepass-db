@@ -1,7 +1,3 @@
-//extern crate proc_macro;
-//#[macro_use]
-//extern crate quote;
-
 use proc_macro::TokenStream as TS1;
 use proc_macro2::{token_stream::IntoIter, Delimiter, Ident, Span, TokenStream, TokenTree};
 

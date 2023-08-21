@@ -2296,9 +2296,8 @@ const KDBX1_MAGIC_TYPE: u32 = 0xB54BFB65;
 const KDBX2_BETA_MAGIC_TYPE: u32 = 0xB54BFB66;
 const KDBX2_MAGIC_TYPE: u32 = 0xB54BFB67;
 
-fn save_file(doc: &KeePassFile) -> io::Result<()> {
+fn save_file(doc: &KeePassFile, major_version: u16) -> io::Result<()> {
     let mut file = File::create("data-out.kbdx")?;
-    let major_version = 4;
     let minor_version = 0;
     let mut header = vec![];
     header.write_u32::<LittleEndian>(KDBX_MAGIC)?;
@@ -2320,6 +2319,8 @@ fn save_file(doc: &KeePassFile) -> io::Result<()> {
         .expect("Failed to transform key");
     let master_seed = [0u8; 32];
     let iv = [0u8; 16];
+    let stream_cipher = 2u32;
+    let stream_key = [0u8; 32];
     let mut tlvs = BTreeMap::new();
     tlvs.insert(
         TlvType::MasterSeed.to_u8().unwrap(),
@@ -2334,17 +2335,43 @@ fn save_file(doc: &KeePassFile) -> io::Result<()> {
         TlvType::CompressionFlags.to_u8().unwrap(),
         vec![Compression::None.to_u32().unwrap().to_le_bytes().to_vec()],
     );
-    tlvs.insert(
-        TlvType::KdfParameters.to_u8().unwrap(),
-        vec![save_map(&custom_data)],
-    );
+    let mut start_stream = vec![0; 32];  // TODO Randomize this
+    if major_version < 4 {
+        tlvs.insert(
+            TlvType::TransformSeed.to_u8().unwrap(),
+            vec![master_seed.to_vec()],
+        );
+        tlvs.insert(
+            TlvType::TransformRounds.to_u8().unwrap(),
+            vec![match custom_data[KDF_PARAM_ROUNDS] { MapValue::UInt64(x) => x.to_le_bytes().to_vec(), _ => panic!("Wrong") }],
+        );
+        tlvs.insert(
+            TlvType::StreamStartBytes.to_u8().unwrap(),
+            vec![start_stream.to_vec()],
+        );
+        tlvs.insert(
+            TlvType::ProtectedStreamKey.to_u8().unwrap(),
+            vec![stream_key.to_vec()],
+        );
+        tlvs.insert(
+            TlvType::InnerRandomStreamId.to_u8().unwrap(),
+            vec![stream_cipher.to_le_bytes().to_vec()],
+        );
+    } else {
+        tlvs.insert(
+            TlvType::KdfParameters.to_u8().unwrap(),
+            vec![save_map(&custom_data)],
+        );
+    }
     header.append(&mut save_tlvs(&mut io::sink(), &tlvs, major_version).unwrap());
     file.write(&header)?;
     let mut context = Context::new(&SHA256);
     context.update(&header);
     let digest = context.finish();
-    file.write(digest.as_ref())?;
-    // header.append(&mut digest.as_ref().to_owned());
+    if major_version >= 4 {
+        file.write(digest.as_ref())?;
+        // header.append(&mut digest.as_ref().to_owned());
+    }
 
     let mut master_key = master_seed.to_vec();
     master_key.extend(transform_key);
@@ -2363,18 +2390,20 @@ fn save_file(doc: &KeePassFile) -> io::Result<()> {
 
     let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
     let hmac_tag = hmac::sign(&hmac_key, &header);
-    file.write(hmac_tag.as_ref())?;
+    if major_version >= 4 {
+        file.write(hmac_tag.as_ref())?;
+    }
 
     let output = BlockWriter::new(&hmac_key_base, file);
     let cipher = Cipher::aes_256_cbc();
     let mut output = Crypto::new(cipher, &master_key, Some(&iv), output).unwrap();
 
-    let stream_cipher = 2u32;
-    let stream_key = [0u8; 32];
-    let mut inner_tlvs = BTreeMap::new();
-    inner_tlvs.insert(1, vec![stream_cipher.to_le_bytes().to_vec()]);
-    inner_tlvs.insert(2, vec![stream_key.to_vec()]);
-    save_tlvs(&mut output, &inner_tlvs, major_version).unwrap();
+    if major_version >= 4 {
+        let mut inner_tlvs = BTreeMap::new();
+        inner_tlvs.insert(1, vec![stream_cipher.to_le_bytes().to_vec()]);
+        inner_tlvs.insert(2, vec![stream_key.to_vec()]);
+        save_tlvs(&mut output, &inner_tlvs, major_version).unwrap();
+    }
     let mut writer = xml::writer::EventWriter::new(output);
     writer
         .write(xml::writer::XmlEvent::start_element("KeePassFile"))
@@ -3399,7 +3428,7 @@ pub fn lib_main() -> io::Result<()> {
                 context.major_version = major_version;
                 let my_doc = crate::KeePassFile::parse(&mut reader, name, attributes, &mut context)
                     .map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?.unwrap();
-                save_file(&my_doc).unwrap();
+                save_file(&my_doc, 4).unwrap();
             }
             XmlEvent::EndDocument => {
                 println!("End");
