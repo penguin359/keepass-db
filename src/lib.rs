@@ -1421,7 +1421,7 @@ struct MemoryProtection {
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
 struct Meta {
     generator: String,
-    header_hash: [u8; 32],
+    header_hash: Option<[u8; 32]>,
     database_name: String,
     database_name_changed: Option<DateTime<Utc>>,
     database_description: String,
@@ -1641,7 +1641,7 @@ fn decode_meta_old<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String>
     //elements.push(::xml::name::OwnedName::from_str("Foo").unwrap());
 
     let mut generator = String::new();
-    let mut header_hash = [0; 32];
+    let mut header_hash = None;
     let mut database_name = String::new();
     let mut database_name_changed = None;
     let mut database_description = String::new();

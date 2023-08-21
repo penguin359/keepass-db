@@ -5,7 +5,7 @@
 use proc_macro::TokenStream as TS1;
 use proc_macro2::{token_stream::IntoIter, Delimiter, Ident, Span, TokenStream, TokenTree};
 
-use quote::quote;
+use quote::{quote, format_ident};
 
 use change_case::pascal_case;
 use syn::{Attribute, Expr, ExprLit, Lit, Type, TypeArray, TypePath};
@@ -196,6 +196,16 @@ fn decode_struct(ast: &syn::DeriveInput) -> Vec<KdbxField> {
                                     unimplemented!("Only basic inner types supported for Option<Vec<_>>")
                                 }
                             }
+                            TypeCategory::Array(inner_type) => KdbxField {
+                                name,
+                                r#type: Ident::new("u8", Span::call_site()),
+                                element_name: big_name,
+                                inner_type: inner_type.clone(),
+                                full_type: field.ty.clone(),
+                                array: false,
+                                option: true,
+                                flatten,
+                            },
                             _ => unimplemented!("Only basic and Vec types supported for Option<_>")
                         },
                         TypeCategory::Basic(t) => KdbxField {
@@ -230,28 +240,33 @@ fn decode_struct(ast: &syn::DeriveInput) -> Vec<KdbxField> {
 
 #[proc_macro_derive(KdbxParse, attributes(kdbx))]
 pub fn derive_deserializer(input: TS1) -> TS1 {
-    let ast: syn::DeriveInput = syn::parse(input).expect("bad parsing");
+    derive_deserializer2(input.into()).into()
+}
+
+fn derive_deserializer2(input: TokenStream) -> TokenStream {
+    let ast: syn::DeriveInput = syn::parse2(input).expect("bad parsing");
     let outer_type = &ast.ident;
     let attrs = &ast.attrs;
 
     let _ = KdbxAttributes::parse(attrs);
 
     let impl_block = decode_struct(&ast);
+    eprintln!("Struct fields: {:#?}", &impl_block);
     let variables: TokenStream = impl_block
         .iter()
         .map(|r| {
             // eprintln!("Field: {r:?}");
             let name = &r.name;
-            let mangled_name = Ident::new(&format!("field_{}", name), Span::call_site());
-            let _my_type = &r.r#type;
+            let mangled_name = format_ident!("field_{}", name);
             let full_type = &r.full_type;
             quote! { let mut #mangled_name = <#full_type as ::std::default::Default>::default(); }
         })
         .collect();
     let elements: TokenStream = impl_block.iter().map(|r| {
         let name = &r.name;
-        let mangled_name = Ident::new(&format!("field_{}", name), Span::call_site());
+        let mangled_name = format_ident!("field_{}", name);
         let my_type = &r.r#type;
+        let full_type = &r.full_type;
         let inner_type = &r.inner_type;
         // let big_name = pascal_case(&name.to_string());
         let big_name = &r.element_name;
@@ -267,9 +282,9 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
                             let event = reader.next().map_err(|_|"")?;
                             match event {
                                 XmlEvent::StartElement { name, attributes, .. } if name.local_name == #match_name => {
-                                    vec.push(match #my_type::parse(reader, name, attributes, context)? {
+                                    vec.push(match <#inner_type as KdbxParse<KdbxContext>>::parse(reader, name, attributes, context)? {
                                         Some(v) => v,
-                                        None => <#my_type as ::std::default::Default>::default(),
+                                        None => <#inner_type as ::std::default::Default>::default(),
                                     });
                                 },
                                 XmlEvent::StartElement { .. } => {
@@ -290,10 +305,9 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
                 let full_type = &r.full_type;
                 quote! {
                     XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
-                        //#mangled_name.push(<#my_type as KdbxParse>::parse(reader, name, attributes, context)?);
-                        #mangled_name.push(match #my_type::parse(reader, name, attributes, context)? {
+                        #mangled_name.push(match <#inner_type as KdbxParse<KdbxContext>>::parse(reader, name, attributes, context)? {
                             Some(v) => v,
-                            None => <#my_type as ::std::default::Default>::default(),
+                            None => <#inner_type as ::std::default::Default>::default(),
                         });
                         println!(#big_name_debug, #mangled_name);
                     }
@@ -308,10 +322,9 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
                             let event = reader.next().map_err(|_|"")?;
                             match event {
                                 XmlEvent::StartElement { name, attributes, .. } if name.local_name == #match_name => {
-                                    //#mangled_name.push(<#my_type as KdbxParse>::parse(reader, name, attributes, context)?);
-                                    #mangled_name.push(match #my_type::parse(reader, name, attributes, context)? {
+                                    #mangled_name.push(match <#inner_type as KdbxParse<KdbxContext>>::parse(reader, name, attributes, context)? {
                                         Some(v) => v,
-                                        None => <#my_type as ::std::default::Default>::default(),
+                                        None => <#inner_type as ::std::default::Default>::default(),
                                     });
                                 },
                                 XmlEvent::StartElement { name, .. } => {
@@ -342,8 +355,7 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
                 } else {
                     quote! {
                         XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
-                            //#mangled_name = <#my_type as KdbxParse>::parse(reader, name, attributes, context)?;
-                            #mangled_name = #my_type::parse(reader, name, attributes, context)?;
+                            #mangled_name = <#inner_type as KdbxParse<KdbxContext>>::parse(reader, name, attributes, context)?;
                             println!(#big_name_debug, #mangled_name);
                         }
                     }
@@ -352,10 +364,9 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
                 let full_type = &r.full_type;
                 quote! {
                     XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
-                        //#mangled_name = <#my_type as KdbxParse>::parse(reader, name, attributes, context)?;
-                        #mangled_name = match <#full_type>::parse(reader, name, attributes, context)? {
+                        #mangled_name = match <#inner_type as KdbxParse<KdbxContext>>::parse(reader, name, attributes, context)? {
                             Some(v) => v,
-                            None => <#full_type as ::std::default::Default>::default(),
+                            None => <#inner_type as ::std::default::Default>::default(),
                         };
                         println!(#big_name_debug, #mangled_name);
                     }
@@ -368,7 +379,7 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
     let debug_string = format!("Decode {}...", outer_type.to_string());
     let names = impl_block.iter().map(|r| {
         let name = &r.name;
-        let mangled_name = Ident::new(&format!("field_{}", name), Span::call_site());
+        let mangled_name = format_ident!("field_{}", name);
         quote! { #name: #mangled_name }
     });
     let results = quote! {
@@ -412,7 +423,7 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
         }
     };
     // eprintln!("Parse macros: {}", results);
-    results.into()
+    results
 }
 
 #[proc_macro_derive(KdbxSerialize, attributes(kdbx))]
@@ -446,8 +457,7 @@ fn derive_serializer2(input: TokenStream) -> TokenStream {
                     // writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
                     for item in value.#name {
                         writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
-                        //<#my_type as KdbxSerialize>::serialize(writer, value.#name)?;
-                        #my_type::serialize2(writer, item, context)?;
+                        <#inner_type as KdbxSerialize<KdbxContext>>::serialize2(writer, item, context)?;
                         writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
                     }
                     // writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
@@ -459,8 +469,7 @@ fn derive_serializer2(input: TokenStream) -> TokenStream {
                             writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
                             for item in inner {
                                 writer.write(xml::writer::XmlEvent::start_element(#match_name)).map_err(|_|"")?;
-                                //<#my_type as KdbxSerialize>::serialize(writer, inner)?;
-                                #my_type::serialize2(writer, item, context)?;
+                                <#inner_type as KdbxSerialize<KdbxContext>>::serialize2(writer, item, context)?;
                                 writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
                             }
                             writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
@@ -471,8 +480,7 @@ fn derive_serializer2(input: TokenStream) -> TokenStream {
                         writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
                         for item in value.#name {
                             writer.write(xml::writer::XmlEvent::start_element(#match_name)).map_err(|_|"")?;
-                            //<#my_type as KdbxSerialize>::serialize(writer, value.#name)?;
-                            #my_type::serialize2(writer, item, context)?;
+                            <#inner_type as KdbxSerialize<KdbxContext>>::serialize2(writer, item, context)?;
                             writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
                         }
                         writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
@@ -491,9 +499,7 @@ fn derive_serializer2(input: TokenStream) -> TokenStream {
             } else {
                 quote! {
                     writer.write(xml::writer::XmlEvent::start_element(#big_name)).map_err(|_|"")?;
-                    //<#my_type as KdbxSerialize>::serialize(writer, value.#name)?;
-                    //#full_type::serialize2(writer, value.#name, context)?;
-                    <#full_type as KdbxSerialize<KdbxContext>>::serialize2(writer, value.#name, context)?;
+                    <#inner_type as KdbxSerialize<KdbxContext>>::serialize2(writer, value.#name, context)?;
                     writer.write(xml::writer::XmlEvent::end_element()).map_err(|_|"")?;
                 }
             }
