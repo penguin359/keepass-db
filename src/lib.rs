@@ -72,6 +72,8 @@ use yaserde::{YaDeserialize, YaSerialize};
 
 use kdbx_derive::{KdbxParse, KdbxSerialize};
 
+mod kdb1;
+
 //trait KdbxDefault: Default {
 //    fn provide_default() -> Self
 //        {
@@ -89,7 +91,7 @@ trait KdbxParse<C>: Sized + Default {
         reader: &mut EventReader<R>,
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
-        context: &mut C
+        context: &mut C,
     ) -> Result<Option<Self>, String>;
 }
 
@@ -98,7 +100,11 @@ trait KdbxParse<C>: Sized + Default {
 //    fn default() -> Self {
 
 trait KdbxSerialize<C>: Sized {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut C) -> Result<(), String>;
+    fn serialize2<W: Write>(
+        writer: &mut EventWriter<W>,
+        value: Self,
+        context: &mut C,
+    ) -> Result<(), String>;
 }
 
 #[cfg(test)]
@@ -768,39 +774,7 @@ impl Key {
 }
 
 mod kdf;
-use kdf::*;
-
-
-fn decode_string_kdb1(mut content: Vec<u8>) -> String {
-    if content[content.len() - 1] != 0 {
-        panic!("Need null terminator");
-    }
-    content.truncate(content.len() - 1);
-    String::from_utf8(content).unwrap()
-}
-
-fn decode_datetime_kdb1(content: &[u8]) -> NaiveDateTime {
-    let mut buf = vec![0, 0, 0];
-    buf.extend(content);
-    let mut raw = unmake_u64_be(&buf).unwrap();
-    //println!("{:010x}: {:?}", raw, buf);
-    let second = raw & 0x3f;
-    raw >>= 6;
-    let minute = raw & 0x3f;
-    raw >>= 6;
-    let hour = raw & 0x1f;
-    raw >>= 5;
-    let day = raw & 0x1f;
-    raw >>= 5;
-    let month = raw & 0x0f;
-    raw >>= 4;
-    let year = raw & 0xfff;
-    NaiveDate::from_ymd(year as i32, month as u32, day as u32).and_hms(
-        hour as u32,
-        minute as u32,
-        second as u32,
-    )
-}
+pub use kdf::*;
 
 pub const KDF_AES_KDBX3: Uuid = uuid!("c9d9f39a-628a-4460-bf74-0d08c18a4fea");
 const KDF_AES_KDBX4: Uuid = uuid!("7c02bb82-79a7-4ac0-927d-114a00648238");
@@ -1007,7 +981,11 @@ fn encode_string<W: Write>(writer: &mut EventWriter<W>, value: &str) -> Result<(
 }
 
 impl<C> KdbxSerialize<C> for String {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut C) -> Result<(), String> {
+    fn serialize2<W: Write>(
+        writer: &mut EventWriter<W>,
+        value: Self,
+        context: &mut C,
+    ) -> Result<(), String> {
         encode_string(writer, &value)
     }
 }
@@ -1017,7 +995,8 @@ fn decode_optional_base64<R: Read>(
     name: OwnedName,
     attributes: Vec<OwnedAttribute>,
 ) -> Result<Option<Vec<u8>>, String> {
-    Ok(decode_optional_string(reader, name, attributes)?.map(|x| decode(&x).unwrap()/* .as_bytes().into() */))
+    Ok(decode_optional_string(reader, name, attributes)?
+        .map(|x| decode(&x).unwrap() /* .as_bytes().into() */))
 }
 
 fn encode_optional_base64<W: Write, T: AsRef<[u8]>>(
@@ -1084,7 +1063,11 @@ fn encode_bool<W: Write>(writer: &mut EventWriter<W>, value: bool) -> Result<(),
 }
 
 impl<C> KdbxSerialize<C> for bool {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut C) -> Result<(), String> {
+    fn serialize2<W: Write>(
+        writer: &mut EventWriter<W>,
+        value: Self,
+        context: &mut C,
+    ) -> Result<(), String> {
         encode_bool(writer, value)
     }
 }
@@ -1128,7 +1111,11 @@ fn encode_i64<W: Write>(writer: &mut EventWriter<W>, value: i64) -> Result<(), S
 }
 
 impl<C> KdbxSerialize<C> for i64 {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut C) -> Result<(), String> {
+    fn serialize2<W: Write>(
+        writer: &mut EventWriter<W>,
+        value: Self,
+        context: &mut C,
+    ) -> Result<(), String> {
         encode_i64(writer, value)
     }
 }
@@ -1146,7 +1133,11 @@ impl<C> KdbxParse<C> for i32 {
 }
 
 impl<C> KdbxSerialize<C> for i32 {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut C) -> Result<(), String> {
+    fn serialize2<W: Write>(
+        writer: &mut EventWriter<W>,
+        value: Self,
+        context: &mut C,
+    ) -> Result<(), String> {
         encode_i64(writer, value as i64)
     }
 }
@@ -1163,7 +1154,11 @@ impl<C> KdbxParse<C> for u32 {
 }
 
 impl<C> KdbxSerialize<C> for u32 {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut C) -> Result<(), String> {
+    fn serialize2<W: Write>(
+        writer: &mut EventWriter<W>,
+        value: Self,
+        context: &mut C,
+    ) -> Result<(), String> {
         encode_i64(writer, value as i64)
     }
 }
@@ -1257,7 +1252,11 @@ fn encode_datetime<W: Write>(
 }
 
 impl KdbxSerialize<KdbxContext> for DateTime<Utc> {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut KdbxContext) -> Result<(), String> {
+    fn serialize2<W: Write>(
+        writer: &mut EventWriter<W>,
+        value: Self,
+        context: &mut KdbxContext,
+    ) -> Result<(), String> {
         if context.major_version >= 4 {
             encode_datetime(writer, value)
         } else {
@@ -1310,7 +1309,11 @@ impl<C> KdbxParse<C> for Uuid {
 }
 
 impl<C> KdbxSerialize<C> for Uuid {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut C) -> Result<(), String> {
+    fn serialize2<W: Write>(
+        writer: &mut EventWriter<W>,
+        value: Self,
+        context: &mut C,
+    ) -> Result<(), String> {
         encode_uuid(writer, value)
     }
 }
@@ -1458,12 +1461,20 @@ impl<C> KdbxParse<C> for [u8; 32] {
     ) -> Result<Option<Self>, String> {
         //decode_optional_string(reader, name, attributes)
         //Ok(decode_base64(reader, name, attributes)?.map(|v| Some(v.try_into().map_err(|_| "")?))?)
-        Ok(Some(decode_base64(reader, name, attributes)?.try_into().map_err(|_| "")?))
+        Ok(Some(
+            decode_base64(reader, name, attributes)?
+                .try_into()
+                .map_err(|_| "")?,
+        ))
     }
 }
 
 impl<C> KdbxSerialize<C> for [u8; 32] {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut C) -> Result<(), String> {
+    fn serialize2<W: Write>(
+        writer: &mut EventWriter<W>,
+        value: Self,
+        context: &mut C,
+    ) -> Result<(), String> {
         encode_base64(writer, value)
     }
 }
@@ -1480,7 +1491,11 @@ impl<C> KdbxParse<C> for HashMap<String, String> {
 }
 
 impl<C> KdbxSerialize<C> for HashMap<String, String> {
-    fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: Self, context: &mut C) -> Result<(), String> {
+    fn serialize2<W: Write>(
+        writer: &mut EventWriter<W>,
+        value: Self,
+        context: &mut C,
+    ) -> Result<(), String> {
         encode_custom_data(writer, value)
     }
 }
@@ -1748,7 +1763,9 @@ fn decode_meta_old<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String>
             XmlEvent::StartElement {
                 name, attributes, ..
             } if name.local_name == "MemoryProtection" => {
-                memory_protection = MemoryProtection::parse(reader, name, attributes, &mut KdbxContext::default())?.unwrap();  // TODO Shouldn't need context
+                memory_protection =
+                    MemoryProtection::parse(reader, name, attributes, &mut KdbxContext::default())?
+                        .unwrap(); // TODO Shouldn't need context
                 println!("MemoryProtection: {:?}", memory_protection);
             }
             XmlEvent::StartElement {
@@ -2115,7 +2132,8 @@ fn decode_group<R: Read>(reader: &mut EventReader<R>) -> Result<Group, String> {
             XmlEvent::StartElement {
                 name, attributes, ..
             } if name.local_name == "Times" => {
-                times = Times::parse(reader, name, attributes, &mut KdbxContext::default())?.unwrap();
+                times =
+                    Times::parse(reader, name, attributes, &mut KdbxContext::default())?.unwrap();
                 println!("Times: {:?}", times);
             }
             XmlEvent::StartElement {
@@ -2133,14 +2151,16 @@ fn decode_group<R: Read>(reader: &mut EventReader<R>) -> Result<Group, String> {
             XmlEvent::StartElement {
                 name, attributes, ..
             } if name.local_name == "Entry" => {
-                let entry = Entry::parse(reader, name, attributes, &mut KdbxContext::default())?.unwrap();
+                let entry =
+                    Entry::parse(reader, name, attributes, &mut KdbxContext::default())?.unwrap();
                 println!("Entry: {:?}", entry);
                 entries.push(entry);
             }
             XmlEvent::StartElement {
                 name, attributes, ..
             } if name.local_name == "Group" => {
-                let group = Group::parse(reader, name, attributes, &mut KdbxContext::default())?.unwrap();
+                let group =
+                    Group::parse(reader, name, attributes, &mut KdbxContext::default())?.unwrap();
                 println!("Group: {:?}", group);
                 groups.push(group);
             }
@@ -2335,7 +2355,7 @@ fn save_file(doc: &KeePassFile, major_version: u16) -> io::Result<()> {
         TlvType::CompressionFlags.to_u8().unwrap(),
         vec![Compression::None.to_u32().unwrap().to_le_bytes().to_vec()],
     );
-    let mut start_stream = vec![0; 32];  // TODO Randomize this
+    let mut start_stream = vec![0; 32]; // TODO Randomize this
     if major_version < 4 {
         tlvs.insert(
             TlvType::TransformSeed.to_u8().unwrap(),
@@ -2343,7 +2363,10 @@ fn save_file(doc: &KeePassFile, major_version: u16) -> io::Result<()> {
         );
         tlvs.insert(
             TlvType::TransformRounds.to_u8().unwrap(),
-            vec![match custom_data[KDF_PARAM_ROUNDS] { MapValue::UInt64(x) => x.to_le_bytes().to_vec(), _ => panic!("Wrong") }],
+            vec![match custom_data[KDF_PARAM_ROUNDS] {
+                MapValue::UInt64(x) => x.to_le_bytes().to_vec(),
+                _ => panic!("Wrong"),
+            }],
         );
         tlvs.insert(
             TlvType::StreamStartBytes.to_u8().unwrap(),
@@ -2485,416 +2508,6 @@ pub fn lib_main() -> io::Result<()> {
 
     match magic_type {
         KDBX1_MAGIC_TYPE => {
-            let flags = file.read_u32::<LittleEndian>()?;
-            let version = file.read_u32::<LittleEndian>()?;
-            let mut master_seed = vec![0; 16];
-            file.read_exact(&mut master_seed)?;
-            let mut encryption_iv = vec![0; 16];
-            file.read_exact(&mut encryption_iv)?;
-            let num_groups = file.read_u32::<LittleEndian>()?;
-            let num_entries = file.read_u32::<LittleEndian>()?;
-            let mut content_hash = vec![0; 32];
-            file.read_exact(&mut content_hash)?;
-            let mut transform_seed = vec![0; 32];
-            file.read_exact(&mut transform_seed)?;
-            let transform_round = file.read_u32::<LittleEndian>()?;
-            println!(
-                "flags: {}, version: {}, groups: {}, entries: {}, round: {:?}",
-                flags, version, num_groups, num_entries, transform_round
-            );
-
-            println!("AES");
-
-            custom_data.insert(KDF_PARAM_SALT.to_string(), transform_seed);
-            custom_data.insert(
-                KDF_PARAM_ROUNDS.to_string(),
-                make_u64(transform_round as u64),
-            );
-
-            let transform_key = transform_aes_kdf(&key.composite_key_kdb1(), &custom_data)?;
-
-            println!("Key OUT: {:0x?}", transform_key);
-
-            println!("Calculating master key");
-            let mut hmac_context = Context::new(&SHA512);
-
-            let mut master_key = master_seed.to_owned();
-            master_key.extend(transform_key);
-            let mut context = Context::new(&SHA256);
-            context.update(&master_key);
-            hmac_context.update(&master_key);
-            hmac_context.update(&[1u8]);
-            master_key = context.finish().as_ref().to_owned();
-            println!("Master OUT: {:0x?}", master_key);
-
-            let mut ciphertext = vec![];
-            file.read_to_end(&mut ciphertext)?;
-
-            println!(
-                "MK: {}, IV: {}, CP: {}",
-                master_key.len(),
-                encryption_iv.len(),
-                ciphertext.len()
-            );
-            let data = decrypt(
-                Cipher::aes_256_cbc(),
-                &master_key,
-                Some(encryption_iv.as_ref()),
-                &ciphertext,
-            )
-            .unwrap();
-
-            let mut context = Context::new(&SHA256);
-            context.update(&data);
-            let hash = context.finish().as_ref().to_owned();
-            if hash != content_hash {
-                println!("Failed to decode");
-                process::exit(1);
-            }
-
-            //let mut uuid_map = HashMap::new();
-            //let mut items = Vec::new();
-            let mut rng = rand::thread_rng();
-            struct KdbGroup {
-                //<'a> {
-                uuid: u32,
-                parent: u32,
-                name: String,
-                creation_time: DateTime<Local>,
-                modification_time: DateTime<Local>,
-                access_time: DateTime<Local>,
-                expiry_time: DateTime<Local>,
-                icon: u32,
-                flags: u32,
-                //groups: Vec<&'a KdbGroup>,
-                groups: Vec<u32>,
-                entries: Vec<Uuid>,
-            }
-
-            struct KdbEntry {
-                uuid: Uuid,
-                parent: u32,
-                icon: u32,
-                title: String,
-                url: String,
-                username: String,
-                password: String,
-                notes: String,
-                creation_time: DateTime<Local>,
-                modification_time: DateTime<Local>,
-                access_time: DateTime<Local>,
-                expiry_time: DateTime<Local>,
-                binary_description: String,
-                binary_data: Vec<u8>,
-            }
-
-            let now = Local::now();
-            let root_group_uuid = rng.gen();
-            let root_group = KdbGroup {
-                uuid: root_group_uuid,
-                parent: 0,
-                name: "Root".to_string(),
-                creation_time: now,
-                modification_time: now,
-                access_time: now,
-                expiry_time: now,
-                icon: 1,
-                flags: 0,
-                groups: vec![],
-                entries: vec![],
-            };
-
-            let mut all_groups = HashMap::new();
-            let mut all_entries = HashMap::new();
-            let mut groups_level = HashMap::new();
-            all_groups.insert(root_group.uuid, root_group);
-            groups_level.insert(0u16, root_group_uuid);
-
-            let mut c = Cursor::new(data);
-            println!("Groups:");
-            for _ in 0..num_groups {
-                let mut group = KdbGroup {
-                    uuid: rng.gen(),
-                    parent: root_group_uuid,
-                    name: "".to_string(),
-                    creation_time: now,
-                    modification_time: now,
-                    access_time: now,
-                    expiry_time: now,
-                    icon: 1,
-                    flags: 0,
-                    groups: vec![],
-                    entries: vec![],
-                };
-                let mut level = 0;
-                loop {
-                    let field_type = c.read_u16::<LittleEndian>()?;
-                    let field_len = c.read_u32::<LittleEndian>()?;
-                    let mut field_content = vec![0; field_len as usize];
-                    c.read_exact(&mut field_content)?;
-                    if field_type == 0xffff {
-                        break;
-                    }
-                    //println!("TLV({}, {}): {:?}", field_type, field_len, field_content);
-                    match field_type {
-                        0x0000 => {
-                            //readExtData(dataInput);
-                            assert!(false);
-                        }
-                        0x0001 => {
-                            let mut c = Cursor::new(field_content);
-                            let uuid = c.read_u32::<LittleEndian>()?;
-                            group.uuid = uuid;
-                            assert_eq!(c.position(), field_len as u64);
-                            println!("UUID: {}", uuid);
-                        }
-                        0x0002 => {
-                            let name = decode_string_kdb1(field_content);
-                            group.name = name;
-                            println!("Name: {}", group.name);
-                        }
-                        0x0003 => {
-                            let date = decode_datetime_kdb1(&field_content);
-                            let datetime = Local.from_utc_datetime(&date);
-                            group.creation_time = datetime;
-                            println!(
-                                "Creation Time: {}",
-                                group.creation_time.format("%Y-%m-%d %l:%M:%S %p %Z")
-                            );
-                        }
-                        0x0004 => {
-                            let date = decode_datetime_kdb1(&field_content);
-                            let datetime = Local.from_utc_datetime(&date);
-                            group.modification_time = datetime;
-                            println!(
-                                "Last Modification Time: {}",
-                                group.modification_time.format("%Y-%m-%d %l:%M:%S %p %Z")
-                            );
-                        }
-                        0x0005 => {
-                            let date = decode_datetime_kdb1(&field_content);
-                            let datetime = Local.from_utc_datetime(&date);
-                            group.access_time = datetime;
-                            println!(
-                                "Last Access Time: {}",
-                                group.access_time.format("%Y-%m-%d %l:%M:%S %p %Z")
-                            );
-                        }
-                        0x0006 => {
-                            let date = decode_datetime_kdb1(&field_content);
-                            let datetime = Local.from_utc_datetime(&date);
-                            group.expiry_time = datetime;
-                            println!(
-                                "Expiry Time: {}",
-                                group.expiry_time.format("%Y-%m-%d %l:%M:%S %p %Z")
-                            );
-                        }
-                        0x0007 => {
-                            let mut c = Cursor::new(field_content);
-                            let icon = c.read_u32::<LittleEndian>()?;
-                            group.icon = icon;
-                            assert_eq!(c.position(), field_len as u64);
-                            println!("Icon: {}", icon);
-                        }
-                        0x0008 => {
-                            //int level = readShort(dataInput);
-                            //group.setParent(computeParentGroup(lastGroup, level));
-                            let mut c = Cursor::new(field_content);
-                            level = c.read_u16::<LittleEndian>()?;
-                            assert_eq!(c.position(), field_len as u64);
-                            println!("Level: {}", level);
-                        }
-                        0x0009 => {
-                            let mut c = Cursor::new(field_content);
-                            let flags = c.read_u32::<LittleEndian>()?;
-                            group.flags = flags;
-                            assert_eq!(c.position(), field_len as u64);
-                            println!("Flags: 0x{:08x}", flags);
-                        }
-                        _ => {
-                            panic!("Unknown field");
-                        }
-                    };
-                }
-                println!("");
-                //root_group.groups.push(group.uuid);
-                group.parent = *groups_level.get(&level).unwrap_or(&root_group_uuid);
-                all_groups
-                    .get_mut(&group.parent)
-                    .unwrap()
-                    .groups
-                    .push(group.uuid);
-                groups_level.insert(level, group.uuid);
-                all_groups.insert(group.uuid, group);
-                //groups_level.get_mut(&2).unwrap().groups.push(group.uuid);
-                //let g = Rc::new(RefCell::new(group));
-                //items.push(Rc::clone(&g));
-                //let u = g.borrow().uuid;
-                //uuid_map.insert(u, g);
-            }
-            println!("Entries:");
-            for _ in 0..num_entries {
-                let mut entry = KdbEntry {
-                    uuid: Uuid::default(),
-                    parent: 0,
-                    icon: 0,
-                    title: "".to_string(),
-                    url: "".to_string(),
-                    username: "".to_string(),
-                    password: "".to_string(),
-                    notes: "".to_string(),
-                    creation_time: now,
-                    modification_time: now,
-                    access_time: now,
-                    expiry_time: now,
-                    binary_description: "".to_string(),
-                    binary_data: vec![],
-                };
-                loop {
-                    let field_type = c.read_u16::<LittleEndian>()?;
-                    let field_len = c.read_u32::<LittleEndian>()?;
-                    let mut field_content = vec![0; field_len as usize];
-                    c.read_exact(&mut field_content)?;
-                    if field_type == 0xffff {
-                        break;
-                    }
-                    //println!("TLV({}, {}): {:?}", field_type, field_len, field_content);
-                    match field_type {
-                        0x0000 => {
-                            //readExtData(dataInput);
-                            assert!(false);
-                        }
-                        0x0001 => {
-                            //let mut c = Cursor::new(field_content);
-                            //let uuid = c.read_u32::<LittleEndian>()?;
-                            //assert_eq!(c.position(), field_len as u64);
-                            let uuid = Uuid::from_slice(&field_content).unwrap();
-                            entry.uuid = uuid;
-                            println!("UUID: {}", entry.uuid);
-                        }
-                        0x0002 => {
-                            let mut c = Cursor::new(field_content);
-                            let group_id = c.read_u32::<LittleEndian>()?;
-                            entry.parent = group_id;
-                            assert_eq!(c.position(), field_len as u64);
-                            println!("Group: {}", entry.parent);
-                        }
-                        0x0003 => {
-                            let mut c = Cursor::new(field_content);
-                            let icon = c.read_u32::<LittleEndian>()?;
-                            entry.icon = icon;
-                            assert_eq!(c.position(), field_len as u64);
-                            println!("Icon: {}", entry.icon);
-                        }
-                        0x0004 => {
-                            let name = decode_string_kdb1(field_content);
-                            entry.title = name;
-                            println!("Title: {}", entry.title);
-                        }
-                        0x0005 => {
-                            let name = decode_string_kdb1(field_content);
-                            entry.url = name;
-                            println!("Url: {}", entry.url);
-                        }
-                        0x0006 => {
-                            let name = decode_string_kdb1(field_content);
-                            entry.username = name;
-                            println!("Username: {}", entry.username);
-                        }
-                        0x0007 => {
-                            let name = decode_string_kdb1(field_content);
-                            entry.password = name;
-                            println!("Password: {}", entry.password);
-                        }
-                        0x0008 => {
-                            let name = decode_string_kdb1(field_content);
-                            entry.notes = name;
-                            println!("Notes: {}", entry.notes);
-                        }
-                        0x0009 => {
-                            let date = decode_datetime_kdb1(&field_content);
-                            let datetime = Local.from_utc_datetime(&date);
-                            entry.creation_time = datetime;
-                            println!(
-                                "Creation Time: {}",
-                                entry.creation_time.format("%Y-%m-%d %l:%M:%S %p %Z")
-                            );
-                        }
-                        0x000a => {
-                            let date = decode_datetime_kdb1(&field_content);
-                            let datetime = Local.from_utc_datetime(&date);
-                            entry.modification_time = datetime;
-                            println!(
-                                "Last Modification Time: {}",
-                                entry.modification_time.format("%Y-%m-%d %l:%M:%S %p %Z")
-                            );
-                        }
-                        0x000b => {
-                            let date = decode_datetime_kdb1(&field_content);
-                            let datetime = Local.from_utc_datetime(&date);
-                            entry.access_time = datetime;
-                            println!(
-                                "Last Access Time: {}",
-                                entry.access_time.format("%Y-%m-%d %l:%M:%S %p %Z")
-                            );
-                        }
-                        0x000c => {
-                            let date = decode_datetime_kdb1(&field_content);
-                            let datetime = Local.from_utc_datetime(&date);
-                            entry.expiry_time = datetime;
-                            println!(
-                                "Expiry Time: {}",
-                                entry.expiry_time.format("%Y-%m-%d %l:%M:%S %p %Z")
-                            );
-                        }
-                        0x000d => {
-                            let name = decode_string_kdb1(field_content);
-                            entry.binary_description = name;
-                            println!("Binary Description: {}", entry.binary_description);
-                        }
-                        0x000e => {
-                            entry.binary_data = field_content;
-                            println!("Binary Data: {:#?}", entry.binary_data);
-                        }
-                        _ => {
-                            panic!("Unknown field");
-                        }
-                    };
-                }
-                println!("");
-                //let parent_group = all_groups.get_mut(&entry.parent).unwrap_or_else(|| all_groups.get_mut(&root_group_uuid).unwrap());
-                let parent_group = match all_groups.get_mut(&entry.parent) {
-                    Some(group) => group,
-                    None => all_groups.get_mut(&root_group_uuid).unwrap(),
-                };
-                parent_group.entries.push(entry.uuid);
-                entry.parent = parent_group.uuid;
-                all_entries.insert(entry.uuid, entry);
-            }
-
-            struct KdbDatabase {
-                groups: HashMap<u32, KdbGroup>,
-                entries: HashMap<Uuid, KdbEntry>,
-            }
-
-            let database = KdbDatabase {
-                groups: all_groups,
-                entries: all_entries,
-            };
-
-            fn dump_group(database: &KdbDatabase, uuid: u32, depth: u16) {
-                let group = database.groups.get(&uuid).unwrap();
-                println!("{0:1$}>{2}", "", 2 * depth as usize, group.name);
-                for child in &group.groups {
-                    dump_group(database, *child, depth + 1);
-                }
-                for child in &group.entries {
-                    let entry = database.entries.get(&child).unwrap();
-                    println!("{0:1$}  -{2}", "", 2 * depth as usize, entry.title);
-                }
-            }
-            dump_group(&database, root_group_uuid, 0);
-
             return Ok(());
         }
         // KDBX2_BETA_MAGIC_TYPE => {
@@ -2966,7 +2579,10 @@ pub fn lib_main() -> io::Result<()> {
             }
             6 => {
                 custom_data.insert(KDF_PARAM_ROUNDS.to_string(), tlv_data.clone());
-                custom_data2.insert(KDF_PARAM_ROUNDS.to_string(), MapValue::UInt64(u64::from_le_bytes(tlv_data[0..8].try_into().unwrap())));
+                custom_data2.insert(
+                    KDF_PARAM_ROUNDS.to_string(),
+                    MapValue::UInt64(u64::from_le_bytes(tlv_data[0..8].try_into().unwrap())),
+                );
             }
             8 => {
                 inner_tlvs.insert(2u8, tlv_data);
@@ -3427,7 +3043,8 @@ pub fn lib_main() -> io::Result<()> {
                 let mut context = KdbxContext::default();
                 context.major_version = major_version;
                 let my_doc = crate::KeePassFile::parse(&mut reader, name, attributes, &mut context)
-                    .map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?.unwrap();
+                    .map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?
+                    .unwrap();
                 save_file(&my_doc, 4).unwrap();
             }
             XmlEvent::EndDocument => {
