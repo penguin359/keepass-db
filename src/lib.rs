@@ -62,7 +62,6 @@ use salsa20::Salsa20;
 use sxd_document::parser;
 use sxd_xpath::{evaluate_xpath, Context as XPathContext, Factory, Value};
 
-use clap::{App, Arg};
 use rand::Rng;
 use xml::attribute::OwnedAttribute;
 use xml::name::OwnedName;
@@ -467,7 +466,7 @@ impl<R: Read> BlockReader<R> {
         //         println!("Header Hash: '{}'", header_hash.string());
         //         let expected_hash = decode(&header_hash.string()).expect("Valid base64");
         //         if expected_hash != digest.as_ref() {
-        //             let _ = writeln!(stderr, "Possible header corruption\n");
+        //             eprintln!("Possible header corruption\n");
         //             process::exit(1);
         //         }
         //     }
@@ -2252,7 +2251,6 @@ fn decode_root<R: Read>(reader: &mut EventReader<R>) -> Result<Vec<Group>, Strin
     Ok(groups)
 }
 
-//fn consume_element<R: Read>(reader: &mut yaserde::de::Deserializer<R>, mut event: XmlEvent) -> Result<(), String> {
 fn decode_document_old<R: Read>(mut reader: &mut EventReader<R>) -> Result<KeePassFile, String> {
     //let mut elements: Vec<::xml::name::OwnedName> = vec![];
     //elements.push("Foo".into());
@@ -2317,7 +2315,7 @@ const KDBX2_BETA_MAGIC_TYPE: u32 = 0xB54BFB66;
 const KDBX2_MAGIC_TYPE: u32 = 0xB54BFB67;
 
 fn save_file(doc: &KeePassFile, major_version: u16) -> io::Result<()> {
-    let mut file = File::create("data-out.kbdx")?;
+    let mut file = File::create("data-out.kdbx")?;
     let minor_version = 0;
     let mut header = vec![];
     header.write_u32::<LittleEndian>(KDBX_MAGIC)?;
@@ -2448,34 +2446,7 @@ fn save_file(doc: &KeePassFile, major_version: u16) -> io::Result<()> {
 /// assert!(true);
 /// ```
 /// Does it work?
-pub fn lib_main() -> io::Result<()> {
-    env_logger::init();
-
-    let mut stderr = io::stderr();
-
-    println!("Hello, world!");
-
-    let options = App::new("KDBX Dump")
-        .version("0.1.0")
-        .author("Loren M. Lang <lorenl@north-winds.org>")
-        .about("Dumping KDBX Password files")
-        .arg(
-            Arg::with_name("key")
-                .short("k")
-                .long("key-file")
-                .takes_value(true)
-                .help("Key file for unlocking database"),
-        )
-        .arg(
-            Arg::with_name("file")
-                .help("Password database")
-                .required(true)
-                .index(1),
-        )
-        .get_matches();
-
-    let filename = options.value_of("file").expect("missing filename");
-
+pub fn lib_main(filename: &str, key_file: Option<&str>) -> io::Result<()> {
     let mut key = Key::new();
     let user_password = match env::var("KDBX_PASSWORD") {
         Ok(password) => password,
@@ -2486,7 +2457,7 @@ pub fn lib_main() -> io::Result<()> {
     };
     key.set_user_password(user_password);
 
-    if let Some(filename) = options.value_of("key") {
+    if let Some(filename) = key_file {
         let mut contents = vec![];
         File::open(filename)?.read_to_end(&mut contents)?;
         key.set_keyfile(contents);
@@ -2499,7 +2470,7 @@ pub fn lib_main() -> io::Result<()> {
     let magic_type = file.read_u32::<LittleEndian>()?;
 
     if magic != KDBX_MAGIC {
-        let _ = writeln!(stderr, "Invalid database file\n");
+        eprintln!("Invalid database file\n");
         process::exit(1);
     }
 
@@ -2512,7 +2483,7 @@ pub fn lib_main() -> io::Result<()> {
         }
         // KDBX2_BETA_MAGIC_TYPE => {
         //     // XXX Untested
-        //     let _ = writeln!(stderr, "KeePass 2.x Beta files not supported\n");
+        //     eprintln!("KeePass 2.x Beta files not supported\n");
         //     process::exit(1);
         // },
         KDBX2_MAGIC_TYPE | KDBX2_BETA_MAGIC_TYPE => {
@@ -2520,7 +2491,7 @@ pub fn lib_main() -> io::Result<()> {
         }
         _ => {
             // XXX Untested
-            let _ = writeln!(stderr, "Unknown KeePass database format\n");
+            eprintln!("Unknown KeePass database format\n");
             process::exit(1);
         }
     };
@@ -2548,8 +2519,7 @@ pub fn lib_main() -> io::Result<()> {
             );
         }
         _ => {
-            let _ = writeln!(
-                stderr,
+            eprintln!(
                 "Unsupported KeePass 2.x database version ({}.{})\n",
                 major_version, minor_version
             );
@@ -2597,8 +2567,7 @@ pub fn lib_main() -> io::Result<()> {
                 let variant_minor = c.read_u8()?;
                 let variant_major = c.read_u8()?;
                 if variant_major != 1 {
-                    let _ = writeln!(
-                        stderr,
+                    eprintln!(
                         "Unsupported variant dictionary version ({}.{})\n",
                         variant_major, variant_minor
                     );
@@ -2635,7 +2604,7 @@ pub fn lib_main() -> io::Result<()> {
     let cipher_id = Uuid::from_slice(&tlvs[&2u8]).unwrap();
     println!("D: {:?}", cipher_id);
     if cipher_id != CIPHER_ID_AES256_CBC {
-        let _ = writeln!(stderr, "Unknown cipher\n");
+        eprintln!("Unknown cipher\n");
         process::exit(1);
     }
     println!("AES");
@@ -2648,7 +2617,7 @@ pub fn lib_main() -> io::Result<()> {
     let compress = match compression_flags {
         0 => {
             // XX Untested
-            // let _ = writeln!(stderr, "Unsupported no compressed file\n");
+            // eprintln!("Unsupported no compressed file\n");
             //process::exit(1);
             Compression::None
         }
@@ -2658,7 +2627,7 @@ pub fn lib_main() -> io::Result<()> {
         }
         _ => {
             // XX Untested
-            let _ = writeln!(stderr, "Unsupported compression method\n");
+            eprintln!("Unsupported compression method\n");
             process::exit(1);
         }
     };
@@ -2679,7 +2648,7 @@ pub fn lib_main() -> io::Result<()> {
         let mut expected_hash = [0; 32];
         file.read_exact(&mut expected_hash)?;
         if digest.as_ref() != expected_hash {
-            let _ = writeln!(stderr, "Possible header corruption\n");
+            eprintln!("Possible header corruption\n");
             process::exit(1);
         }
     }
@@ -2854,7 +2823,7 @@ pub fn lib_main() -> io::Result<()> {
             println!("Header Hash: '{}'", header_hash.string());
             let expected_hash = decode(&header_hash.string()).expect("Valid base64");
             if expected_hash != digest.as_ref() {
-                let _ = writeln!(stderr, "Possible header corruption\n");
+                eprintln!("Possible header corruption\n");
                 process::exit(1);
             }
         }
@@ -3065,40 +3034,6 @@ pub fn lib_main() -> io::Result<()> {
 
     #[derive(Debug, Default, PartialEq)]
     struct CustomData(HashMap<String, String>);
-
-    /*
-    fn consume_element<R: Read>(reader: &mut yaserde::de::Deserializer<R>, mut event: XmlEvent) -> Result<(), String> {
-        let mut elements = vec![];
-
-        loop {
-            match event {
-                XmlEvent::StartDocument { .. } => {
-                    return Err("Malformed XML document".to_string());
-                },
-                XmlEvent::EndDocument { .. } => {
-                    return Err("Malformed XML document".to_string());
-                },
-                XmlEvent::StartElement { name, .. } => {
-                    elements.push(name);
-                },
-                XmlEvent::EndElement { name, .. } => {
-                    let start_tag = elements.pop().expect("Can't consume a bare end element");
-                    if start_tag != name {
-                        return Err(format!("Start tag <{}> mismatches end tag </{}>", start_tag, name));
-                    }
-                },
-                _ => {
-                    // Consume any PI, text, comment, or cdata node
-                    return Ok(());
-                },
-            };
-            if elements.len() == 0 {
-                return Ok(());
-            }
-            event = reader.next_event()?;
-        }
-    }
-    */
 
     impl YaDeserialize for CustomData {
         fn deserialize<R: Read>(reader: &mut yaserde::de::Deserializer<R>) -> Result<Self, String> {
@@ -3444,24 +3379,9 @@ pub fn lib_main() -> io::Result<()> {
         protect_notes: String,
     }
 
-    /*
-    let mut database: KeePassFile = from_str(&contents).unwrap();
-    println!("Database Generator: '{}'", database.meta.generator);
-    println!("Database: {:?}", database);
-    database.meta.generator = "<Funny>".to_string();
-    println!("XML: {:?}", to_string(&database).unwrap());
-    */
-
-    //let content_cursor = Cursor::new(&contents);
-    //let mut reader = ParserConfig::new()
-    //    .cdata_to_characters(true)
-    //    .create_reader(content_cursor);
-    //let de = yaserde::de::Deserializer::new(reader);
     let mut database: KeePassFile = yaserde::de::from_str(&contents).unwrap();
-    database.meta.generator = "<Funny>".to_string();
     println!("Parsed: {:?}", database);
     println!("XML: {:?}", yaserde::ser::to_string(&database).unwrap());
-    println!("Done!");
 
     Ok(())
 }

@@ -247,7 +247,7 @@ fn derive_deserializer2(input: TokenStream) -> TokenStream {
     let _ = KdbxAttributes::parse(attrs);
 
     let impl_block = decode_struct(&ast);
-    eprintln!("Struct fields: {:#?}", &impl_block);
+    // eprintln!("Struct fields: {:#?}", &impl_block);
     let variables: TokenStream = impl_block
         .iter()
         .map(|r| {
