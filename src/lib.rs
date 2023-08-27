@@ -52,7 +52,7 @@ use chacha20::stream_cipher::{NewStreamCipher, SyncStreamCipher};
 use chacha20::ChaCha20;
 use chrono::prelude::*;
 use flate2::read::GzDecoder;
-use openssl::symm::{decrypt, Cipher, Crypter, Mode};
+use openssl::symm::{decrypt, encrypt, Cipher, Crypter, Mode};
 use ring::digest::{Context, SHA256, SHA512};
 use ring::hmac;
 use rpassword::read_password;
@@ -2413,6 +2413,40 @@ fn save_file(doc: &KeePassFile, major_version: u16) -> io::Result<()> {
     let hmac_tag = hmac::sign(&hmac_key, &header);
     if major_version >= 4 {
         file.write(hmac_tag.as_ref())?;
+    } else {
+        let output = Cursor::new(Vec::<u8>::new());
+        let mut context = KdbxContext::default();
+        context.major_version = major_version;
+        let mut writer = xml::writer::EventWriter::new(output);
+        writer
+            .write(xml::writer::XmlEvent::start_element("KeePassFile"))
+            .expect("Success!");
+        KeePassFile::serialize2(&mut writer, doc.clone(), &mut context).unwrap();
+        writer
+            .write(xml::writer::XmlEvent::end_element())
+            .expect("Success!");
+        let output = writer.into_inner().into_inner();
+        let mut buf = Cursor::new(Vec::<u8>::new());
+        buf.write_all(&start_stream).unwrap();
+        buf.write_all(&0u32.to_le_bytes()).unwrap();
+        let mut context = Context::new(&SHA256);
+        context.update(&output);
+        buf.write_all(&context.finish().as_ref().to_owned()).unwrap();
+        buf.write_all(&(output.len() as u32).to_le_bytes()).unwrap();
+        buf.write_all(&output).unwrap();
+        buf.write_all(&1u32.to_le_bytes()).unwrap();
+        let mut context = Context::new(&SHA256);
+        buf.write_all(&context.finish().as_ref().to_owned()).unwrap();
+        //buf.write_all(&[0u8; 32]).unwrap();
+        buf.write_all(&0u32.to_le_bytes()).unwrap();
+        let data = encrypt(
+            Cipher::aes_256_cbc(),
+            &master_key,
+            Some(&iv),
+            &buf.into_inner(),
+        ).unwrap();
+        file.write_all(&data).unwrap();
+        return Ok(());
     }
 
     let output = BlockWriter::new(&hmac_key_base, file);
@@ -3016,7 +3050,7 @@ pub fn lib_main(filename: &str, key_file: Option<&str>) -> io::Result<()> {
                 let my_doc = crate::KeePassFile::parse(&mut reader, name, attributes, &mut context)
                     .map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?
                     .unwrap();
-                save_file(&my_doc, 4).unwrap();
+                save_file(&my_doc, 3).unwrap();
             }
             XmlEvent::EndDocument => {
                 println!("End");
@@ -3302,7 +3336,8 @@ pub fn lib_main(filename: &str, key_file: Option<&str>) -> io::Result<()> {
         #[yaserde(rename = "HistoryMaxSize")]
         history_max_size: String,
         #[yaserde(rename = "SettingsChanged")]
-        settings_changed: KdbDate,
+        //settings_changed: KdbDate,
+        settings_changed: String,
         #[yaserde(rename = "CustomData")]
         custom_data: CustomData,
     }
