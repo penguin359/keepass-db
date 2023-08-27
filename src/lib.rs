@@ -2479,6 +2479,8 @@ pub fn lib_main(filename: &str, key_file: Option<&str>) -> io::Result<()> {
 
     match magic_type {
         KDBX1_MAGIC_TYPE => {
+            use kdb1::read_kdb1_header;
+            read_kdb1_header(&mut file, &key);
             return Ok(());
         }
         // KDBX2_BETA_MAGIC_TYPE => {

@@ -86,7 +86,19 @@ fn decode_datetime_kdb1(content: &[u8]) -> NaiveDateTime {
     )
 }
 
-fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<()> {
+fn dump_group(database: &KdbDatabase, uuid: u32, depth: u16) {
+    let group = database.groups.get(&uuid).unwrap();
+    println!("{0:1$}>{2}", "", 2 * depth as usize, group.name);
+    for child in &group.groups {
+        dump_group(database, *child, depth + 1);
+    }
+    for child in &group.entries {
+        let entry = database.entries.get(&child).unwrap();
+        println!("{0:1$}  -{2}", "", 2 * depth as usize, entry.title);
+    }
+}
+
+pub fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<()> {
     let flags = file.read_u32::<LittleEndian>()?;
     let version = file.read_u32::<LittleEndian>()?;
     let mut master_seed = vec![0; 16];
@@ -446,18 +458,6 @@ fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<()> {
         groups: all_groups,
         entries: all_entries,
     };
-
-    fn dump_group(database: &KdbDatabase, uuid: u32, depth: u16) {
-        let group = database.groups.get(&uuid).unwrap();
-        println!("{0:1$}>{2}", "", 2 * depth as usize, group.name);
-        for child in &group.groups {
-            dump_group(database, *child, depth + 1);
-        }
-        for child in &group.entries {
-            let entry = database.entries.get(&child).unwrap();
-            println!("{0:1$}  -{2}", "", 2 * depth as usize, entry.title);
-        }
-    }
     dump_group(&database, root_group_uuid, 0);
 
     Ok(())
