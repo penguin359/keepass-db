@@ -2740,43 +2740,43 @@ fn test_decode_document_filled_contents() {
     //assert_eq!(document.meta.custom_data.len(), 3, "Correct number of custom data fields");
     //assert!(document.meta.custom_data.contains_key("KPXC_DECRYPTION_TIME_PREFERENCE"), "Missing a custom data field");
     //assert_eq!(document.meta.custom_data["KPXC_DECRYPTION_TIME_PREFERENCE"], "100", "Custom data field has wrong value");
-    assert_eq!(document.root.len(), 1);
-    assert_eq!(document.root[0].entry.len(), 0);
-    assert_eq!(document.root[0].group.len(), 1);
-    assert_eq!(document.root[0].group[0].entry.len(), 1);
+    assert_eq!(document.root.group.len(), 1);
+    assert_eq!(document.root.group[0].entry.len(), 0);
+    assert_eq!(document.root.group[0].group.len(), 1);
+    assert_eq!(document.root.group[0].group[0].entry.len(), 1);
     assert_eq!(
-        document.root[0].group[0].entry[0]
+        document.root.group[0].group[0].entry[0]
             .history
             .as_ref()
             .unwrap()
             .len(),
         2,
         "{:#?}",
-        document.root[0].group[0].entry[0].history
+        document.root.group[0].group[0].entry[0].history
     );
-    assert_eq!(document.root[0].group[0].group.len(), 2);
-    assert_eq!(document.root[0].group[0].group[0].entry.len(), 1);
+    assert_eq!(document.root.group[0].group[0].group.len(), 2);
+    assert_eq!(document.root.group[0].group[0].group[0].entry.len(), 1);
     assert_eq!(
-        document.root[0].group[0].group[0].entry[0]
+        document.root.group[0].group[0].group[0].entry[0]
             .history
             .as_ref()
             .unwrap()
             .len(),
         2
     );
-    assert_eq!(document.root[0].group[0].group[0].group.len(), 1);
-    assert_eq!(document.root[0].group[0].group[0].group[0].entry.len(), 1);
+    assert_eq!(document.root.group[0].group[0].group[0].group.len(), 1);
+    assert_eq!(document.root.group[0].group[0].group[0].group[0].entry.len(), 1);
     assert_eq!(
-        document.root[0].group[0].group[0].group[0].entry[0]
+        document.root.group[0].group[0].group[0].group[0].entry[0]
             .history
             .as_ref()
             .unwrap()
             .len(),
         0
     );
-    assert_eq!(document.root[0].group[0].group[0].group[0].group.len(), 0);
-    assert_eq!(document.root[0].group[0].group[1].entry.len(), 0);
-    assert_eq!(document.root[0].group[0].group[1].group.len(), 0);
+    assert_eq!(document.root.group[0].group[0].group[0].group[0].group.len(), 0);
+    assert_eq!(document.root.group[0].group[0].group[1].entry.len(), 0);
+    assert_eq!(document.root.group[0].group[0].group[1].group.len(), 0);
 }
 
 #[test]
@@ -2792,9 +2792,9 @@ fn test_decode_document_filled_group() {
     .expect("Failed parsing")
     .unwrap();
     end_document(reader);
-    assert_eq!(document.root.len(), 1);
-    assert_eq!(document.root[0].entry.len(), 0);
-    let group = &document.root[0];
+    assert_eq!(document.root.group.len(), 1);
+    assert_eq!(document.root.group[0].entry.len(), 0);
+    let group = &document.root.group[0];
     let expected_uuid = Uuid::parse_str("5a1c21b4-b663-4efb-ba79-9dea57a393eb").unwrap();
     assert_eq!(group.uuid, expected_uuid);
     assert_eq!(group.name, "Root");
