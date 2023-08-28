@@ -23,7 +23,6 @@ extern crate xml;
 use std::collections::VecDeque;
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryInto;
-use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Cursor;
@@ -51,7 +50,6 @@ use flate2::read::GzDecoder;
 use openssl::symm::{decrypt, encrypt, Cipher, Crypter, Mode};
 use ring::digest::{Context, SHA256, SHA512};
 use ring::hmac;
-use rpassword::read_password;
 use salsa20::cipher::{KeyIvInit, StreamCipher};
 use salsa20::Key as Salsa20_Key;
 use salsa20::Salsa20;
@@ -1418,6 +1416,7 @@ struct MemoryProtection {
 struct Meta {
     generator: String,
     header_hash: Option<[u8; 32]>,
+    settings_changed: Option<DateTime<Utc>>,
     database_name: String,
     database_name_changed: Option<DateTime<Utc>>,
     database_description: String,
@@ -1437,11 +1436,10 @@ struct Meta {
     recycle_bin_changed: String,
     entry_templates_group: String,
     entry_templates_group_changed: String,
-    last_selected_group: String,
-    last_top_visible_group: String,
     history_max_items: String,
     history_max_size: String,
-    settings_changed: Option<DateTime<Utc>>,
+    last_selected_group: String,
+    last_top_visible_group: String,
     custom_data: HashMap<String, String>,
 }
 
@@ -1496,8 +1494,8 @@ impl<C> KdbxSerialize<C> for HashMap<String, String> {
 #[derive(Clone, Debug, Default, PartialEq, KdbxParse, KdbxSerialize)]
 //#[derive(Debug, Default, KdbxParse)]
 struct Times {
-    last_modification_time: DateTime<Utc>,
     creation_time: DateTime<Utc>,
+    last_modification_time: DateTime<Utc>,
     last_access_time: DateTime<Utc>,
     expiry_time: DateTime<Utc>,
     expires: bool,
@@ -1520,17 +1518,36 @@ struct Group {
     notes: String,
     #[kdbx(element = "IconID")]
     icon_id: u32,
+    #[kdbx(element = "CustomIconUUID")]
+    custom_icon_uuid: Option<Uuid>,
     times: Times,
     is_expanded: bool,
-    // TODO <DefaultAutoTypeSequence/>
-    // TODO _enable_auto_type: String,
-    // TODO _enable_searching: String,
+    default_auto_type_sequence: String,
+    enable_auto_type: bool,
+    enable_searching: bool,
     last_top_visible_entry: Uuid,
     // TODO custom_data: CustomData,
+    previous_parent_group: Option<Uuid>,
+    tags: Option<String>,  // TODO Should be a Vec
     #[kdbx(flatten)]
     entry: Vec<Entry>,
     #[kdbx(flatten)]
     group: Vec<Group>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, KdbxParse, KdbxSerialize)]
+struct Association {
+    window: String,
+    keystroke_sequence: String,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, KdbxParse, KdbxSerialize)]
+struct AutoType {
+    enabled: bool,
+    data_transfer_obfuscation: i64,
+    default_sequence: Option<String>,
+    #[kdbx(flatten)]
+    association: Vec<Association>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, KdbxParse, KdbxSerialize)]
@@ -1539,20 +1556,25 @@ struct Entry {
     uuid: String,
     #[kdbx(element = "IconID")]
     icon_id: u32,
+    #[kdbx(element = "CustomIconUUID")]
+    custom_icon_uuid: Option<Uuid>,
     foreground_color: String,
     background_color: String,
     #[kdbx(element = "OverrideURL")]
     override_url: String,
+    quality_check: Option<bool>,
     tags: String,
+    previous_parent_group: Option<Uuid>,
     times: Times,
     // TODO custom_data: CustomData,
     #[kdbx(flatten)]
     string: Vec<ProtectedString>,
+    auto_type: AutoType,
     history: Option<Vec<Entry>>,
 }
 
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
-struct KeePassFile {
+pub struct KeePassFile {
     meta: Meta,
     root: Vec<Group>,
 }
@@ -1563,7 +1585,7 @@ const KDBX1_MAGIC_TYPE: u32 = 0xB54BFB65;
 const KDBX2_BETA_MAGIC_TYPE: u32 = 0xB54BFB66;
 const KDBX2_MAGIC_TYPE: u32 = 0xB54BFB67;
 
-fn save_file(doc: &KeePassFile, major_version: u16) -> io::Result<()> {
+pub fn save_file(doc: &KeePassFile, major_version: u16) -> io::Result<()> {
     let mut file = File::create("data-out.kdbx")?;
     let minor_version = 0;
     let mut header = vec![];
@@ -1729,23 +1751,7 @@ fn save_file(doc: &KeePassFile, major_version: u16) -> io::Result<()> {
 /// assert!(true);
 /// ```
 /// Does it work?
-pub fn lib_main(filename: &str, key_file: Option<&str>) -> io::Result<()> {
-    let mut key = Key::new();
-    let user_password = match env::var("KDBX_PASSWORD") {
-        Ok(password) => password,
-        Err(env::VarError::NotPresent) => read_password().unwrap(),
-        Err(env::VarError::NotUnicode(_)) => {
-            panic!("Invalid password");
-        }
-    };
-    key.set_user_password(user_password);
-
-    if let Some(filename) = key_file {
-        let mut contents = vec![];
-        File::open(filename)?.read_to_end(&mut contents)?;
-        key.set_keyfile(contents);
-    }
-
+pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassFile> {
     let composite_key = key.composite_key();
 
     let mut file = File::open(filename)?;
@@ -1764,7 +1770,7 @@ pub fn lib_main(filename: &str, key_file: Option<&str>) -> io::Result<()> {
         KDBX1_MAGIC_TYPE => {
             use kdb1::read_kdb1_header;
             read_kdb1_header(&mut file, &key);
-            return Ok(());
+            return Ok(KeePassFile::default());
         }
         // KDBX2_BETA_MAGIC_TYPE => {
         //     // XXX Untested
@@ -2285,6 +2291,7 @@ pub fn lib_main(filename: &str, key_file: Option<&str>) -> io::Result<()> {
     let mut reader = ParserConfig::new()
         .cdata_to_characters(true)
         .create_reader(content_cursor);
+    let mut my_doc = None;
     loop {
         let event = reader.next().unwrap();
         match event {
@@ -2294,13 +2301,12 @@ pub fn lib_main(filename: &str, key_file: Option<&str>) -> io::Result<()> {
             XmlEvent::StartElement {
                 name, attributes, ..
             } => {
+                // TODO Check top-level tag name
                 let mut context = KdbxContext::default();
                 context.major_version = major_version;
-                let my_doc = KeePassFile::parse(&mut reader, name, attributes, &mut context)
+                my_doc = Some(KeePassFile::parse(&mut reader, name, attributes, &mut context)
                     .map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?
-                    .unwrap();
-                println!("KeePassFile: {:#?}", my_doc);
-                save_file(&my_doc, 3).unwrap();
+                    .unwrap());
             }
             XmlEvent::EndDocument => {
                 println!("End");
@@ -2310,5 +2316,5 @@ pub fn lib_main(filename: &str, key_file: Option<&str>) -> io::Result<()> {
         }
     }
 
-    Ok(())
+    Ok(my_doc.expect("Missing top-level element"))
 }
