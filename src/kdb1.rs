@@ -98,6 +98,44 @@ fn dump_group(database: &KdbDatabase, uuid: u32, depth: u16) {
     }
 }
 
+fn read_tlvs<R: Read>(file: &mut R) -> io::Result<HashMap<u16, Vec<u8>>> {
+    let mut map = HashMap::new();
+    loop {
+        let field_type = file.read_u16::<LittleEndian>()?;
+        let field_len = file.read_u32::<LittleEndian>()?;
+        let mut field_content = vec![0; field_len as usize];
+        file.read_exact(&mut field_content)?;
+        if field_type == 0xffff {
+            // TODO Check field length
+            return Ok(map)
+        }
+        map.insert(field_type, field_content);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_read_tlvs() {
+        let mut buf = Cursor::new(vec![
+            1u8, 0,  // Type = 1
+            4, 0, 0, 0,  // Length = 4
+            0, 1, 2, 3,  // Value
+            2, 0,  // Type = 2
+            6, 0, 0, 0,  // Length = 6
+            0xa, 0xb, 0xc, 0xd, 0xe, 0xf,  // Value
+            0xff, 0xff,  // Type = End
+            0, 0, 0, 0,  // Length = 0
+        ]);
+        let tlvs = read_tlvs(&mut buf).expect("Error reading TLVs");
+        assert_eq!(tlvs.len(), 2);
+        assert_eq!(tlvs[&1u16], vec![0, 1, 2, 3]);
+        assert_eq!(tlvs[&2u16], vec![0xa, 0xb, 0xc, 0xd, 0xe, 0xf]);
+    }
+}
+
 pub fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<()> {
     let flags = file.read_u32::<LittleEndian>()?;
     let version = file.read_u32::<LittleEndian>()?;
@@ -210,24 +248,20 @@ pub fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<()> {
             entries: vec![],
         };
         let mut level = 0;
-        loop {
-            let field_type = c.read_u16::<LittleEndian>()?;
-            let field_len = c.read_u32::<LittleEndian>()?;
-            let mut field_content = vec![0; field_len as usize];
-            c.read_exact(&mut field_content)?;
-            if field_type == 0xffff {
-                break;
-            }
+        let tlvs = read_tlvs(&mut c)?;
+        for (field_type, field_content) in tlvs {
             match field_type {
                 0x0000 => {
-                    //readExtData(dataInput);
-                    assert!(false);
+                    //readExtData(field_content);
+                    let mut c = Cursor::new(&field_content);
+                    println!("Ext: {:?}", read_tlvs(&mut c)?);
+                    assert_eq!(c.position(), field_content.len() as u64);
                 }
                 0x0001 => {
-                    let mut c = Cursor::new(field_content);
+                    let mut c = Cursor::new(&field_content);
                     let uuid = c.read_u32::<LittleEndian>()?;
                     group.uuid = uuid;
-                    assert_eq!(c.position(), field_len as u64);
+                    assert_eq!(c.position(), field_content.len() as u64);
                     println!("UUID: {}", uuid);
                 }
                 0x0002 => {
@@ -272,25 +306,25 @@ pub fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<()> {
                     );
                 }
                 0x0007 => {
-                    let mut c = Cursor::new(field_content);
+                    let mut c = Cursor::new(&field_content);
                     let icon = c.read_u32::<LittleEndian>()?;
                     group.icon = icon;
-                    assert_eq!(c.position(), field_len as u64);
+                    assert_eq!(c.position(), field_content.len() as u64);
                     println!("Icon: {}", icon);
                 }
                 0x0008 => {
                     //int level = readShort(dataInput);
                     //group.setParent(computeParentGroup(lastGroup, level));
-                    let mut c = Cursor::new(field_content);
+                    let mut c = Cursor::new(&field_content);
                     level = c.read_u16::<LittleEndian>()?;
-                    assert_eq!(c.position(), field_len as u64);
+                    assert_eq!(c.position(), field_content.len() as u64);
                     println!("Level: {}", level);
                 }
                 0x0009 => {
-                    let mut c = Cursor::new(field_content);
+                    let mut c = Cursor::new(&field_content);
                     let flags = c.read_u32::<LittleEndian>()?;
                     group.flags = flags;
-                    assert_eq!(c.position(), field_len as u64);
+                    assert_eq!(c.position(), field_content.len() as u64);
                     println!("Flags: 0x{:08x}", flags);
                 }
                 _ => {
@@ -332,14 +366,8 @@ pub fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<()> {
             binary_description: "".to_string(),
             binary_data: vec![],
         };
-        loop {
-            let field_type = c.read_u16::<LittleEndian>()?;
-            let field_len = c.read_u32::<LittleEndian>()?;
-            let mut field_content = vec![0; field_len as usize];
-            c.read_exact(&mut field_content)?;
-            if field_type == 0xffff {
-                break;
-            }
+        let tlvs = read_tlvs(&mut c)?;
+        for (field_type, field_content) in tlvs {
             //println!("TLV({}, {}): {:?}", field_type, field_len, field_content);
             match field_type {
                 0x0000 => {
@@ -355,17 +383,17 @@ pub fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<()> {
                     println!("UUID: {}", entry.uuid);
                 }
                 0x0002 => {
-                    let mut c = Cursor::new(field_content);
+                    let mut c = Cursor::new(&field_content);
                     let group_id = c.read_u32::<LittleEndian>()?;
                     entry.parent = group_id;
-                    assert_eq!(c.position(), field_len as u64);
+                    assert_eq!(c.position(), field_content.len() as u64);
                     println!("Group: {}", entry.parent);
                 }
                 0x0003 => {
-                    let mut c = Cursor::new(field_content);
+                    let mut c = Cursor::new(&field_content);
                     let icon = c.read_u32::<LittleEndian>()?;
                     entry.icon = icon;
-                    assert_eq!(c.position(), field_len as u64);
+                    assert_eq!(c.position(), field_content.len() as u64);
                     println!("Icon: {}", entry.icon);
                 }
                 0x0004 => {
