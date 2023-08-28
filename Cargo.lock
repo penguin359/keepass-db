@@ -679,8 +679,6 @@ dependencies = [
  "sxd-xpath",
  "uuid",
  "xml-rs",
- "yaserde",
- "yaserde_derive",
 ]
 
 [[package]]
@@ -1577,24 +1575,3 @@ name = "xml-rs"
 version = "0.8.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a56c84a8ccd4258aed21c92f70c0f6dea75356b6892ae27c24139da456f9336"
-
-[[package]]
-name = "yaserde"
-version = "0.3.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe81055b36d926da70850a7c1a9bc72eff184659da29e008ce9f2af4bfee7c89"
-dependencies = [
- "log",
- "xml-rs",
-]
-
-[[package]]
-name = "yaserde_derive"
-version = "0.3.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5fcdf088bb87971689cf7aef14b123c5c85ca8d71267985090369e5eab16a514"
-dependencies = [
- "proc-macro2 1.0.66",
- "quote 1.0.31",
- "syn 1.0.91",
-]

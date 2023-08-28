@@ -19,10 +19,6 @@ extern crate num_derive;
 extern crate clap;
 extern crate rand;
 extern crate xml;
-extern crate yaserde;
-
-#[macro_use]
-extern crate yaserde_derive;
 
 use std::collections::VecDeque;
 use std::collections::{BTreeMap, HashMap};
@@ -67,7 +63,6 @@ use xml::attribute::OwnedAttribute;
 use xml::name::OwnedName;
 use xml::reader::{EventReader, ParserConfig, XmlEvent};
 use xml::writer::EventWriter;
-use yaserde::{YaDeserialize, YaSerialize};
 
 use kdbx_derive::{KdbxParse, KdbxSerialize};
 
@@ -1528,11 +1523,11 @@ struct Group {
     icon_id: u32,
     times: Times,
     is_expanded: bool,
-    //<DefaultAutoTypeSequence/>
-    //_enable_auto_type: String,
-    //_enable_searching: String,
+    // TODO <DefaultAutoTypeSequence/>
+    // TODO _enable_auto_type: String,
+    // TODO _enable_searching: String,
     last_top_visible_entry: Uuid,
-    //custom_data: CustomData,
+    // TODO custom_data: CustomData,
     #[kdbx(flatten)]
     entry: Vec<Entry>,
     #[kdbx(flatten)]
@@ -1551,7 +1546,7 @@ struct Entry {
     override_url: String,
     tags: String,
     times: Times,
-    // custom_data: CustomData,
+    // TODO custom_data: CustomData,
     #[kdbx(flatten)]
     string: Vec<ProtectedString>,
     history: Option<Vec<Entry>>,
@@ -1791,54 +1786,6 @@ fn decode_meta_old<R: Read>(reader: &mut EventReader<R>) -> Result<Meta, String>
                 custom_data = decode_custom_data(reader, name, attributes)?;
                 println!("CustomData: {:?}", custom_data);
             }
-            /*
-                #[yaserde(rename = "DatabaseNameChanged")]
-                database_name_changed: String,
-                #[yaserde(rename = "DatabaseDescription")]
-                database_description: String,
-                #[yaserde(rename = "DatabaseDescriptionChanged")]
-                database_description_changed: String,
-                #[yaserde(rename = "DefaultUserName")]
-                default_user_name: String,
-                #[yaserde(rename = "DefaultUserNameChanged")]
-                default_user_name_changed: String,
-                #[yaserde(rename = "MaintenanceHistoryDays")]
-                maintenance_history_days: String,
-                #[yaserde(rename = "Color")]
-                color: String,
-                #[yaserde(rename = "MasterKeyChanged")]
-                master_key_changed: String,
-                #[yaserde(rename = "MasterKeyChangeRec")]
-                master_key_change_rec: String,
-                #[yaserde(rename = "MasterKeyChangeForce")]
-                master_key_change_force: String,
-                #[yaserde(rename = "MemoryProtection")]
-                memory_protection: MemoryProtection,
-                #[yaserde(rename = "CustomIcons")]
-                custom_icons: String,
-                #[yaserde(rename = "RecycleBinEnabled")]
-                recycle_bin_enabled: String,
-                #[yaserde(rename = "RecycleBinUUID")]
-                recycle_bin_uuid: Option<String>,
-                #[yaserde(rename = "RecycleBinChanged")]
-                recycle_bin_changed: String,
-                #[yaserde(rename = "EntryTemplatesGroup")]
-                entry_templates_group: String,
-                #[yaserde(rename = "EntryTemplatesGroupChanged")]
-                entry_templates_group_changed: String,
-                #[yaserde(rename = "LastSelectedGroup")]
-                last_selected_group: String,
-                #[yaserde(rename = "LastTopVisibleGroup")]
-                last_top_visible_group: String,
-                #[yaserde(rename = "HistoryMaxItems")]
-                history_max_items: String,
-                #[yaserde(rename = "HistoryMaxSize")]
-                history_max_size: String,
-                #[yaserde(rename = "SettingsChanged")]
-                settings_changed: KdbDate,
-                #[yaserde(rename = "CustomData")]
-                custom_data: CustomData,
-            */
             XmlEvent::StartElement { name, .. } => {
                 elements.push(name);
             }
@@ -3059,366 +3006,6 @@ pub fn lib_main(filename: &str, key_file: Option<&str>) -> io::Result<()> {
             _ => {}
         }
     }
-
-    #[derive(Debug, YaSerialize, YaDeserialize, PartialEq)]
-    struct KeePassFile {
-        #[yaserde(rename = "Meta")]
-        meta: Meta,
-        #[yaserde(rename = "Root")]
-        root: Vec<Group>,
-    }
-
-    #[derive(Debug, Default, PartialEq)]
-    struct CustomData(HashMap<String, String>);
-
-    impl YaDeserialize for CustomData {
-        fn deserialize<R: Read>(reader: &mut yaserde::de::Deserializer<R>) -> Result<Self, String> {
-            let _name = match reader.next_event()? {
-                XmlEvent::StartElement { name, .. } => name,
-                _ => {
-                    return Err("No element next".to_string());
-                }
-            };
-            println!("Starting event");
-
-            let mut data = HashMap::new();
-
-            loop {
-                //println!("Event: {:?}", reader.next_event());
-                let next = reader.peek()?;
-                match next {
-                    XmlEvent::EndElement { .. } => return Ok(CustomData(data)),
-                    _ => {}
-                }
-                match dbg!(reader.next_event()?) {
-                    XmlEvent::StartDocument { .. } => {
-                        return Err("Malformed XML document".to_string());
-                    }
-                    XmlEvent::EndDocument => {
-                        return Err("Malformed XML document".to_string());
-                    }
-                    XmlEvent::StartElement { name, .. } if name.local_name == "Item" => {
-                        let mut key = String::new();
-                        let mut value = String::new();
-                        loop {
-                            match reader.next_event()? {
-                                XmlEvent::StartElement { name, .. } if name.local_name == "Key" => {
-                                    loop {
-                                        match reader.next_event()? {
-                                            XmlEvent::Characters(k) => {
-                                                key = k;
-                                            }
-                                            XmlEvent::EndElement { name }
-                                                if name.local_name == "Key" =>
-                                            {
-                                                break;
-                                            }
-                                            XmlEvent::EndElement { .. } => {
-                                                return Err("Malformed XML document".to_string());
-                                            }
-                                            _ => {
-                                                panic!("Bad document parsing");
-                                            }
-                                        }
-                                    }
-                                }
-                                XmlEvent::StartElement { name, .. }
-                                    if name.local_name == "Value" =>
-                                {
-                                    loop {
-                                        match reader.next_event()? {
-                                            XmlEvent::Characters(k) => {
-                                                value = k;
-                                            }
-                                            XmlEvent::EndElement { name }
-                                                if name.local_name == "Value" =>
-                                            {
-                                                break;
-                                            }
-                                            XmlEvent::EndElement { .. } => {
-                                                return Err("Malformed XML document".to_string());
-                                            }
-                                            _ => {
-                                                panic!("Bad document parsing");
-                                            }
-                                        }
-                                    }
-                                }
-                                XmlEvent::StartElement { name, .. }
-                                    if name.local_name == "LastModificationTime" =>
-                                {
-                                    loop {
-                                        match reader.next_event()? {
-                                            XmlEvent::Characters(_k) => {
-                                                //value = k;
-                                            }
-                                            XmlEvent::EndElement { name }
-                                                if name.local_name == "LastModificationTime" =>
-                                            {
-                                                break;
-                                            }
-                                            XmlEvent::EndElement { .. } => {
-                                                return Err("Malformed XML document".to_string());
-                                            }
-                                            _ => {
-                                                panic!("Bad document parsing");
-                                            }
-                                        }
-                                    }
-                                }
-                                XmlEvent::EndElement { name } if name.local_name == "Item" => {
-                                    data.insert(key, value);
-                                    break;
-                                }
-                                XmlEvent::EndElement { .. } => {
-                                    return Err("Malformed XML document".to_string());
-                                }
-                                _ => {
-                                    panic!("Bad document parsing");
-                                }
-                            }
-                        }
-                    }
-                    XmlEvent::StartElement { name: _, .. } => {
-                        // TODO Consume this
-                    }
-                    XmlEvent::EndElement { name } if name.local_name == "CustomData" => {
-                        break;
-                    }
-                    XmlEvent::EndElement { .. } => {
-                        return Err("Malformed XML document".to_string());
-                    }
-                    _ => {
-                        panic!("Bad document parsing");
-                    }
-                }
-            }
-            //Err("Fail De".to_string())
-            Ok(CustomData(data))
-        }
-    }
-
-    impl YaSerialize for CustomData {
-        fn serialize<W: Write>(
-            &self,
-            writer: &mut yaserde::ser::Serializer<W>,
-        ) -> Result<(), String> {
-            //Err("Fail Ser".to_string())
-            //writer.write(xml::writer::events::XmlEvent::comment("A comment"));
-            for (key, value) in &self.0 {
-                //writer.write(xml::writer::events::XmlEvent::comment("A comment"));
-                writer
-                    .write(xml::writer::events::XmlEvent::start_element("Item"))
-                    .map_err(|x| format!("{}", x))?;
-                writer
-                    .write(xml::writer::events::XmlEvent::start_element("Key"))
-                    .map_err(|x| format!("{}", x))?;
-                writer
-                    .write(xml::writer::events::XmlEvent::characters(key))
-                    .map_err(|x| format!("{}", x))?;
-                writer
-                    .write(xml::writer::events::XmlEvent::end_element())
-                    .map_err(|x| format!("{}", x))?;
-                writer
-                    .write(xml::writer::events::XmlEvent::start_element("Value"))
-                    .map_err(|x| format!("{}", x))?;
-                writer
-                    .write(xml::writer::events::XmlEvent::characters(value))
-                    .map_err(|x| format!("{}", x))?;
-                writer
-                    .write(xml::writer::events::XmlEvent::end_element())
-                    .map_err(|x| format!("{}", x))?;
-                writer
-                    .write(xml::writer::events::XmlEvent::end_element())
-                    .map_err(|x| format!("{}", x))?;
-            }
-            Ok(())
-        }
-    }
-
-    #[derive(Debug, PartialEq)]
-    struct KdbDate(DateTime<Local>);
-
-    impl Default for KdbDate {
-        fn default() -> Self {
-            KdbDate(Local::now())
-        }
-    }
-
-    impl YaDeserialize for KdbDate {
-        fn deserialize<R: Read>(reader: &mut yaserde::de::Deserializer<R>) -> Result<Self, String> {
-            reader.next_event()?;
-            let name = match reader.next_event()? {
-                //XmlEvent::StartElement { name, .. } => name,
-                XmlEvent::Characters(text) => text,
-                _ => "AAAAAAAAAAA=".to_string(),
-            };
-            //_ => { return Err("No element next".to_string()) }
-            println!("Decode: {:?}", name);
-            let timestamp = Cursor::new(decode(&name).expect("Valid base64"))
-                .read_i64::<LittleEndian>()
-                .unwrap()
-                - KDBX4_TIME_OFFSET;
-            let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
-            Ok(KdbDate(datetime))
-        }
-    }
-
-    impl YaSerialize for KdbDate {
-        fn serialize<W: Write>(
-            &self,
-            writer: &mut yaserde::ser::Serializer<W>,
-        ) -> Result<(), String> {
-            let mut data = vec![];
-            data.write_i64::<LittleEndian>(self.0.timestamp() + KDBX4_TIME_OFFSET)
-                .expect("to succeed");
-            //let datetime: DateTime<Local> = Local.timestamp(timestamp, 0);
-            //let timestamp = Cursor::new(decode(&name).expect("Valid base64")).read_i64::<LittleEndian>().unwrap() - KDBX4_TIME_OFFSET;
-            writer
-                .write(xml::writer::events::XmlEvent::start_element("CreationTime"))
-                .map_err(|x| format!("{}", x))?;
-            writer
-                .write(xml::writer::events::XmlEvent::characters(&encode(&data)))
-                .map_err(|x| format!("{}", x))?;
-            writer
-                .write(xml::writer::events::XmlEvent::end_element())
-                .map_err(|x| format!("{}", x))?;
-            Ok(())
-        }
-    }
-
-    #[derive(Debug, Default, YaSerialize, YaDeserialize, PartialEq)]
-    struct Meta {
-        #[yaserde(rename = "Generator")]
-        generator: String,
-        #[yaserde(rename = "DatabaseName")]
-        database_name: String,
-        #[yaserde(rename = "DatabaseNameChanged")]
-        database_name_changed: String,
-        #[yaserde(rename = "DatabaseDescription")]
-        database_description: String,
-        #[yaserde(rename = "DatabaseDescriptionChanged")]
-        database_description_changed: String,
-        #[yaserde(rename = "DefaultUserName")]
-        default_user_name: String,
-        #[yaserde(rename = "DefaultUserNameChanged")]
-        default_user_name_changed: String,
-        #[yaserde(rename = "MaintenanceHistoryDays")]
-        maintenance_history_days: String,
-        #[yaserde(rename = "Color")]
-        color: String,
-        #[yaserde(rename = "MasterKeyChanged")]
-        master_key_changed: String,
-        #[yaserde(rename = "MasterKeyChangeRec")]
-        master_key_change_rec: String,
-        #[yaserde(rename = "MasterKeyChangeForce")]
-        master_key_change_force: String,
-        #[yaserde(rename = "MemoryProtection")]
-        memory_protection: MemoryProtection,
-        #[yaserde(rename = "CustomIcons")]
-        custom_icons: String,
-        #[yaserde(rename = "RecycleBinEnabled")]
-        recycle_bin_enabled: String,
-        #[yaserde(rename = "RecycleBinUUID")]
-        recycle_bin_uuid: Option<String>,
-        #[yaserde(rename = "RecycleBinChanged")]
-        recycle_bin_changed: String,
-        #[yaserde(rename = "EntryTemplatesGroup")]
-        entry_templates_group: String,
-        #[yaserde(rename = "EntryTemplatesGroupChanged")]
-        entry_templates_group_changed: String,
-        #[yaserde(rename = "LastSelectedGroup")]
-        last_selected_group: String,
-        #[yaserde(rename = "LastTopVisibleGroup")]
-        last_top_visible_group: String,
-        #[yaserde(rename = "HistoryMaxItems")]
-        history_max_items: String,
-        #[yaserde(rename = "HistoryMaxSize")]
-        history_max_size: String,
-        #[yaserde(rename = "SettingsChanged")]
-        //settings_changed: KdbDate,
-        settings_changed: String,
-        #[yaserde(rename = "CustomData")]
-        custom_data: CustomData,
-    }
-
-    #[derive(Debug, Default, YaSerialize, YaDeserialize, PartialEq)]
-    struct Times {
-        #[yaserde(rename = "LastModificationTime")]
-        last_modification_time: String,
-        #[yaserde(rename = "CreationTime")]
-        creation_time: KdbDate,
-        #[yaserde(rename = "LastAccessTime")]
-        last_access_time: String,
-        #[yaserde(rename = "ExpiryTime")]
-        expiry_time: String,
-        #[yaserde(rename = "Expires")]
-        expires: String,
-        #[yaserde(rename = "UsageCount")]
-        usage_count: String,
-        #[yaserde(rename = "LocationChanged")]
-        location_changed: String,
-    }
-
-    #[derive(Debug, Default, YaSerialize, YaDeserialize, PartialEq)]
-    struct Group {
-        #[yaserde(rename = "UUID")]
-        uuid: String,
-        #[yaserde(rename = "Name")]
-        name: String,
-        #[yaserde(rename = "Notes")]
-        notes: String,
-        #[yaserde(rename = "IconID")]
-        icon_id: u32,
-        #[yaserde(rename = "Times")]
-        times: Times,
-        #[yaserde(rename = "IsExpanded")]
-        is_expanded: String,
-        //<DefaultAutoTypeSequence/>
-        #[yaserde(rename = "EnableAutoType")]
-        enable_auto_type: String,
-        #[yaserde(rename = "EnableSearching")]
-        enable_searching: String,
-        #[yaserde(rename = "LastTopVisibleEntry")]
-        last_top_visible_entry: String,
-        #[yaserde(rename = "CustomData")]
-        custom_data: CustomData,
-        //#[yaserde(rename = "Group")]
-        group: Vec<Group>,
-        #[yaserde(rename = "Entry")]
-        entry: Vec<Entry>,
-    }
-
-    #[derive(Debug, Default, YaSerialize, YaDeserialize, PartialEq)]
-    struct Entry {
-        #[yaserde(rename = "UUID")]
-        uuid: String,
-        #[yaserde(rename = "IconID")]
-        icon_id: u32,
-        #[yaserde(rename = "Times")]
-        times: Times,
-        #[yaserde(rename = "CustomData")]
-        custom_data: CustomData,
-    }
-
-    #[derive(Debug, Default, YaSerialize, YaDeserialize, PartialEq)]
-    #[yaserde(default)]
-    struct MemoryProtection {
-        #[yaserde(rename = "ProtectTitle")]
-        protect_title: String,
-        #[yaserde(rename = "ProtectUserName")]
-        protect_user_name: String,
-        #[yaserde(rename = "ProtectPassword")]
-        protect_password: String,
-        #[yaserde(rename = "ProtectUrl")]
-        protect_url: String,
-        #[yaserde(rename = "ProtectNotes")]
-        protect_notes: String,
-    }
-
-    let mut database: KeePassFile = yaserde::de::from_str(&contents).unwrap();
-    println!("Parsed: {:?}", database);
-    println!("XML: {:?}", yaserde::ser::to_string(&database).unwrap());
 
     Ok(())
 }

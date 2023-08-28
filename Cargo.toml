@@ -31,8 +31,6 @@ rand = "0.7.2"
 clap = "2.33.0"
 xml-rs = "0.8.0"
 serde_derive = "1.0.104"
-yaserde = "0.3.11"
-yaserde_derive = "0.3.11"
 kdbx_derive = { path = "kdbx_derive/" }
 num-derive = "0.4.0"
 num-traits = "0.2.16"
