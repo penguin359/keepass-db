@@ -1428,6 +1428,7 @@ struct Meta {
     master_key_changed: Option<DateTime<Utc>>,
     master_key_change_rec: i64,
     master_key_change_force: i64,
+    master_key_change_force_once: bool,
     memory_protection: MemoryProtection,
     custom_icons: String,
     recycle_bin_enabled: bool,
@@ -1574,9 +1575,23 @@ struct Entry {
 }
 
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
+pub struct DeletedObject {
+    #[kdbx(element = "UUID")]
+    uuid: Uuid,
+    deletion_time: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
+pub struct Root {
+    #[kdbx(flatten)]
+    group: Vec<Group>,
+    deleted_objects: Vec<DeletedObject>,
+}
+
+#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
 pub struct KeePassFile {
     meta: Meta,
-    root: Vec<Group>,
+    root: Root,
 }
 
 const KDBX_MAGIC: u32 = 0x9AA2D903;
