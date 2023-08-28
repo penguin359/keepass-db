@@ -293,7 +293,7 @@ fn derive_deserializer2(input: TokenStream) -> TokenStream {
                                 },
                             }
                         }
-                        println!(#big_name_debug, #mangled_name);
+                        //println!(#big_name_debug, #mangled_name);
                     }
                 }
             } else {
@@ -305,7 +305,7 @@ fn derive_deserializer2(input: TokenStream) -> TokenStream {
                             Some(v) => v,
                             None => <#inner_type as ::std::default::Default>::default(),
                         });
-                        println!(#big_name_debug, #mangled_name);
+                        //println!(#big_name_debug, #mangled_name);
                     }
                 }
             } else {
@@ -338,7 +338,7 @@ fn derive_deserializer2(input: TokenStream) -> TokenStream {
                                 },
                             }
                         }
-                        println!(#big_name_debug, #mangled_name);
+                        //println!(#big_name_debug, #mangled_name);
                     }
                 }
             }
@@ -352,7 +352,7 @@ fn derive_deserializer2(input: TokenStream) -> TokenStream {
                     quote! {
                         XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
                             #mangled_name = <#inner_type as KdbxParse<KdbxContext>>::parse(reader, name, attributes, context)?;
-                            println!(#big_name_debug, #mangled_name);
+                            //println!(#big_name_debug, #mangled_name);
                         }
                     }
                 }
@@ -364,7 +364,7 @@ fn derive_deserializer2(input: TokenStream) -> TokenStream {
                             Some(v) => v,
                             None => <#inner_type as ::std::default::Default>::default(),
                         };
-                        println!(#big_name_debug, #mangled_name);
+                        //println!(#big_name_debug, #mangled_name);
                     }
                 }
             }
@@ -387,8 +387,8 @@ fn derive_deserializer2(input: TokenStream) -> TokenStream {
                 #variables
                 while elements.len() > 0 {
                     let event = reader.next().map_err(|_|"")?;
-                    println!("Macro debug: {:?}", event);
-                    println!(#debug_string);
+                    //println!("Macro debug: {:?}", event);
+                    //println!(#debug_string);
                     match event {
                         XmlEvent::StartDocument { .. } => {
                             return Err("Malformed XML document".to_string());
@@ -508,7 +508,7 @@ fn derive_serializer2(input: TokenStream) -> TokenStream {
     let results = quote! {
         impl KdbxSerialize<KdbxContext> for #outer_type {
             fn serialize2<W: Write>(writer: &mut EventWriter<W>, value: #outer_type, context: &mut KdbxContext) -> Result<(), String> {
-                println!(#debug_string);
+                //println!(#debug_string);
                 #elements
                 Ok(())
             }
