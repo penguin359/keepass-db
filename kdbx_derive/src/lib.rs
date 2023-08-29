@@ -95,7 +95,11 @@ fn get_type(t: &Type) -> TypeCategory {
                         p.path.segments.last().unwrap().arguments
                     {
                         if let Some(syn::GenericArgument::Type(inner_type)) = args.args.first() {
-                            TypeCategory::Vec(inner_type)
+                            match inner_type {
+                                syn::Type::Path(ref p) if p.path.segments.last().map(|t| t.ident.to_string()) == Some("u8".to_string()) =>
+                                    TypeCategory::Basic(p.path.segments.last().unwrap().ident.clone()),
+                                _ => TypeCategory::Vec(inner_type),
+                            }
                         } else {
                             unimplemented!("Only support type arguments for Vec: {:#?}", args.args.first())
                         }

@@ -1414,6 +1414,13 @@ struct MemoryProtection {
 }
 
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
+struct Icon {
+    #[kdbx(element = "UUID")]
+    uuid: Uuid,
+    data: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
 struct Meta {
     generator: String,
     header_hash: Option<[u8; 32]>,
@@ -1431,7 +1438,7 @@ struct Meta {
     master_key_change_force: i64,
     master_key_change_force_once: bool,
     memory_protection: MemoryProtection,
-    custom_icons: String,
+    custom_icons: Vec<Icon>,
     recycle_bin_enabled: bool,
     #[kdbx(element = "RecycleBinUUID")]
     recycle_bin_uuid: Option<Uuid>,
@@ -1463,6 +1470,33 @@ impl<C> KdbxParse<C> for [u8; 32] {
 }
 
 impl<C> KdbxSerialize<C> for [u8; 32] {
+    fn serialize2<W: Write>(
+        writer: &mut EventWriter<W>,
+        value: Self,
+        _context: &mut C,
+    ) -> Result<(), String> {
+        encode_base64(writer, value)
+    }
+}
+
+impl<C> KdbxParse<C> for Vec<u8> {
+    fn parse<R: Read>(
+        reader: &mut EventReader<R>,
+        name: OwnedName,
+        attributes: Vec<OwnedAttribute>,
+        _context: &mut C,
+    ) -> Result<Option<Self>, String> {
+        //decode_optional_string(reader, name, attributes)
+        //Ok(decode_base64(reader, name, attributes)?.map(|v| Some(v.try_into().map_err(|_| "")?))?)
+        Ok(Some(
+            decode_base64(reader, name, attributes)?
+                .try_into()
+                .map_err(|_| "")?,
+        ))
+    }
+}
+
+impl<C> KdbxSerialize<C> for Vec<u8> {
     fn serialize2<W: Write>(
         writer: &mut EventWriter<W>,
         value: Self,
