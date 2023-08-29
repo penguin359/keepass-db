@@ -1,6 +1,7 @@
 use hex::FromHex;
 
 use chrono::offset::Utc;
+use rand::Rng;
 
 use super::*;
 

@@ -79,11 +79,11 @@ fn decode_datetime_kdb1(content: &[u8]) -> NaiveDateTime {
     let month = raw & 0x0f;
     raw >>= 4;
     let year = raw & 0xfff;
-    NaiveDate::from_ymd(year as i32, month as u32, day as u32).and_hms(
+    NaiveDate::from_ymd_opt(year as i32, month as u32, day as u32).map(|d| d.and_hms_opt(
         hour as u32,
         minute as u32,
         second as u32,
-    )
+    )).unwrap().unwrap()
 }
 
 fn dump_group(database: &KdbDatabase, uuid: u32, depth: u16) {

@@ -56,7 +56,6 @@ use salsa20::Salsa20;
 use sxd_document::parser;
 use sxd_xpath::{evaluate_xpath, Context as XPathContext, Factory, Value};
 
-use rand::Rng;
 use xml::attribute::OwnedAttribute;
 use xml::name::OwnedName;
 use xml::reader::{EventReader, ParserConfig, XmlEvent};
@@ -225,7 +224,7 @@ fn save_tlvs<W: Write>(
         }
     }
     let bytes = buf.into_inner();
-    output.write(&bytes);
+    output.write(&bytes)?;
     Ok(bytes)
 }
 // }
@@ -374,7 +373,7 @@ fn save_map(map: &HashMap<String, MapValue>) -> Vec<u8> {
             .unwrap();
         output.write(&item_value).unwrap();
     }
-    output.write_u8(0); // End of dictionary
+    output.write_u8(0).unwrap(); // End of dictionary
     output.into_inner()
 }
 
@@ -587,12 +586,12 @@ impl<W: Write> Write for BlockWriter<W> {
 
 #[derive(Debug)]
 struct CryptoError {
-    error: ErrorStack,
+    _error: ErrorStack,
 }
 
 impl From<ErrorStack> for CryptoError {
     fn from(error: ErrorStack) -> Self {
-        Self { error }
+        Self { _error: error }
     }
 }
 
@@ -771,12 +770,12 @@ pub use kdf::*;
 pub const KDF_AES_KDBX3: Uuid = uuid!("c9d9f39a-628a-4460-bf74-0d08c18a4fea");
 const KDF_AES_KDBX4: Uuid = uuid!("7c02bb82-79a7-4ac0-927d-114a00648238");
 const KDF_ARGON2_D: Uuid = uuid!("ef636ddf-8c29-444b-91f7-a9a403e30a0c");
-const KDF_ARGON2_ID: Uuid = uuid!("9e298b19-56db-4773-b23d-fc3ec6f0a1e6");
+const _KDF_ARGON2_ID: Uuid = uuid!("9e298b19-56db-4773-b23d-fc3ec6f0a1e6");
 
-const CIPHER_ID_AES128_CBC: Uuid = uuid!("61ab05a1-9464-41c3-8d74-3a563df8dd35");
+const _CIPHER_ID_AES128_CBC: Uuid = uuid!("61ab05a1-9464-41c3-8d74-3a563df8dd35");
 const CIPHER_ID_AES256_CBC: Uuid = uuid!("31c1f2e6-bf71-4350-be58-05216afc5aff");
-const CIPHER_ID_TWOFISH_CBC: Uuid = uuid!("ad68f29f-576f-4bb9-a36a-d47af965346c");
-const CIPHER_ID_CHACHA20: Uuid = uuid!("d6038a2b-8b6f-4cb5-a524-339a31dbb59a");
+const _CIPHER_ID_TWOFISH_CBC: Uuid = uuid!("ad68f29f-576f-4bb9-a36a-d47af965346c");
+const _CIPHER_ID_CHACHA20: Uuid = uuid!("d6038a2b-8b6f-4cb5-a524-339a31dbb59a");
 
 fn consume_element<R: Read>(
     reader: &mut EventReader<R>,
@@ -961,7 +960,7 @@ impl<C> KdbxParse<C> for String {
         reader: &mut EventReader<R>,
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
-        context: &mut C,
+        _context: &mut C,
     ) -> Result<Option<Self>, String> {
         decode_optional_string(reader, name, attributes)
     }
@@ -975,7 +974,7 @@ impl<C> KdbxSerialize<C> for String {
     fn serialize2<W: Write>(
         writer: &mut EventWriter<W>,
         value: Self,
-        context: &mut C,
+        _context: &mut C,
     ) -> Result<(), String> {
         encode_string(writer, &value)
     }
@@ -1030,20 +1029,20 @@ fn encode_optional_bool<W: Write>(
     encode_optional_string(writer, value.map(|x| if x { "True" } else { "False" }))
 }
 
-fn decode_bool<R: Read>(
-    reader: &mut EventReader<R>,
-    name: OwnedName,
-    attributes: Vec<OwnedAttribute>,
-) -> Result<bool, String> {
-    decode_optional_bool(reader, name, attributes).map(|x| x.unwrap_or(false))
-}
+// fn decode_bool<R: Read>(
+//     reader: &mut EventReader<R>,
+//     name: OwnedName,
+//     attributes: Vec<OwnedAttribute>,
+// ) -> Result<bool, String> {
+//     decode_optional_bool(reader, name, attributes).map(|x| x.unwrap_or(false))
+// }
 
 impl<C> KdbxParse<C> for bool {
     fn parse<R: Read>(
         reader: &mut EventReader<R>,
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
-        context: &mut C,
+        _context: &mut C,
     ) -> Result<Option<Self>, String> {
         decode_optional_bool(reader, name, attributes)
     }
@@ -1057,7 +1056,7 @@ impl<C> KdbxSerialize<C> for bool {
     fn serialize2<W: Write>(
         writer: &mut EventWriter<W>,
         value: Self,
-        context: &mut C,
+        _context: &mut C,
     ) -> Result<(), String> {
         encode_bool(writer, value)
     }
@@ -1091,7 +1090,7 @@ impl<C> KdbxParse<C> for i64 {
         reader: &mut EventReader<R>,
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
-        context: &mut C,
+        _context: &mut C,
     ) -> Result<Option<Self>, String> {
         Ok(Some(decode_i64(reader, name, attributes)?))
     }
@@ -1105,7 +1104,7 @@ impl<C> KdbxSerialize<C> for i64 {
     fn serialize2<W: Write>(
         writer: &mut EventWriter<W>,
         value: Self,
-        context: &mut C,
+        _context: &mut C,
     ) -> Result<(), String> {
         encode_i64(writer, value)
     }
@@ -1116,7 +1115,7 @@ impl<C> KdbxParse<C> for i32 {
         reader: &mut EventReader<R>,
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
-        context: &mut C,
+        _context: &mut C,
     ) -> Result<Option<Self>, String> {
         //decode_i64(reader, name, attributes).map(|v| Some(v as i32))
         Ok(Some(decode_i64(reader, name, attributes)? as i32))
@@ -1127,7 +1126,7 @@ impl<C> KdbxSerialize<C> for i32 {
     fn serialize2<W: Write>(
         writer: &mut EventWriter<W>,
         value: Self,
-        context: &mut C,
+        _context: &mut C,
     ) -> Result<(), String> {
         encode_i64(writer, value as i64)
     }
@@ -1138,7 +1137,7 @@ impl<C> KdbxParse<C> for u32 {
         reader: &mut EventReader<R>,
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
-        context: &mut C,
+        _context: &mut C,
     ) -> Result<Option<Self>, String> {
         Ok(Some(decode_i64(reader, name, attributes)? as u32))
     }
@@ -1148,7 +1147,7 @@ impl<C> KdbxSerialize<C> for u32 {
     fn serialize2<W: Write>(
         writer: &mut EventWriter<W>,
         value: Self,
-        context: &mut C,
+        _context: &mut C,
     ) -> Result<(), String> {
         encode_i64(writer, value as i64)
     }
@@ -1165,13 +1164,13 @@ fn decode_optional_datetime<R: Read>(
     if is_new {
         decode_optional_string(reader, name, attributes).map(|x| {
             x.map(|y| {
-                Utc.timestamp(
+                Utc.timestamp_opt(
                     Cursor::new(decode(&y).expect("Valid base64"))
                         .read_i64::<LittleEndian>()
                         .unwrap()
                         - KDBX4_TIME_OFFSET,
                     0,
-                )
+                ).unwrap()
             })
         })
     } else {
@@ -1197,13 +1196,13 @@ fn encode_optional_datetime<W: Write>(
     )
 }
 
-fn decode_datetime<R: Read>(
-    reader: &mut EventReader<R>,
-    name: OwnedName,
-    attributes: Vec<OwnedAttribute>,
-) -> Result<DateTime<Utc>, String> {
-    decode_optional_datetime(reader, name, attributes).map(|x| x.expect("missing date"))
-}
+// fn decode_datetime<R: Read>(
+//     reader: &mut EventReader<R>,
+//     name: OwnedName,
+//     attributes: Vec<OwnedAttribute>,
+// ) -> Result<DateTime<Utc>, String> {
+//     decode_optional_datetime(reader, name, attributes).map(|x| x.expect("missing date"))
+// }
 
 //impl KdbxDefault for DateTime<Utc> {
 //    fn provide_default() -> Self {
@@ -1276,13 +1275,13 @@ fn encode_optional_uuid<W: Write>(
     encode_optional_string(writer, value.map(|x| encode(x.as_ref())).as_deref())
 }
 
-fn decode_uuid<R: Read>(
-    reader: &mut EventReader<R>,
-    name: OwnedName,
-    attributes: Vec<OwnedAttribute>,
-) -> Result<Uuid, String> {
-    decode_optional_uuid(reader, name, attributes).map(|x| x.unwrap_or_else(|| Uuid::default()))
-}
+// fn decode_uuid<R: Read>(
+//     reader: &mut EventReader<R>,
+//     name: OwnedName,
+//     attributes: Vec<OwnedAttribute>,
+// ) -> Result<Uuid, String> {
+//     decode_optional_uuid(reader, name, attributes).map(|x| x.unwrap_or_else(|| Uuid::default()))
+// }
 
 fn encode_uuid<W: Write>(writer: &mut EventWriter<W>, value: Uuid) -> Result<(), String> {
     encode_optional_uuid(writer, Some(value))
@@ -1293,7 +1292,7 @@ impl<C> KdbxParse<C> for Uuid {
         reader: &mut EventReader<R>,
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
-        context: &mut C,
+        _context: &mut C,
     ) -> Result<Option<Self>, String> {
         decode_optional_uuid(reader, name, attributes)
     }
@@ -1303,7 +1302,7 @@ impl<C> KdbxSerialize<C> for Uuid {
     fn serialize2<W: Write>(
         writer: &mut EventWriter<W>,
         value: Self,
-        context: &mut C,
+        _context: &mut C,
     ) -> Result<(), String> {
         encode_uuid(writer, value)
     }
@@ -1449,7 +1448,7 @@ impl<C> KdbxParse<C> for [u8; 32] {
         reader: &mut EventReader<R>,
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
-        context: &mut C,
+        _context: &mut C,
     ) -> Result<Option<Self>, String> {
         //decode_optional_string(reader, name, attributes)
         //Ok(decode_base64(reader, name, attributes)?.map(|v| Some(v.try_into().map_err(|_| "")?))?)
@@ -1465,7 +1464,7 @@ impl<C> KdbxSerialize<C> for [u8; 32] {
     fn serialize2<W: Write>(
         writer: &mut EventWriter<W>,
         value: Self,
-        context: &mut C,
+        _context: &mut C,
     ) -> Result<(), String> {
         encode_base64(writer, value)
     }
@@ -1476,7 +1475,7 @@ impl<C> KdbxParse<C> for HashMap<String, String> {
         reader: &mut EventReader<R>,
         name: OwnedName,
         attributes: Vec<OwnedAttribute>,
-        context: &mut C,
+        _context: &mut C,
     ) -> Result<Option<Self>, String> {
         Ok(Some(decode_custom_data(reader, name, attributes)?))
     }
@@ -1639,7 +1638,7 @@ pub fn save_file(doc: &KeePassFile, major_version: u16) -> io::Result<()> {
         TlvType::CompressionFlags.to_u8().unwrap(),
         vec![Compression::None.to_u32().unwrap().to_le_bytes().to_vec()],
     );
-    let mut start_stream = vec![0; 32]; // TODO Randomize this
+    let start_stream = vec![0; 32]; // TODO Randomize this
     if major_version < 4 {
         tlvs.insert(
             TlvType::TransformSeed.to_u8().unwrap(),
@@ -1721,7 +1720,7 @@ pub fn save_file(doc: &KeePassFile, major_version: u16) -> io::Result<()> {
         buf.write_all(&(output.len() as u32).to_le_bytes()).unwrap();
         buf.write_all(&output).unwrap();
         buf.write_all(&1u32.to_le_bytes()).unwrap();
-        let mut context = Context::new(&SHA256);
+        let context = Context::new(&SHA256);
         buf.write_all(&context.finish().as_ref().to_owned()).unwrap();
         //buf.write_all(&[0u8; 32]).unwrap();
         buf.write_all(&0u32.to_le_bytes()).unwrap();
@@ -1784,7 +1783,7 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassFile> {
     match magic_type {
         KDBX1_MAGIC_TYPE => {
             use kdb1::read_kdb1_header;
-            read_kdb1_header(&mut file, &key);
+            read_kdb1_header(&mut file, &key)?;
             return Ok(KeePassFile::default());
         }
         // KDBX2_BETA_MAGIC_TYPE => {
@@ -2182,7 +2181,7 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassFile> {
                 - KDBX4_TIME_OFFSET;
         //let naive = NaiveDateTime::from_timestamp(timestamp, 0);
         //let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
-        Local.timestamp(timestamp, 0)
+        Local.timestamp_opt(timestamp, 0).unwrap()
     };
     println!(
         "Database Name Changed: {}",
@@ -2291,7 +2290,7 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassFile> {
                     let timestamp = Cursor::new(decode(&t.string()).expect("Valid base64"))
                         .read_i64::<LittleEndian>()?
                         - KDBX4_TIME_OFFSET;
-                    Local.timestamp(timestamp, 0)
+                    Local.timestamp_opt(timestamp, 0).unwrap()
                 };
                 println!("Changed: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
                 println!("Password: {:?}", p.string());

@@ -4,7 +4,7 @@ use proc_macro2::{token_stream::IntoIter, Delimiter, Ident, Span, TokenStream, T
 use quote::{quote, format_ident};
 
 use change_case::pascal_case;
-use syn::{Attribute, Expr, ExprLit, Lit, Type, TypeArray, TypePath};
+use syn::{Attribute, Type};
 
 #[cfg(test)]
 mod tests {
@@ -127,7 +127,7 @@ fn get_type(t: &Type) -> TypeCategory {
         //    }
         //}
         //syn::Type::Array(x) => TypeCategory::Array(syn::Type::Array(x))
-        syn::Type::Array(x) => TypeCategory::Array(t),
+        syn::Type::Array(_) => TypeCategory::Array(t),
         _ => unimplemented!("Unsupported type: {:?}", t)
     }
 }
@@ -214,7 +214,7 @@ fn decode_struct(ast: &syn::DeriveInput) -> Vec<KdbxField> {
                             option: false,
                             flatten,
                         },
-                        TypeCategory::Array(inner_type) => KdbxField {
+                        TypeCategory::Array(_inner_type) => KdbxField {
                             name,
                             r#type: Ident::new("u8", Span::call_site()),
                             element_name: big_name,
@@ -262,12 +262,12 @@ fn derive_deserializer2(input: TokenStream) -> TokenStream {
         let name = &r.name;
         let mangled_name = format_ident!("field_{}", name);
         let my_type = &r.r#type;
-        let full_type = &r.full_type;
+        let _full_type = &r.full_type;
         let inner_type = &r.inner_type;
         // let big_name = pascal_case(&name.to_string());
         let big_name = &r.element_name;
         // eprintln!("Matching names: {big_name}");
-        let big_name_debug = format!("{big_name}: {{:?}}");
+        // let big_name_debug = format!("{big_name}: {{:?}}");
         let match_name = my_type.to_string();
         if r.array {
             if r.option {
@@ -298,7 +298,7 @@ fn derive_deserializer2(input: TokenStream) -> TokenStream {
                 }
             } else {
             if r.flatten {
-                let full_type = &r.full_type;
+                // let full_type = &r.full_type;
                 quote! {
                     XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
                         #mangled_name.push(match <#inner_type as KdbxParse<KdbxContext>>::parse(reader, name, attributes, context)? {
@@ -309,7 +309,7 @@ fn derive_deserializer2(input: TokenStream) -> TokenStream {
                     }
                 }
             } else {
-                let full_type = &r.full_type;
+                // let full_type = &r.full_type;
                 quote! {
                     XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
                         let mut elements = vec![name];
@@ -357,7 +357,7 @@ fn derive_deserializer2(input: TokenStream) -> TokenStream {
                     }
                 }
             } else {
-                let full_type = &r.full_type;
+                // let full_type = &r.full_type;
                 quote! {
                     XmlEvent::StartElement { name, attributes, .. } if name.local_name == #big_name => {
                         #mangled_name = match <#inner_type as KdbxParse<KdbxContext>>::parse(reader, name, attributes, context)? {
@@ -372,7 +372,7 @@ fn derive_deserializer2(input: TokenStream) -> TokenStream {
     }).collect();
     let _big_outer_type = pascal_case(&outer_type.to_string());
     // let _func_name = Ident::new(&format!("decode_{}", snake_case(&outer_type.to_string())), outer_type.span());
-    let debug_string = format!("Decode {}...", outer_type.to_string());
+    // let debug_string = format!("Decode {}...", outer_type.to_string());
     let names = impl_block.iter().map(|r| {
         let name = &r.name;
         let mangled_name = format_ident!("field_{}", name);
@@ -440,7 +440,7 @@ fn derive_serializer2(input: TokenStream) -> TokenStream {
         let name = &r.name;
         let my_type = &r.r#type;
         let inner_type = &r.inner_type;
-        let full_type = &r.full_type;
+        // let full_type = &r.full_type;
         //let my_func = Ident::new(&format!("encode_{}", my_type), outer_type.span());
         // let big_name = pascal_case(&name.to_string());
         let big_name = &r.element_name;
@@ -503,7 +503,7 @@ fn derive_serializer2(input: TokenStream) -> TokenStream {
     }).collect();
     let _big_outer_type = pascal_case(&outer_type.to_string());
     // let _func_name = Ident::new(&format!("encode_{}", snake_case(&outer_type.to_string())), outer_type.span());
-    let debug_string = format!("Encode {}...", outer_type.to_string());
+    // let debug_string = format!("Encode {}...", outer_type.to_string());
     // let names = impl_block.iter().map(|r| &r.name);
     let results = quote! {
         impl KdbxSerialize<KdbxContext> for #outer_type {

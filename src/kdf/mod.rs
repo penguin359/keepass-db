@@ -1,13 +1,12 @@
 use std::convert::TryInto;
 use std::io;
-use std::io::prelude::*;
 use std::io::Cursor;
 use std::collections::HashMap;
 
-use uuid::{Uuid};
-use openssl::symm::{decrypt, Cipher, Crypter, Mode};
-use ring::digest::{Context, SHA256, SHA512};
-use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
+use uuid::Uuid;
+use openssl::symm::{Cipher, Crypter, Mode};
+use ring::digest::{Context, SHA256};
+use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::{KDF_AES_KDBX3, MapValue};
 
