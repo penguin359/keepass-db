@@ -36,6 +36,7 @@ num-derive = "0.4.0"
 num-traits = "0.2.16"
 salsa20 = "0.10.2"
 hex-literal = "0.4.1"
+derive-getters = "0.3.0"
 
 [workspace]
 members = [ "kdbx_derive" ]

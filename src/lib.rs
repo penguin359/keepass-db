@@ -23,6 +23,7 @@ extern crate xml;
 use std::collections::VecDeque;
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryInto;
+use std::slice::Iter;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Cursor;
@@ -60,6 +61,7 @@ use xml::attribute::OwnedAttribute;
 use xml::name::OwnedName;
 use xml::reader::{EventReader, ParserConfig, XmlEvent};
 use xml::writer::EventWriter;
+use derive_getters::Getters;
 
 use kdbx_derive::{KdbxParse, KdbxSerialize};
 
@@ -1485,15 +1487,16 @@ impl<C> KdbxSerialize<C> for HashMap<String, String> {
     fn serialize2<W: Write>(
         writer: &mut EventWriter<W>,
         value: Self,
-        context: &mut C,
+        _context: &mut C,
     ) -> Result<(), String> {
         encode_custom_data(writer, value)
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, KdbxParse, KdbxSerialize)]
+#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
 //#[derive(Debug, Default, KdbxParse)]
-struct Times {
+#[cfg_attr(test, derive(PartialEq))]
+pub struct Times {
     creation_time: DateTime<Utc>,
     last_modification_time: DateTime<Utc>,
     last_access_time: DateTime<Utc>,
@@ -1503,15 +1506,15 @@ struct Times {
     location_changed: DateTime<Utc>,
 }
 
-//#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
-#[derive(Clone, Debug, Default, PartialEq, KdbxParse, KdbxSerialize)]
+#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
+#[cfg_attr(test, derive(PartialEq))]
 struct ProtectedString {
     key: String,
     value: String,
 }
 
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
-struct Group {
+pub struct Group {
     #[kdbx(element = "UUID")]
     uuid: Uuid,
     name: String,
@@ -1535,13 +1538,25 @@ struct Group {
     group: Vec<Group>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, KdbxParse, KdbxSerialize)]
+impl Group {
+    pub fn groups(&self) -> Iter<'_, Group> {
+        self.group.iter()
+    }
+
+    pub fn entries(&self) -> Iter<'_, Entry> {
+        self.entry.iter()
+    }
+}
+
+#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
+#[cfg_attr(test, derive(PartialEq))]
 struct Association {
     window: String,
     keystroke_sequence: String,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, KdbxParse, KdbxSerialize)]
+#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
+#[cfg_attr(test, derive(PartialEq))]
 struct AutoType {
     enabled: bool,
     data_transfer_obfuscation: i64,
@@ -1550,8 +1565,9 @@ struct AutoType {
     association: Vec<Association>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, KdbxParse, KdbxSerialize)]
-struct Entry {
+#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize, Getters)]
+#[cfg_attr(test, derive(PartialEq))]
+pub struct Entry {
     #[kdbx(element = "UUID")]
     uuid: String,
     #[kdbx(element = "IconID")]
@@ -1568,7 +1584,9 @@ struct Entry {
     times: Times,
     // TODO custom_data: CustomData,
     #[kdbx(flatten)]
+    #[getter(skip)]
     string: Vec<ProtectedString>,
+    #[getter(skip)]
     auto_type: AutoType,
     history: Option<Vec<Entry>>,
 }
@@ -1580,7 +1598,7 @@ pub struct DeletedObject {
     deletion_time: DateTime<Utc>,
 }
 
-#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
+#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize, Getters)]
 pub struct Root {
     #[kdbx(flatten)]
     group: Vec<Group>,
@@ -1591,6 +1609,15 @@ pub struct Root {
 pub struct KeePassFile {
     meta: Meta,
     root: Root,
+}
+
+impl KeePassFile {
+//    pub fn groups(&self) -> Iter<'_, Group> {
+//        self.root.group.iter()
+//    }
+    pub fn groups(&self) -> &Vec<Group> {
+        &self.root.group
+    }
 }
 
 const KDBX_MAGIC: u32 = 0x9AA2D903;
