@@ -1704,7 +1704,23 @@ pub struct Entry {
 
 impl Entry {
     pub fn title(&self) -> &str {
-        self.string.iter().find(|p| p.key == "Title").map(|p| p.value.as_str()).unwrap_or_else(|| "")
+        self.string.iter().find(|p| p.key == "Title").map(|p| p.value.as_str()).unwrap_or("")
+    }
+
+    pub fn username(&self) -> &str {
+        self.string.iter().find(|p| p.key == "UserName").map(|p| p.value.as_str()).unwrap_or("")
+    }
+
+    pub fn password(&self) -> &str {
+        self.string.iter().find(|p| p.key == "Password").map(|p| p.value.as_str()).unwrap_or("")
+    }
+
+    pub fn url(&self) -> &str {
+        self.string.iter().find(|p| p.key == "URL").map(|p| p.value.as_str()).unwrap_or("")
+    }
+
+    pub fn notes(&self) -> &str {
+        self.string.iter().find(|p| p.key == "Notes").map(|p| p.value.as_str()).unwrap_or("")
     }
 }
 
