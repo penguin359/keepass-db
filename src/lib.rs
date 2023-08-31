@@ -1547,7 +1547,7 @@ struct ProtectedString {
     value: String,
 }
 
-#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
+#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize, Getters)]
 pub struct Group {
     #[kdbx(element = "UUID")]
     uuid: Uuid,
@@ -1567,18 +1567,95 @@ pub struct Group {
     previous_parent_group: Option<Uuid>,
     tags: Option<String>,  // TODO Should be a Vec
     #[kdbx(flatten)]
+    #[getter(rename = "entries")]
     entry: Vec<Entry>,
     #[kdbx(flatten)]
+    #[getter(rename = "groups")]
     group: Vec<Group>,
 }
 
 impl Group {
-    pub fn groups(&self) -> Iter<'_, Group> {
-        self.group.iter()
+//    pub fn groups(&self) -> Iter<'_, Group> {
+//        self.group.iter()
+//    }
+//
+//    pub fn entries(&self) -> Iter<'_, Entry> {
+//        self.entry.iter()
+//    }
+
+    pub fn all_groups(&self) -> GroupIter {
+        return GroupIter {
+            first: true,
+            group: self,
+            children: self.group.iter(),
+            next_group: None,
+        }
     }
 
-    pub fn entries(&self) -> Iter<'_, Entry> {
-        self.entry.iter()
+    pub fn all_entries(&self) -> EntryIter {
+        let mut groups = self.all_groups();
+        return EntryIter {
+            entries: groups.next().map(|e| e.entries().iter()),
+            groups,
+        }
+    }
+}
+
+pub struct GroupIter<'a> {
+    first: bool,
+    group: &'a Group,
+    children: Iter<'a, Group>,
+    next_group: Option<Box<GroupIter<'a>>>,
+}
+
+impl<'a> Iterator for GroupIter<'a> {
+    type Item = &'a Group;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.first {
+            self.first = false;
+            self.next_group = self.children.next().map(|c| Box::new(c.all_groups()));
+            Some(self.group)
+        } else {
+            if let Some(ref mut child) = self.next_group {
+                if let Some(g) = child.next() {
+                    Some(g)
+                } else {
+                    self.next_group = self.children.next().map(|c| Box::new(c.all_groups()));
+                    if let Some(ref mut child) = self.next_group {
+                        if let Some(g) = child.next() {
+                            Some(g)
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                }
+            } else {
+                None
+            }
+        }
+    }
+}
+
+pub struct EntryIter<'a> {
+    entries: Option<Iter<'a, Entry>>,
+    groups: GroupIter<'a>,
+}
+
+impl<'a> Iterator for EntryIter<'a> {
+    type Item = &'a Entry;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(ref mut d) = self.entries {
+            if let Some(e) = d.next() {
+                return Some(e);
+            } else {
+                self.entries = self.groups.next().map(|e| e.entries().iter());
+            }
+        }
+        None
     }
 }
 
@@ -1623,6 +1700,12 @@ pub struct Entry {
     #[getter(skip)]
     auto_type: AutoType,
     history: Option<Vec<Entry>>,
+}
+
+impl Entry {
+    pub fn title(&self) -> &str {
+        self.string.iter().find(|p| p.key == "Title").map(|p| p.value.as_str()).unwrap_or_else(|| "")
+    }
 }
 
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
