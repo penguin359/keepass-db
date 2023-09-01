@@ -1,8 +1,16 @@
 [package]
 name = "kdbx"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Loren M. Lang <lorenl@north-winds.org>"]
+license = "MIT"
 edition = "2018"
+description = "KeePass password database"
+#readme = "README.md"
+#documentation = "https://docs.rs/kdbx"
+homepage = "https://github.north-winds.org/"
+repository = "https://github.com/penguin359/kdbx"
+keywords = ["password"]
+categories = ["cryptography"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
