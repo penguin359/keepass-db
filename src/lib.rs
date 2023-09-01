@@ -43,9 +43,10 @@ use hex_literal::hex;
 use openssl::error::ErrorStack;
 use uuid::{uuid, Uuid};
 //use borsh::de::BorshDeserialize;  // try_from_slice()
-use chacha20::stream_cipher::generic_array::GenericArray;
-use chacha20::stream_cipher::{NewStreamCipher, SyncStreamCipher};
+// use chacha20::stream_cipher::generic_array::GenericArray;
+// use chacha20::stream_cipher::{NewStreamCipher, SyncStreamCipher};
 use chacha20::ChaCha20;
+use generic_array::GenericArray;
 use chrono::prelude::*;
 use flate2::read::GzDecoder;
 use openssl::symm::{decrypt, encrypt, Cipher, Crypter, Mode};
