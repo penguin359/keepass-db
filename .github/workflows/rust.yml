@@ -11,16 +11,39 @@ env:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        build: [stable, beta, nightly, macos, windows, msrv]
+        include:
+          - build: stable
+            os: ubuntu-latest
+            rust: stable
+          - build: beta
+            os: ubuntu-latest
+            rust: beta
+          - build: nightly
+            os: ubuntu-latest
+            rust: nightly
+          - build: macos
+            os: macos-latest
+            rust: stable
+          - build: windows
+            os: windows-latest
+            rust: stable
+          - build: msrv
+            os: ubuntu-20.04
+            # sync MSRV with docs: guide/src/guide/installation.md and Cargo.toml
+            rust: 1.66.0
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         lfs: true
     - name: Build
-      run: cargo build --verbose
+      run: cargo +${{ matrix.rust }} build --verbose
     - name: Run tests
-      run: cargo test --verbose --all
+      run: cargo +${{ matrix.rust }} test --verbose --all
     - name: Test executable
-      run: KDBX_PASSWORD=asdf cargo run testdata/dummy-kdbx41.kdbx
+      run: KDBX_PASSWORD=asdf cargo +${{ matrix.rust }} run -- testdata/dummy-kdbx41.kdbx
