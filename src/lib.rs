@@ -67,6 +67,7 @@ use derive_getters::Getters;
 use kdbx_derive::{KdbxParse, KdbxSerialize};
 
 mod kdb1;
+mod protected_stream;
 
 //trait KdbxDefault: Default {
 //    fn provide_default() -> Self
@@ -2356,6 +2357,7 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassFile> {
         .build(".")
         .expect("Failed to compile XPath")
         .expect("Empty XPath expression");
+    let mut protected_offset = 0;
     match protected_nodes {
         Value::Nodeset(nodes) => {
             for entry in nodes.document_order() {
@@ -2374,7 +2376,7 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassFile> {
                 //let p_algo = unmake_u32(&inner_tlvs[&0x01u8]).unwrap();
                 //assert_eq!(p_algo, 3);
                 let p_key = &inner_tlvs[&0x02u8];
-                println!("p_key: {}", p_key.len());
+                println!("p_key: {p_key:02x?} ({})", p_key.len());
                 if cipher_opt.is_none() {
                     let cipher = if inner_cipher == 2 {
                         //let nonce = Vec::from_hex("E830094B97205D2A").unwrap();
@@ -2396,7 +2398,8 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassFile> {
                     cipher_opt = Some(cipher);
                 }
                 let cipher = cipher_opt.as_mut().unwrap();
-                println!("Protected Value Ciphertext: {:?}", p_ciphertext);
+                println!("Protected Value Ciphertext: {p_ciphertext:#04X?} (+{protected_offset})");
+                protected_offset += p_ciphertext.len();
                 cipher.apply_keystream(&mut p_ciphertext);
                 //let data = decrypt(Cipher::chacha20(), &p2_key[0..32], Some(&p2_key[32..32+12]), &p_ciphertext).unwrap();
                 let value = String::from_utf8(p_ciphertext)
