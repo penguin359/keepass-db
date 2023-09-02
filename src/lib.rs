@@ -2332,23 +2332,25 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassFile> {
     let database_name_changed_node =
         evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseNameChanged/text()")
             .expect("Missing database name changed");
-    let datetime: DateTime<Local> = if major_version == 3 {
-        DateTime::parse_from_rfc3339(&database_name_changed_node.string())
-            .expect("failed to parse timestamp")
-            .with_timezone(&Local)
+    let change_time = if database_name_changed_node.string() == "" {
+        "<missing>".to_owned()
     } else {
-        let timestamp =
-            Cursor::new(decode(&database_name_changed_node.string()).expect("Valid base64"))
-                .read_i64::<LittleEndian>()?
-                - KDBX4_TIME_OFFSET;
-        //let naive = NaiveDateTime::from_timestamp(timestamp, 0);
-        //let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
-        Local.timestamp_opt(timestamp, 0).unwrap()
+        let datetime: DateTime<Local> = if major_version <= 3 {
+            DateTime::parse_from_rfc3339(&database_name_changed_node.string())
+                .expect("failed to parse timestamp")
+                .with_timezone(&Local)
+        } else {
+            let timestamp =
+                Cursor::new(decode(&database_name_changed_node.string()).expect("Valid base64"))
+                    .read_i64::<LittleEndian>()?
+                    - KDBX4_TIME_OFFSET;
+            //let naive = NaiveDateTime::from_timestamp(timestamp, 0);
+            //let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+            Local.timestamp_opt(timestamp, 0).unwrap()
+        };
+        datetime.format("%Y-%m-%d %l:%M:%S %p %Z").to_string()
     };
-    println!(
-        "Database Name Changed: {}",
-        datetime.format("%Y-%m-%d %l:%M:%S %p %Z")
-    );
+    println!("Database Name Changed: {}", change_time);
 
     let xpath_context = XPathContext::new();
     let protected_nodes = evaluate_xpath(&document, "//Value[@Protected = 'True']/text()")
@@ -2365,7 +2367,8 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassFile> {
                     .evaluate(&xpath_context, entry)
                     .expect("Missing entry text");
                 println!("P: {:?}, ('{}')", p, p.string());
-                let inner_stream_cipher = &inner_tlvs[&1u8];
+                let default = vec![1, 0, 0, 0];
+                let inner_stream_cipher = &inner_tlvs.get(&1u8).unwrap_or(&default);  // Defaults to ARC4
                 if inner_stream_cipher.len() != 4 {
                     panic!("Invalid inner cipher");
                 }
