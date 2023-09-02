@@ -2311,7 +2311,17 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassFile> {
         }
     }
 
-    let mut cipher_opt = None;
+    let default = vec![1, 0, 0, 0];
+    let inner_stream_cipher = &inner_tlvs.get(&1u8).unwrap_or(&default);  // Defaults to ARC4
+    if inner_stream_cipher.len() != 4 {
+        panic!("Invalid inner cipher");
+    }
+    let inner_cipher_type = u32::from_le_bytes(inner_stream_cipher[..].try_into().unwrap());
+    println!("Inner Cipher: {inner_cipher_type}");
+    let p_key = &inner_tlvs[&0x02u8];
+    println!("p_key: {p_key:02x?} ({})", p_key.len());
+    let mut inner_cipher = protected_stream::new_stream(inner_cipher_type, p_key).expect("Unknown inner cipher");
+
     let mut xml_file = File::create("data.xml")?;
     let _ = xml_file.write(&contents.as_bytes());
     const KDBX4_TIME_OFFSET: i64 = 62135596800;
@@ -2367,43 +2377,10 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassFile> {
                     .evaluate(&xpath_context, entry)
                     .expect("Missing entry text");
                 println!("P: {:?}, ('{}')", p, p.string());
-                let default = vec![1, 0, 0, 0];
-                let inner_stream_cipher = &inner_tlvs.get(&1u8).unwrap_or(&default);  // Defaults to ARC4
-                if inner_stream_cipher.len() != 4 {
-                    panic!("Invalid inner cipher");
-                }
-                let inner_cipher = u32::from_le_bytes(inner_stream_cipher[..].try_into().unwrap());
-                println!("Inner Cipher: {inner_cipher}");
-                assert!(inner_cipher == 2 || inner_cipher == 3); // Salsa20 or ChaCha20
                 let mut p_ciphertext = decode(&p.string()).expect("Valid base64");
-                //let p_algo = unmake_u32(&inner_tlvs[&0x01u8]).unwrap();
-                //assert_eq!(p_algo, 3);
-                let p_key = &inner_tlvs[&0x02u8];
-                println!("p_key: {p_key:02x?} ({})", p_key.len());
-                if cipher_opt.is_none() {
-                    let cipher = if inner_cipher == 2 {
-                        //let nonce = Vec::from_hex("E830094B97205D2A").unwrap();
-                        let nonce = hex!("E830094B97205D2A");
-                        let mut p_context = Context::new(&SHA256);
-                        p_context.update(p_key);
-                        let p2_key = p_context.finish().as_ref().to_owned();
-                        let key = Salsa20_Key::from_slice(&p2_key[0..32]);
-                        CipherType::Salsa20(Salsa20::new(&key, &nonce.into()))
-                    } else {
-                        let mut p_context = Context::new(&SHA512);
-                        p_context.update(p_key);
-                        let p2_key = p_context.finish().as_ref().to_owned();
-                        println!("p2_key: {}", p2_key.len());
-                        let key = GenericArray::from_slice(&p2_key[0..32]);
-                        let nonce = GenericArray::from_slice(&p2_key[32..32 + 12]);
-                        CipherType::ChaCha20(ChaCha20::new(&key, &nonce))
-                    };
-                    cipher_opt = Some(cipher);
-                }
-                let cipher = cipher_opt.as_mut().unwrap();
                 println!("Protected Value Ciphertext: {p_ciphertext:#04X?} (+{protected_offset})");
                 protected_offset += p_ciphertext.len();
-                cipher.apply_keystream(&mut p_ciphertext);
+                inner_cipher.apply_keystream(&mut p_ciphertext);
                 //let data = decrypt(Cipher::chacha20(), &p2_key[0..32], Some(&p2_key[32..32+12]), &p_ciphertext).unwrap();
                 let value = String::from_utf8(p_ciphertext)
                     .unwrap_or("«Failed to decrypt value»".to_owned());

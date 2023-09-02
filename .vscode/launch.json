@@ -22,8 +22,9 @@
             //"args": ["dummy.kdbx"],
             //"args": ["testdata\\dummy-keepass2.08-gz.kdbx"],
             "args": [
-                "testdata/dummy-kdbx41.kdbx"
+                // "testdata/dummy-kdbx41.kdbx"
                 // "data-corrupt.kdbx"
+                "/home/lorenl/NewDatabase.kdbx"
             ],
             "env": {
                 "KDBX_PASSWORD": "asdf",

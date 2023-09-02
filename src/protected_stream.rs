@@ -13,14 +13,14 @@ use chacha20::ChaCha20;
 use chacha20::cipher::StreamCipherSeek;
 
 #[derive(FromPrimitive, ToPrimitive)]
-enum CipherType {
+pub enum CipherType {
     Null = 0,
     RC4 = 1,
     Salsa20 = 2,
     ChaCha20 = 3,
 }
 
-enum CipherValue {
+pub enum CipherValue {
     Null,
     Salsa20(Salsa20),
     ChaCha20(ChaCha20),
@@ -49,11 +49,11 @@ impl CipherValue {
 // }
 
 #[derive(Debug)]
-enum Error {
+pub enum Error {
     InvalidCipher(u32),
 }
 
-fn new_stream(cipher: u32, key: &[u8]) -> Result<CipherValue, Error> {
+pub fn new_stream(cipher: u32, key: &[u8]) -> Result<CipherValue, Error> {
     let r#type = CipherType::from_u32(cipher).ok_or(Error::InvalidCipher(cipher))?;
     Ok(match r#type {
         CipherType::Null => CipherValue::Null,
