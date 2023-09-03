@@ -41,6 +41,9 @@ jobs:
     - uses: actions/checkout@v3
       with:
         lfs: true
+    - uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
     - name: Build
       run: cargo +${{ matrix.rust }} build --verbose
     - name: Run tests
