@@ -1586,11 +1586,15 @@ pub enum ProtectedValue {
 use protected_stream::CipherValue;
 
 impl ProtectedValue {
-    pub fn unprotect(&self, _value: &mut CipherValue) -> Result<String, String> {
-        Ok(match self {
-            Self::Unprotected(ref v) => v.clone(),
-            Self::Protected(..) => "".to_string(),
-        })
+    pub fn unprotect(&self, cipher: &mut CipherValue) -> Result<String, String> {
+        match self {
+            Self::Unprotected(ref v) => Ok(v.clone()),
+            Self::Protected(offset, bytes) => {
+                let mut value = bytes.clone();
+                cipher.apply_keystream_pos(&mut value, *offset);
+                String::from_utf8(value).map_err(|_| "Invalid UTF-8".to_string())
+            }
+        }
     }
 }
 
@@ -2026,12 +2030,26 @@ pub fn save_file(doc: &KeePassFile, major_version: u16) -> io::Result<()> {
     Ok(())
 }
 
+#[derive(Default)]
+pub struct KeePassDoc {
+    pub file: KeePassFile,
+    pub cipher: CipherValue,
+}
+
+impl std::fmt::Debug for KeePassDoc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KeePassDoc")
+            .field("file", &self.file)
+            .finish()
+    }
+}
+
 /// This is a temporary solution until a proper API is ready
 /// ```
 /// assert!(true);
 /// ```
 /// Does it work?
-pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassFile> {
+pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassDoc> {
     let composite_key = key.composite_key();
 
     let mut file = File::open(filename)?;
@@ -2050,7 +2068,7 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassFile> {
         KDBX1_MAGIC_TYPE => {
             use kdb1::read_kdb1_header;
             read_kdb1_header(&mut file, &key)?;
-            return Ok(KeePassFile::default());
+            return Ok(KeePassDoc::default());
         }
         // KDBX2_BETA_MAGIC_TYPE => {
         //     // XXX Untested
@@ -2401,20 +2419,6 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassFile> {
         contents
     };
 
-    enum CipherType {
-        Salsa20(Salsa20),
-        ChaCha20(ChaCha20),
-    }
-
-    impl CipherType {
-        fn apply_keystream(&mut self, buf: &mut [u8]) {
-            match self {
-                Self::Salsa20(c) => c.apply_keystream(buf),
-                Self::ChaCha20(c) => c.apply_keystream(buf),
-            }
-        }
-    }
-
     let default = vec![1, 0, 0, 0];
     let inner_stream_cipher = &inner_tlvs.get(&1u8).unwrap_or(&default);  // Defaults to ARC4
     if inner_stream_cipher.len() != 4 {
@@ -2586,5 +2590,8 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassFile> {
         }
     }
 
-    Ok(my_doc.expect("Missing top-level element"))
+    Ok(KeePassDoc {
+        file: my_doc.expect("Missing top-level element"),
+        cipher: inner_cipher,
+    })
 }

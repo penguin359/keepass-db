@@ -52,6 +52,12 @@ impl CipherValue {
     }
 }
 
+impl Default for CipherValue {
+    fn default() -> Self {
+        Self::Null
+    }
+}
+
 #[derive(Debug)]
 pub enum Error {
     InvalidCipher(u32),

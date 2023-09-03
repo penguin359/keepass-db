@@ -49,7 +49,7 @@ fn main() -> io::Result<()> {
         key.set_keyfile(contents);
     }
 
-    let doc = lib_main(filename, &key)?;
+    let doc = lib_main(filename, &key)?.file;
     println!("KeePassFile: {:#?}", &doc);
     save_file(&doc, 4).unwrap();
     println!("Done!");
