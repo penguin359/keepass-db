@@ -1434,6 +1434,7 @@ struct Icon {
 }
 
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct Item {
     key: String,
     value: String,
