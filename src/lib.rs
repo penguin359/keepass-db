@@ -1429,7 +1429,16 @@ struct MemoryProtection {
 struct Icon {
     #[kdbx(element = "UUID")]
     uuid: Uuid,
+    last_modification_time: Option<DateTime<Utc>>,
     data: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
+pub struct Item {
+    key: String,
+    value: String,
+    // This field only seems to be present on Meta data, not password entries
+    last_modification_time: Option<DateTime<Utc>>,
 }
 
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
@@ -1461,7 +1470,8 @@ struct Meta {
     history_max_size: String,
     last_selected_group: String,
     last_top_visible_group: String,
-    custom_data: HashMap<String, String>,
+    //custom_data: HashMap<String, String>,
+    custom_data: Vec<Item>,
 }
 
 impl<C> KdbxParse<C> for [u8; 32] {
@@ -1705,10 +1715,13 @@ pub struct Entry {
     tags: String,
     previous_parent_group: Option<Uuid>,
     times: Times,
-    // TODO custom_data: CustomData,
+    custom_data: Vec<Item>,
     #[kdbx(flatten)]
     #[getter(skip)]
     string: Vec<ProtectedString>,
+    #[kdbx(flatten)]
+    #[getter(skip)]
+    binary: Vec<ProtectedString>,
     #[getter(skip)]
     auto_type: AutoType,
     history: Option<Vec<Entry>>,
