@@ -12,6 +12,8 @@ use generic_array::GenericArray;
 use chacha20::ChaCha20;
 use chacha20::cipher::StreamCipherSeek;
 
+mod arc4variant;
+
 #[derive(FromPrimitive, ToPrimitive)]
 pub enum CipherType {
     Null = 0,
@@ -57,7 +59,7 @@ pub fn new_stream(cipher: u32, key: &[u8]) -> Result<CipherValue, Error> {
     let r#type = CipherType::from_u32(cipher).ok_or(Error::InvalidCipher(cipher))?;
     Ok(match r#type {
         CipherType::Null => CipherValue::Null,
-        CipherType::RC4 => unimplemented!(),
+        CipherType::RC4 => CipherValue::Null,
         CipherType::Salsa20 => {
             let nonce = hex!("E830094B97205D2A");
             let mut context = Context::new(&SHA256);

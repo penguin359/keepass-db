@@ -69,6 +69,7 @@ use kdbx_derive::{KdbxParse, KdbxSerialize};
 mod kdb1;
 mod protected_stream;
 
+
 //trait KdbxDefault: Default {
 //    fn provide_default() -> Self
 //        {
@@ -2381,7 +2382,7 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassFile> {
                 println!("Protected Value Ciphertext: {p_ciphertext:#04X?} (+{protected_offset})");
                 protected_offset += p_ciphertext.len();
                 inner_cipher.apply_keystream(&mut p_ciphertext);
-                //let data = decrypt(Cipher::chacha20(), &p2_key[0..32], Some(&p2_key[32..32+12]), &p_ciphertext).unwrap();
+                println!("Protected Value Plaintext: {p_ciphertext:#04X?}");
                 let value = String::from_utf8(p_ciphertext)
                     .unwrap_or("«Failed to decrypt value»".to_owned());
                 println!("Protected Value: {:?}", &value);
