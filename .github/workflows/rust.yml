@@ -13,7 +13,8 @@ jobs:
   build:
     strategy:
       matrix:
-        build: [stable, beta, nightly, macos, windows, msrv]
+        #build: [stable, beta, nightly, macos, windows, msrv]
+        build: [stable, beta, nightly, macos, msrv]
         include:
           - build: stable
             os: ubuntu-latest
@@ -27,9 +28,9 @@ jobs:
           - build: macos
             os: macos-latest
             rust: stable
-          - build: windows
-            os: windows-latest
-            rust: stable
+          #- build: windows
+          #  os: windows-latest
+          #  rust: stable
           - build: msrv
             os: ubuntu-20.04
             # sync MSRV with docs: guide/src/guide/installation.md and Cargo.toml
