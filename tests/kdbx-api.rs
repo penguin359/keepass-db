@@ -31,5 +31,9 @@ fn main() -> Result<()> {
     assert_eq!(full_entry.notes().unprotect(stream).unwrap(), "A complete entry as much as possible.");
     let basic_entry = database.groups()[0].all_entries().filter(|e| e.title().unprotect(stream).unwrap() == "Basic").nth(0).expect("Fifth entry is missing");
     assert_eq!(basic_entry.username().unprotect(stream).unwrap(), "user");
+    let attach_entry = database.groups()[0].all_entries().filter(|e| e.title().unprotect(stream).unwrap() == "Obtuse").nth(0).expect("Attach entry is missing");
+    let (attach_name, attach_value) = attach_entry.get_binary(1);
+    assert_eq!(attach_name, "secret.bin", "Wrong attach name");
+    //assert_eq!(String::from_utf8_lossy(attach_value), "secret\n", "Wrong attach value");
     Ok(())
 }

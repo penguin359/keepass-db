@@ -1470,13 +1470,13 @@ struct Meta {
     recycle_bin_enabled: bool,
     #[kdbx(element = "RecycleBinUUID")]
     recycle_bin_uuid: Option<Uuid>,
-    recycle_bin_changed: String,
-    entry_templates_group: String,
-    entry_templates_group_changed: String,
-    history_max_items: String,
-    history_max_size: String,
-    last_selected_group: String,
-    last_top_visible_group: String,
+    recycle_bin_changed: DateTime<Utc>,
+    entry_templates_group: Uuid,  // TODO should be optional?
+    entry_templates_group_changed: DateTime<Utc>,
+    history_max_items: i32,  // -1 = unlimited
+    history_max_size: i64,  // -1 = unlimited
+    last_selected_group: Uuid,  // TODO should be optional?
+    last_top_visible_group: Uuid,  // TODO should be optional?
     //custom_data: HashMap<String, String>,
     custom_data: Vec<Item>,
 }
@@ -1654,6 +1654,68 @@ impl<C> KdbxSerialize<C> for ProtectedValue {
     }
 }
 
+#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
+#[cfg_attr(test, derive(PartialEq))]
+struct ProtectedBinary {
+    key: String,
+    value: BinaryRef,
+}
+
+#[derive(Clone, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+struct BinaryRef(Vec<u8>);
+
+impl BinaryRef {
+}
+
+impl Default for BinaryRef {
+    fn default() -> Self {
+        Self(vec![])
+    }
+}
+
+impl KdbxParse<KdbxContext> for BinaryRef {
+    fn parse<R: Read>(
+        reader: &mut EventReader<R>,
+        name: OwnedName,
+        attributes: Vec<OwnedAttribute>,
+        context: &mut KdbxContext,
+    ) -> Result<Option<Self>, String> {
+        use std::str::FromStr;
+        let id = attributes.iter().filter(|a| a.name.local_name == "Ref").last().and_then(|v| usize::from_str(v.value.as_str()).ok()).unwrap_or(0);
+        loop {
+            let event = reader.next().unwrap();
+            match event {
+                XmlEvent::StartDocument { .. } => {
+                    return Err("Malformed XML document".to_string());
+                }
+                XmlEvent::EndDocument { .. } => {
+                    return Err("Malformed XML document".to_string());
+                }
+                XmlEvent::StartElement { .. } => {
+                    reader.skip();
+                }
+                XmlEvent::EndElement { .. } => {
+                    return Ok(Some(Self(context.binaries.get(id).map(|v| v.clone()).unwrap_or_else(|| vec![]))));
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
+impl<C> KdbxSerialize<C> for BinaryRef {
+    fn serialize2<W: Write>(
+        writer: &mut EventWriter<W>,
+        value: Self,
+        _context: &mut C,
+    ) -> Result<(), String> {
+        //encode_string(writer, &value)
+        Ok(())
+    }
+}
+
+
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize, Getters)]
 pub struct Group {
     #[kdbx(element = "UUID")]
@@ -1787,7 +1849,7 @@ struct AutoType {
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Entry {
     #[kdbx(element = "UUID")]
-    uuid: String,
+    uuid: Uuid,
     #[kdbx(element = "IconID")]
     icon_id: u32,
     #[kdbx(element = "CustomIconUUID")]
@@ -1806,7 +1868,7 @@ pub struct Entry {
     string: Vec<ProtectedString>,
     #[kdbx(flatten)]
     #[getter(skip)]
-    binary: Vec<ProtectedString>,
+    binary: Vec<ProtectedBinary>,
     #[getter(skip)]
     auto_type: AutoType,
     history: Option<Vec<Entry>>,
@@ -1831,6 +1893,10 @@ impl Entry {
 
     pub fn notes(&self) -> ProtectedValue {
         self.string.iter().find(|p| p.key == "Notes").map(|p| p.value.clone()).unwrap_or(ProtectedValue::Unprotected("".to_string()))
+    }
+
+    pub fn get_binary(&self, index: usize) -> (&str, &[u8]) {
+        (self.binary[index].key.as_ref(), self.binary[index].value.0.as_ref())
     }
 }
 
@@ -2116,7 +2182,8 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassDoc> {
         }
     };
     let mut tlvs = HashMap::new();
-    let mut inner_tlvs = HashMap::new();
+    let mut inner_tlvs = BTreeMap::<u8, Vec<Vec<u8>>>::new();
+    inner_tlvs.insert(3u8, vec![]);
     loop {
         let tlv_type = file.read_u8()?;
         let tlv_len = if major_version == 4 {
@@ -2144,10 +2211,10 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassDoc> {
                 );
             }
             8 => {
-                inner_tlvs.insert(2u8, tlv_data);
+                inner_tlvs.insert(2u8, vec![tlv_data]);
             }
             10 => {
-                inner_tlvs.insert(1u8, tlv_data);
+                inner_tlvs.insert(1u8, vec![tlv_data]);
             }
             11 => {
                 custom_data2 = load_map(&tlv_data).unwrap();
@@ -2338,18 +2405,7 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassDoc> {
             Compression::None => Box::new(Cursor::new(data)),
         };
 
-        loop {
-            let tlv_type = gz.read_u8()?;
-            let tlv_len = gz.read_u32::<LittleEndian>()?;
-            let mut tlv_data = vec![0; tlv_len as usize];
-            gz.read_exact(&mut tlv_data)?;
-            if tlv_type == 0 {
-                break;
-            }
-            debug!("TLV({}, {}): {:?}", tlv_type, tlv_len, tlv_data);
-            inner_tlvs.insert(tlv_type, tlv_data);
-        }
-
+        inner_tlvs = load_tlvs(&mut gz, major_version)?.0;
         let mut contents = String::new();
         gz.read_to_string(&mut contents)?;
         contents
@@ -2419,14 +2475,14 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassDoc> {
         contents
     };
 
-    let default = vec![1, 0, 0, 0];
-    let inner_stream_cipher = &inner_tlvs.get(&1u8).unwrap_or(&default);  // Defaults to ARC4
+    let default = vec![vec![1, 0, 0, 0]];
+    let inner_stream_cipher = &inner_tlvs.get(&1u8).unwrap_or(&default)[0];  // Defaults to ARC4
     if inner_stream_cipher.len() != 4 {
         panic!("Invalid inner cipher");
     }
     let inner_cipher_type = u32::from_le_bytes(inner_stream_cipher[..].try_into().unwrap());
     println!("Inner Cipher: {inner_cipher_type}");
-    let p_key = &inner_tlvs[&0x02u8];
+    let p_key = &inner_tlvs[&0x02u8][0];
     println!("p_key: {p_key:02x?} ({})", p_key.len());
     let mut inner_cipher = protected_stream::new_stream(inner_cipher_type, p_key).expect("Unknown inner cipher");
 
@@ -2578,6 +2634,7 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassDoc> {
                 // TODO Check top-level tag name
                 let mut context = KdbxContext::default();
                 context.major_version = major_version;
+                context.binaries = inner_tlvs.remove(&3u8).unwrap();
                 my_doc = Some(KeePassFile::parse(&mut reader, name, attributes, &mut context)
                     .map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?
                     .unwrap());
