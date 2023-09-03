@@ -67,7 +67,7 @@ use derive_getters::Getters;
 use kdbx_derive::{KdbxParse, KdbxSerialize};
 
 mod kdb1;
-mod protected_stream;
+pub mod protected_stream;
 
 
 //trait KdbxDefault: Default {
@@ -1226,11 +1226,17 @@ fn encode_optional_datetime<W: Write>(
 
 struct KdbxContext {
     major_version: u16,
+    inner_cipher_position: usize,
+    binaries: Vec<Vec<u8>>,
 }
 
 impl Default for KdbxContext {
     fn default() -> Self {
-        KdbxContext { major_version: 4 }
+        KdbxContext {
+            major_version: 4,
+            inner_cipher_position: 0,
+            binaries: vec![],
+        }
     }
 }
 
@@ -1567,7 +1573,81 @@ pub struct Times {
 #[cfg_attr(test, derive(PartialEq))]
 struct ProtectedString {
     key: String,
-    value: String,
+    value: ProtectedValue,
+}
+
+#[derive(Clone, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub enum ProtectedValue {
+    Unprotected(String),
+    Protected(usize, Vec<u8>),
+}
+
+use protected_stream::CipherValue;
+
+impl ProtectedValue {
+    pub fn unprotect(&self, _value: &mut CipherValue) -> Result<String, String> {
+        Ok(match self {
+            Self::Unprotected(ref v) => v.clone(),
+            Self::Protected(..) => "".to_string(),
+        })
+    }
+}
+
+impl Default for ProtectedValue {
+    fn default() -> Self {
+        Self::Unprotected("".to_string())
+    }
+}
+
+impl KdbxParse<KdbxContext> for ProtectedValue {
+    fn parse<R: Read>(
+        reader: &mut EventReader<R>,
+        name: OwnedName,
+        attributes: Vec<OwnedAttribute>,
+        context: &mut KdbxContext,
+    ) -> Result<Option<Self>, String> {
+        let protected = attributes.iter().filter(|a| a.name.local_name == "Protected").last().map(|v| v.value.to_ascii_lowercase() == "true").unwrap_or(false);
+        if protected {
+            decode_optional_base64(reader, name, attributes).map(|o| o.map(|v| { let offset = context.inner_cipher_position; context.inner_cipher_position += v.len(); Self::Protected(offset, v)}))
+        } else {
+            decode_optional_string(reader, name, attributes).map(|o| o.map(|v| Self::Unprotected(v)))
+        }
+//        loop {
+//            let event = reader.next().unwrap();
+//            match event {
+//                XmlEvent::StartDocument { .. } => {
+//                    println!("Start");
+//                }
+//                XmlEvent::StartElement {
+//                    name, attributes, ..
+//                } => {
+//                    // TODO Check top-level tag name
+//                    let mut context = KdbxContext::default();
+//                    context.major_version = major_version;
+//                    my_doc = Some(KeePassFile::parse(&mut reader, name, attributes, &mut context)
+//                        .map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?
+//                        .unwrap());
+//                }
+//                XmlEvent::EndDocument => {
+//                    println!("End");
+//                    break;
+//                }
+//                _ => {}
+//            }
+//        }
+    }
+}
+
+impl<C> KdbxSerialize<C> for ProtectedValue {
+    fn serialize2<W: Write>(
+        writer: &mut EventWriter<W>,
+        value: Self,
+        _context: &mut C,
+    ) -> Result<(), String> {
+        //encode_string(writer, &value)
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize, Getters)]
@@ -1729,24 +1809,24 @@ pub struct Entry {
 }
 
 impl Entry {
-    pub fn title(&self) -> &str {
-        self.string.iter().find(|p| p.key == "Title").map(|p| p.value.as_str()).unwrap_or("")
+    pub fn title(&self) -> ProtectedValue {
+        self.string.iter().find(|p| p.key == "Title").map(|p| p.value.clone()).unwrap_or(ProtectedValue::Unprotected("".to_string()))
     }
 
-    pub fn username(&self) -> &str {
-        self.string.iter().find(|p| p.key == "UserName").map(|p| p.value.as_str()).unwrap_or("")
+    pub fn username(&self) -> ProtectedValue {
+        self.string.iter().find(|p| p.key == "UserName").map(|p| p.value.clone()).unwrap_or(ProtectedValue::Unprotected("".to_string()))
     }
 
-    pub fn password(&self) -> &str {
-        self.string.iter().find(|p| p.key == "Password").map(|p| p.value.as_str()).unwrap_or("")
+    pub fn password(&self) -> ProtectedValue {
+        self.string.iter().find(|p| p.key == "Password").map(|p| p.value.clone()).unwrap_or(ProtectedValue::Unprotected("".to_string()))
     }
 
-    pub fn url(&self) -> &str {
-        self.string.iter().find(|p| p.key == "URL").map(|p| p.value.as_str()).unwrap_or("")
+    pub fn url(&self) -> ProtectedValue {
+        self.string.iter().find(|p| p.key == "URL").map(|p| p.value.clone()).unwrap_or(ProtectedValue::Unprotected("".to_string()))
     }
 
-    pub fn notes(&self) -> &str {
-        self.string.iter().find(|p| p.key == "Notes").map(|p| p.value.as_str()).unwrap_or("")
+    pub fn notes(&self) -> ProtectedValue {
+        self.string.iter().find(|p| p.key == "Notes").map(|p| p.value.clone()).unwrap_or(ProtectedValue::Unprotected("".to_string()))
     }
 }
 
