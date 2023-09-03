@@ -1181,9 +1181,18 @@ fn decode_optional_datetime<R: Read>(
     } else {
         decode_optional_string(reader, name, attributes).map(|x| {
             x.map(|y| {
-                DateTime::parse_from_rfc3339(&y)
-                    .expect("failed to parse timestamp")
-                    .with_timezone(&Utc)
+                if let Some(suffix) = y.chars().last() {
+                    if suffix.to_ascii_uppercase() == 'Z' {
+                        DateTime::parse_from_rfc3339(&y)
+                            .expect(&format!("failed to parse timestamp: {}", y))
+                            .with_timezone(&Utc)
+                    } else {
+                        NaiveDateTime::parse_from_str(&y, "%Y-%m-%dT%H:%M:%S").expect("invalid local date").and_local_timezone(Local).earliest().unwrap()
+                            .with_timezone(&Utc)
+                    }
+                } else {
+                    unreachable!("This shouldn't be possible");
+                }
             })
         })
     }
@@ -2426,18 +2435,26 @@ pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassFile> {
                     .evaluate(&xpath_context, entry)
                     .expect("Missing entry password");
                 println!("Name: {}", n.string());
-                let datetime: DateTime<Local> = if major_version == 3 {
-                    DateTime::parse_from_rfc3339(&database_name_changed_node.string())
-                        .expect("failed to parse timestamp")
-                        .with_timezone(&Local)
+                let change_time = if database_name_changed_node.string() == "" {
+                    "<missing>".to_owned()
                 } else {
-                    println!("Inner: {:?}", &t.string());
-                    let timestamp = Cursor::new(decode(&t.string()).expect("Valid base64"))
-                        .read_i64::<LittleEndian>()?
-                        - KDBX4_TIME_OFFSET;
-                    Local.timestamp_opt(timestamp, 0).unwrap()
+                    let datetime: DateTime<Local> = if major_version <= 3 {
+                        DateTime::parse_from_rfc3339(&t.string())
+                            .expect("failed to parse timestamp")
+                            .with_timezone(&Local)
+                    } else {
+                        println!("Inner: {:?}", &t.string());
+                        let timestamp =
+                            Cursor::new(decode(&t.string()).expect("Valid base64"))
+                                .read_i64::<LittleEndian>()?
+                                - KDBX4_TIME_OFFSET;
+                        //let naive = NaiveDateTime::from_timestamp(timestamp, 0);
+                        //let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+                        Local.timestamp_opt(timestamp, 0).unwrap()
+                    };
+                    datetime.format("%Y-%m-%d %l:%M:%S %p %Z").to_string()
                 };
-                println!("Changed: {}", datetime.format("%Y-%m-%d %l:%M:%S %p %Z"));
+                println!("Changed: {}", change_time);
                 println!("Password: {:?}", p.string());
             }
         }

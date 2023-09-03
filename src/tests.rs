@@ -1297,6 +1297,27 @@ fn test_parsing_nil_datetime_kdbx3() {
 }
 
 #[test]
+fn test_parsing_valid_datetime_kdbx1() {
+    // This is an older format from Alpha/Beta KeePass releases
+    let mut reader = start_document("<root> <Field>2021-07-30T21:31:02</Field> </root>", "root");
+    let mut context = KdbxContext::default();
+    context.major_version = 1;
+    let actual = DateTimeTest::parse(
+        &mut reader,
+        OwnedName::local("root"),
+        vec![],
+        &mut context,
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    assert_eq!(
+        actual.field,
+        Local.with_ymd_and_hms(2021, 7, 30, 21, 31, 2).single().expect("valid local date")
+    );
+    end_document(reader);
+}
+
+#[test]
 fn test_parsing_valid_datetime_kdbx3() {
     let mut reader = start_document("<root> <Field>2021-07-30T21:31:02Z</Field> </root>", "root");
     let mut context = KdbxContext::default();
