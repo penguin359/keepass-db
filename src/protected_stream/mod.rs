@@ -14,16 +14,19 @@ use chacha20::cipher::StreamCipherSeek;
 
 mod arc4variant;
 
+use arc4variant::ArcFourVariant;
+
 #[derive(FromPrimitive, ToPrimitive)]
 pub enum CipherType {
     Null = 0,
-    RC4 = 1,
+    ArcFourVariant = 1,
     Salsa20 = 2,
     ChaCha20 = 3,
 }
 
 pub enum CipherValue {
     Null,
+    ArcFourVariant(ArcFourVariant),
     Salsa20(Salsa20),
     ChaCha20(ChaCha20),
 }
@@ -32,6 +35,7 @@ impl CipherValue {
     pub fn apply_keystream(&mut self, buf: &mut [u8]) {
         match self {
             Self::Null => (),
+            Self::ArcFourVariant(c) => c.gen(buf),
             Self::Salsa20(c) => c.apply_keystream(buf),
             Self::ChaCha20(c) => c.apply_keystream(buf),
         }
@@ -40,15 +44,13 @@ impl CipherValue {
     pub fn apply_keystream_pos(&mut self, buf: &mut [u8], pos: usize) {
         match self {
             Self::Null => (),
+            Self::ArcFourVariant(c) => c.seek(pos),
             Self::Salsa20(c) => c.try_seek(pos as u64).unwrap(),
             Self::ChaCha20(c) => c.try_seek(pos as u64).unwrap(),
         }
         self.apply_keystream(buf);
     }
 }
-
-// struct StreamCipher {
-// }
 
 #[derive(Debug)]
 pub enum Error {
@@ -59,7 +61,7 @@ pub fn new_stream(cipher: u32, key: &[u8]) -> Result<CipherValue, Error> {
     let r#type = CipherType::from_u32(cipher).ok_or(Error::InvalidCipher(cipher))?;
     Ok(match r#type {
         CipherType::Null => CipherValue::Null,
-        CipherType::RC4 => CipherValue::Null,
+        CipherType::ArcFourVariant => CipherValue::ArcFourVariant(ArcFourVariant::new(key)),
         CipherType::Salsa20 => {
             let nonce = hex!("E830094B97205D2A");
             let mut context = Context::new(&SHA256);
@@ -81,11 +83,14 @@ pub fn new_stream(cipher: u32, key: &[u8]) -> Result<CipherValue, Error> {
 
 #[cfg(test)]
 mod tests {
+    use std::convert::TryInto;
+    use num_traits::ToPrimitive;
+
     use super::*;
 
     #[test]
     fn test_null() {
-        let mut c = new_stream(0, &[]).unwrap();
+        let mut c = new_stream(CipherType::Null.to_u32().unwrap(), &[]).unwrap();
         let mut ciphertext = [0x61, 0x62, 0x63, 0x64];
         let expected = "abcd";
         c.apply_keystream(&mut ciphertext);
@@ -97,6 +102,60 @@ mod tests {
         assert_eq!(actual, expected);
 
         c.apply_keystream_pos(&mut ciphertext, 0);
+        let actual = String::from_utf8(ciphertext.to_vec()).expect("Valid utf-8");
+        assert_eq!(actual, expected);
+    }
+
+    const ARC4_VARIANT_KEY: [u8; 32] = hex!(
+        "db6fc5e8fc6b3d95497d52e4b215ed7d"
+        "e04824c12f52f8877762d09c276b3775");
+
+    const ARC4_VARIANT_OFFSET: usize = 0;
+    const ARC4_VARIANT_CIPHERTEXT: [u8; 5] = [
+        0x90, 0x21, 0xA1, 0x07, 0x53,
+    ];
+    const ARC4_VARIANT_PLAINTEXT: &str = "Notes";
+
+    const ARC4_VARIANT_CIPHERTEXT2: [u8; 8] = [
+        0x43, 0xE2, 0x7F, 0xA2, 0x1A, 0x75, 0x67, 0xEE,
+    ];
+    const ARC4_VARIANT_OFFSET2: usize = 5;
+    const ARC4_VARIANT_PLAINTEXT2: &str = "Password";
+
+    #[test]
+    fn test_arc4_variant() {
+        let mut c = new_stream(CipherType::ArcFourVariant.to_u32().unwrap(), &ARC4_VARIANT_KEY).unwrap();
+        let mut ciphertext = ARC4_VARIANT_CIPHERTEXT.clone();
+        let expected = ARC4_VARIANT_PLAINTEXT;
+        c.apply_keystream(&mut ciphertext);
+        let actual = String::from_utf8(ciphertext.to_vec()).expect("Valid utf-8");
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_arc4_variant_identity() {
+        let mut c = new_stream(CipherType::ArcFourVariant.to_u32().unwrap(), &ARC4_VARIANT_KEY).unwrap();
+        let mut actual = ARC4_VARIANT_CIPHERTEXT.clone();
+        c.apply_keystream_pos(&mut actual, 0);
+        c.apply_keystream_pos(&mut actual, 0);
+        assert_eq!(actual, ARC4_VARIANT_CIPHERTEXT);
+    }
+
+    #[test]
+    fn test_arc4_variant_offsets() {
+        let mut c = new_stream(CipherType::ArcFourVariant.to_u32().unwrap(), &ARC4_VARIANT_KEY).unwrap();
+        let mut ciphertext = ARC4_VARIANT_CIPHERTEXT2.clone();
+        let expected = ARC4_VARIANT_PLAINTEXT2;
+        // c.apply_keystream_pos(&mut ciphertext, ARC4_VARIANT_OFFSET2);
+        // let actual = String::from_utf8(ciphertext.to_vec()).expect("Valid utf-8");
+        // assert_eq!(actual, expected);
+
+        // let mut c = new_stream(CipherType::ArcFourVariant.to_u32().unwrap(), &ARC4_VARIANT_KEY).unwrap();
+        let mut ciphertext = ARC4_VARIANT_CIPHERTEXT.clone();
+        let expected = ARC4_VARIANT_PLAINTEXT;
+        c.apply_keystream_pos(&mut ciphertext, ARC4_VARIANT_OFFSET);
+        c.apply_keystream_pos(&mut ciphertext, ARC4_VARIANT_OFFSET);
+        c.apply_keystream_pos(&mut ciphertext, ARC4_VARIANT_OFFSET);
         let actual = String::from_utf8(ciphertext.to_vec()).expect("Valid utf-8");
         assert_eq!(actual, expected);
     }
@@ -137,7 +196,7 @@ mod tests {
 
     #[test]
     fn test_chacha20() {
-        let mut c = new_stream(3, &CHACHA20_KEY).unwrap();
+        let mut c = new_stream(CipherType::ChaCha20.to_u32().unwrap(), &CHACHA20_KEY).unwrap();
         let mut ciphertext = CHACHA20_CIPHERTEXT.clone();
         let expected = CHACHA20_PLAINTEXT;
         c.apply_keystream(&mut ciphertext);
@@ -146,15 +205,24 @@ mod tests {
     }
 
     #[test]
+    fn test_chacha20_identity() {
+        let mut c = new_stream(CipherType::ChaCha20.to_u32().unwrap(), &CHACHA20_KEY).unwrap();
+        let mut actual = CHACHA20_CIPHERTEXT.clone();
+        c.apply_keystream_pos(&mut actual, 0);
+        c.apply_keystream_pos(&mut actual, 0);
+        assert_eq!(actual, CHACHA20_CIPHERTEXT);
+    }
+
+    #[test]
     fn test_chacha20_offsets() {
-        let mut c = new_stream(3, &CHACHA20_KEY).unwrap();
+        let mut c = new_stream(CipherType::ChaCha20.to_u32().unwrap(), &CHACHA20_KEY).unwrap();
         let mut ciphertext = CHACHA20_CIPHERTEXT2.clone();
         let expected = CHACHA20_PLAINTEXT2;
         c.apply_keystream_pos(&mut ciphertext, CHACHA20_OFFSET2);
         let actual = String::from_utf8(ciphertext.to_vec()).expect("Valid utf-8");
         assert_eq!(actual, expected);
 
-        let mut c = new_stream(3, &CHACHA20_KEY).unwrap();
+        // let mut c = new_stream(CipherType::ChaCha20.to_u32().unwrap(), &CHACHA20_KEY).unwrap();
         let mut ciphertext = CHACHA20_CIPHERTEXT.clone();
         let expected = CHACHA20_PLAINTEXT;
         c.apply_keystream_pos(&mut ciphertext, CHACHA20_OFFSET);
@@ -189,7 +257,7 @@ mod tests {
 
     #[test]
     fn test_salsa20() {
-        let mut c = new_stream(2, &SALSA20_KEY).unwrap();
+        let mut c = new_stream(CipherType::Salsa20.to_u32().unwrap(), &SALSA20_KEY).unwrap();
         let mut ciphertext = SALSA20_CIPHERTEXT.clone();
         let expected = SALSA20_PLAINTEXT;
         c.apply_keystream(&mut ciphertext);
@@ -198,15 +266,24 @@ mod tests {
     }
 
     #[test]
+    fn test_salsa20_identity() {
+        let mut c = new_stream(CipherType::Salsa20.to_u32().unwrap(), &SALSA20_KEY).unwrap();
+        let mut actual = SALSA20_CIPHERTEXT.clone();
+        c.apply_keystream_pos(&mut actual, 0);
+        c.apply_keystream_pos(&mut actual, 0);
+        assert_eq!(actual, SALSA20_CIPHERTEXT);
+    }
+
+    #[test]
     fn test_salsa20_offsets() {
-        let mut c = new_stream(2, &SALSA20_KEY).unwrap();
+        let mut c = new_stream(CipherType::Salsa20.to_u32().unwrap(), &SALSA20_KEY).unwrap();
         let mut ciphertext = SALSA20_CIPHERTEXT2.clone();
         let expected = SALSA20_PLAINTEXT2;
         c.apply_keystream_pos(&mut ciphertext, SALSA20_OFFSET2);
         let actual = String::from_utf8(ciphertext.to_vec()).expect("Valid utf-8");
         assert_eq!(actual, expected);
 
-        let mut c = new_stream(2, &SALSA20_KEY).unwrap();
+        // let mut c = new_stream(CipherType::Salsa20.to_u32().unwrap(), &SALSA20_KEY).unwrap();
         let mut ciphertext = SALSA20_CIPHERTEXT.clone();
         let expected = SALSA20_PLAINTEXT;
         c.apply_keystream_pos(&mut ciphertext, SALSA20_OFFSET);

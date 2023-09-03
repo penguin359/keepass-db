@@ -1,19 +1,22 @@
-use std::num::Wrapping;
-use std::mem::swap;
+use std::{num::Wrapping, rc};
 
 pub struct ArcFourVariant {
+    initial_i: Wrapping<u8>,
+    initial_j: Wrapping<u8>,
+    initial: [Wrapping<u8>; 256],
     i: Wrapping<u8>,
     j: Wrapping<u8>,
-    initial: [Wrapping<u8>; 256],
     state:   [Wrapping<u8>; 256],
 }
 
 impl ArcFourVariant {
     pub fn new(key: &[u8]) -> Self {
         let mut rc4 = Self {
+            initial_i: Wrapping(0),
+            initial_j: Wrapping(0),
+            initial: [Wrapping(0); 256],
             i: Wrapping(0),
             j: Wrapping(0),
-            initial: [Wrapping(0); 256],
             state: [Wrapping(0); 256],
         };
 
@@ -30,7 +33,11 @@ impl ArcFourVariant {
         }
 
         rc4.gen(&mut [0; 512]);
+        rc4.initial = rc4.state;
+        rc4.initial_i = rc4.i;
+        rc4.initial_j = rc4.j;
         //eprintln!("State: {}, {}, {:#04x?}", rc4.i.0, rc4.j.0, rc4.state);
+        // eprintln!("First initial: {:#04X?}", rc4.initial);
 
         return rc4;
     }
@@ -46,6 +53,14 @@ impl ArcFourVariant {
             //eprintln!("K: {:#04X?}", t.0);
             buf[x] ^= t.0;
         }
+    }
+
+    pub fn seek(&mut self, pos: usize) {
+        // eprintln!("Initial: {:#04X?}", self.initial);
+        self.i = self.initial_i;
+        self.j = self.initial_j;
+        self.state = self.initial;
+        self.gen(&mut vec![0; pos]);
     }
 }
 
