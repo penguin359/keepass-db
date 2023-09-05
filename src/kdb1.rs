@@ -8,7 +8,7 @@ use std::vec::Vec;
 // use std::cell::RefCell;
 
 use byteorder::{LittleEndian, ReadBytesExt};
-use chrono::{DateTime, Local, NaiveDateTime, NaiveDate, TimeZone};
+use chrono::{DateTime, Local, Utc, NaiveDateTime, NaiveDate, TimeZone};
 use openssl::symm::{decrypt, Cipher};
 use uuid::Uuid;
 use rand::Rng;
@@ -16,6 +16,8 @@ use ring::digest::{Context, SHA256, SHA512};
 
 use crate::{make_u64, Key, unmake_u64_be};
 use crate::kdf::{transform_aes_kdf, KDF_PARAM_ROUNDS, KDF_PARAM_SALT};
+
+use super::{Group, Entry, Times, AutoType, ProtectedString, ProtectedValue, ProtectedBinary, BinaryRef, TITLE_FIELD, USER_NAME_FIELD, PASSWORD_FIELD, URL_FIELD, NOTES_FIELD};
 
 pub struct KdbGroup {
     //<'a> {
@@ -33,6 +35,36 @@ pub struct KdbGroup {
     pub entries: Vec<Uuid>,
 }
 
+impl From<KdbGroup> for Group {
+    fn from(value: KdbGroup) -> Self {
+        Group {
+            uuid: Uuid::nil(),
+            name: value.name,
+            notes: "".to_string(),
+            icon_id: value.icon,
+            custom_icon_uuid: None,
+            times: Times {
+                creation_time: value.creation_time.with_timezone(&Utc),
+                last_modification_time: value.modification_time.with_timezone(&Utc),
+                last_access_time: value.access_time.with_timezone(&Utc),
+                expiry_time: value.expiry_time.with_timezone(&Utc),
+                expires: false,  // TODO Needs to be detected from value above
+                usage_count: 0,
+                location_changed: value.modification_time.with_timezone(&Utc),  // TODO This the best choice?
+            },
+            is_expanded: true,
+            default_auto_type_sequence: "".to_string(),
+            enable_auto_type: true,
+            enable_searching: true,
+            last_top_visible_entry: Uuid::nil(),
+            previous_parent_group: None,
+            tags: None,
+            entry: vec![],
+            group: vec![],
+        }
+    }
+}
+
 pub struct KdbEntry {
     pub uuid: Uuid,
     pub parent: u32,
@@ -48,6 +80,69 @@ pub struct KdbEntry {
     pub expiry_time: DateTime<Local>,
     pub binary_description: String,
     pub binary_data: Vec<u8>,
+}
+
+impl From<KdbEntry> for Entry {
+    fn from(value: KdbEntry) -> Self {
+        Entry {
+            uuid: value.uuid,
+            icon_id: value.icon,
+            custom_icon_uuid: None,
+
+            foreground_color: "".to_string(),  // Should be None
+            background_color: "".to_string(),  // Should be None
+            override_url: "".to_string(),
+            quality_check: None,
+            tags: "".to_string(),
+            previous_parent_group: None,
+            times: Times {
+                creation_time: value.creation_time.with_timezone(&Utc),
+                last_modification_time: value.modification_time.with_timezone(&Utc),
+                last_access_time: value.access_time.with_timezone(&Utc),
+                expiry_time: value.expiry_time.with_timezone(&Utc),
+                expires: false,  // TODO Needs to be detected from value above
+                usage_count: 0,
+                location_changed: value.modification_time.with_timezone(&Utc),  // TODO This the best choice?
+            },
+            custom_data: vec![],
+            string: vec![
+                ProtectedString {
+                    key: TITLE_FIELD.to_string(),
+                    value: ProtectedValue::Unprotected(value.title),
+                },
+                ProtectedString {
+                    key: USER_NAME_FIELD.to_string(),
+                    value: ProtectedValue::Unprotected(value.username),
+                },
+                ProtectedString {
+                    key: PASSWORD_FIELD.to_string(),
+                    value: ProtectedValue::Unprotected(value.password),
+                },
+                ProtectedString {
+                    key: URL_FIELD.to_string(),
+                    value: ProtectedValue::Unprotected(value.url),
+                },
+                ProtectedString {
+                    //key: NOTES_FIELD.to_string(),
+                    key: URL_FIELD.to_string(),
+                    value: ProtectedValue::Unprotected(value.notes),
+                },
+            ],
+            binary: vec![
+                ProtectedBinary {
+                    key: value.binary_description,
+                    value: BinaryRef(value.binary_data),
+                },
+            ],
+            auto_type: AutoType {
+                enabled: false,
+                data_transfer_obfuscation: 0,
+                default_sequence: None,
+                association: vec![],
+            },
+            history: None,
+        }
+    }
 }
 
 pub struct KdbDatabase {

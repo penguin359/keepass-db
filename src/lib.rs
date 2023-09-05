@@ -1874,25 +1874,31 @@ pub struct Entry {
     history: Option<Vec<Entry>>,
 }
 
+const TITLE_FIELD: &str = "Title";
+const USER_NAME_FIELD: &str = "UserName";
+const PASSWORD_FIELD: &str = "Password";
+const URL_FIELD: &str = "URL";
+const NOTES_FIELD: &str = "Notes";
+
 impl Entry {
     pub fn title(&self) -> ProtectedValue {
-        self.string.iter().find(|p| p.key == "Title").map(|p| p.value.clone()).unwrap_or(ProtectedValue::Unprotected("".to_string()))
+        self.string.iter().find(|p| p.key == TITLE_FIELD).map(|p| p.value.clone()).unwrap_or(ProtectedValue::Unprotected("".to_string()))
     }
 
     pub fn username(&self) -> ProtectedValue {
-        self.string.iter().find(|p| p.key == "UserName").map(|p| p.value.clone()).unwrap_or(ProtectedValue::Unprotected("".to_string()))
+        self.string.iter().find(|p| p.key == USER_NAME_FIELD).map(|p| p.value.clone()).unwrap_or(ProtectedValue::Unprotected("".to_string()))
     }
 
     pub fn password(&self) -> ProtectedValue {
-        self.string.iter().find(|p| p.key == "Password").map(|p| p.value.clone()).unwrap_or(ProtectedValue::Unprotected("".to_string()))
+        self.string.iter().find(|p| p.key == PASSWORD_FIELD).map(|p| p.value.clone()).unwrap_or(ProtectedValue::Unprotected("".to_string()))
     }
 
     pub fn url(&self) -> ProtectedValue {
-        self.string.iter().find(|p| p.key == "URL").map(|p| p.value.clone()).unwrap_or(ProtectedValue::Unprotected("".to_string()))
+        self.string.iter().find(|p| p.key == URL_FIELD).map(|p| p.value.clone()).unwrap_or(ProtectedValue::Unprotected("".to_string()))
     }
 
     pub fn notes(&self) -> ProtectedValue {
-        self.string.iter().find(|p| p.key == "Notes").map(|p| p.value.clone()).unwrap_or(ProtectedValue::Unprotected("".to_string()))
+        self.string.iter().find(|p| p.key == NOTES_FIELD).map(|p| p.value.clone()).unwrap_or(ProtectedValue::Unprotected("".to_string()))
     }
 
     pub fn get_binary(&self, index: usize) -> (&str, &[u8]) {
