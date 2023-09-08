@@ -1076,6 +1076,7 @@ fn decode_optional_datetime<R: Read>(
                             .expect(&format!("failed to parse timestamp: {}", y))
                             .with_timezone(&Utc)
                     } else {
+                        // TODO Is this fragile? Seen failing intermittently
                         NaiveDateTime::parse_from_str(&y, "%Y-%m-%dT%H:%M:%S").expect("invalid local date").and_local_timezone(Local).earliest().unwrap()
                             .with_timezone(&Utc)
                     }

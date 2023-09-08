@@ -1,0 +1,4 @@
+Switch to more updated Argon2 library
+Randomize seeds on save
+Convert KDB1 to KDBX2
+Implement color decode

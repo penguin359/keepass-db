@@ -13,6 +13,7 @@ use openssl::symm::{decrypt, Cipher};
 use uuid::Uuid;
 use rand::Rng;
 use ring::digest::{Context, SHA256, SHA512};
+use derive_getters::Getters;
 
 use crate::Key;
 use crate::kdf::{transform_aes_kdf, KDF_PARAM_ROUNDS, KDF_PARAM_SALT};
@@ -20,8 +21,8 @@ use crate::utils::{make_u64, unmake_u64_be};
 
 use super::{Group, Entry, Times, AutoType, ProtectedString, ProtectedValue, ProtectedBinary, BinaryRef, TITLE_FIELD, USER_NAME_FIELD, PASSWORD_FIELD, URL_FIELD};
 
+#[derive(Getters)]
 pub struct KdbGroup {
-    //<'a> {
     pub uuid: u32,
     pub parent: u32,
     pub name: String,
@@ -31,9 +32,20 @@ pub struct KdbGroup {
     pub expiry_time: DateTime<Local>,
     pub icon: u32,
     pub flags: u32,
-    //pub groups: Vec<&'a KdbGroup>,
     pub groups: Vec<u32>,
     pub entries: Vec<Uuid>,
+}
+
+use std::iter::Iterator;
+use std::slice::Iter;
+impl KdbGroup {
+    fn iter_groups<'a>(&'a self, db: &'a KdbDatabase) -> impl Iterator<Item = &KdbGroup> + '_ {
+        self.groups.iter().map(move |id| &db.groups[id])
+    }
+
+    fn iter_entries<'a>(&'a self, db: &'a KdbDatabase) -> impl Iterator<Item = &KdbEntry> + '_ {
+        self.entries.iter().map(move |id| &db.entries[id])
+    }
 }
 
 impl From<KdbGroup> for Group {
@@ -66,6 +78,7 @@ impl From<KdbGroup> for Group {
     }
 }
 
+#[derive(Getters)]
 pub struct KdbEntry {
     pub uuid: Uuid,
     pub parent: u32,
@@ -147,8 +160,15 @@ impl From<KdbEntry> for Entry {
 }
 
 pub struct KdbDatabase {
+    pub root: u32,
     pub groups: HashMap<u32, KdbGroup>,
     pub entries: HashMap<Uuid, KdbEntry>,
+}
+
+impl KdbDatabase {
+    fn root(&self) -> &KdbGroup {
+        &self.groups[&self.root]
+    }
 }
 
 fn decode_string_kdb1(mut content: Vec<u8>) -> String {
@@ -209,30 +229,7 @@ fn read_tlvs<R: Read>(file: &mut R) -> io::Result<HashMap<u16, Vec<u8>>> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_read_tlvs() {
-        let mut buf = Cursor::new(vec![
-            1u8, 0,  // Type = 1
-            4, 0, 0, 0,  // Length = 4
-            0, 1, 2, 3,  // Value
-            2, 0,  // Type = 2
-            6, 0, 0, 0,  // Length = 6
-            0xa, 0xb, 0xc, 0xd, 0xe, 0xf,  // Value
-            0xff, 0xff,  // Type = End
-            0, 0, 0, 0,  // Length = 0
-        ]);
-        let tlvs = read_tlvs(&mut buf).expect("Error reading TLVs");
-        assert_eq!(tlvs.len(), 2);
-        assert_eq!(tlvs[&1u16], vec![0, 1, 2, 3]);
-        assert_eq!(tlvs[&2u16], vec![0xa, 0xb, 0xc, 0xd, 0xe, 0xf]);
-    }
-}
-
-pub fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<()> {
+pub fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<KdbDatabase> {
     let flags = file.read_u32::<LittleEndian>()?;
     let version = file.read_u32::<LittleEndian>()?;
     let mut master_seed = vec![0; 16];
@@ -579,10 +576,80 @@ pub fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<()> {
     }
 
     let database = KdbDatabase {
+        root: root_group_uuid,
         groups: all_groups,
         entries: all_entries,
     };
     dump_group(&database, root_group_uuid, 0);
 
-    Ok(())
+    Ok(database)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::fs::File;
+    use std::path::PathBuf;
+    use std::io::SeekFrom;
+
+    use crate::Key;
+
+    #[test]
+    fn test_read_tlvs() {
+        let mut buf = Cursor::new(vec![
+            1u8, 0,  // Type = 1
+            4, 0, 0, 0,  // Length = 4
+            0, 1, 2, 3,  // Value
+            2, 0,  // Type = 2
+            6, 0, 0, 0,  // Length = 6
+            0xa, 0xb, 0xc, 0xd, 0xe, 0xf,  // Value
+            0xff, 0xff,  // Type = End
+            0, 0, 0, 0,  // Length = 0
+        ]);
+        let tlvs = read_tlvs(&mut buf).expect("Error reading TLVs");
+        assert_eq!(tlvs.len(), 2);
+        assert_eq!(tlvs[&1u16], vec![0, 1, 2, 3]);
+        assert_eq!(tlvs[&2u16], vec![0xa, 0xb, 0xc, 0xd, 0xe, 0xf]);
+    }
+
+    #[test]
+    fn can_read_header() {
+        let filename = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("testdata").join("keepass-1.41.kdb");
+        let mut file = File::open(filename).expect("Failed to find test data file");
+        //let magic = file.read_u32::<LittleEndian>().unwrap();
+        //let magic_type = file.read_u32::<LittleEndian>().unwrap();
+        file.seek(SeekFrom::Start(8)).expect("Failed to seek");
+        let mut key = Key::new();
+        key.set_user_password("asdf");
+        let _db = read_kdb1_header(&mut file, &key).expect("Failed to parse KDB1 header");
+    }
+
+    #[test]
+    fn can_see_groups() {
+        let filename = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("testdata").join("keepass-1.41.kdb");
+        let mut file = File::open(filename).expect("Failed to find test data file");
+        //let magic = file.read_u32::<LittleEndian>().unwrap();
+        //let magic_type = file.read_u32::<LittleEndian>().unwrap();
+        file.seek(SeekFrom::Start(8)).expect("Failed to seek");
+        let mut key = Key::new();
+        key.set_user_password("asdf");
+        let db = read_kdb1_header(&mut file, &key).expect("Failed to parse KDB1 header");
+        assert_eq!(db.root().name(), "Root", "Top-level group name");
+        assert_eq!(db.root().iter_groups(&db).count(), 1, "Top-level subgroup count");
+        assert_eq!(db.root().iter_groups(&db).nth(0).unwrap().name(), "General", "General subgroup name");
+        assert_eq!(db.root().iter_groups(&db).nth(0).unwrap().iter_groups(&db).count(), 5, "General subgroup count");
+    }
+
+    #[test]
+    fn can_see_entries() {
+        let filename = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("testdata").join("keepass-1.41.kdb");
+        let mut file = File::open(filename).expect("Failed to find test data file");
+        file.seek(SeekFrom::Start(8)).expect("Failed to seek");
+        let mut key = Key::new();
+        key.set_user_password("asdf");
+        let db = read_kdb1_header(&mut file, &key).expect("Failed to parse KDB1 header");
+        assert_eq!(db.root().iter_groups(&db).nth(0).unwrap().iter_entries(&db).count(), 1);
+        assert_eq!(db.root().iter_groups(&db).nth(0).unwrap().iter_entries(&db).nth(0).unwrap().title(), "Top-level", "First entry name");
+    }
 }
