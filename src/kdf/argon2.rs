@@ -1,7 +1,7 @@
 use log::{info, debug};
 
 #[cfg(feature = "rust-argon2")]
-use argon2::{Config, ThreadMode, Variant, Version};
+use ::argon2::{Config, ThreadMode, Variant, Version};
 #[cfg(feature = "argonautica")]
 use argonautica::{
     config::{Variant, Version},
@@ -46,7 +46,7 @@ fn transform_argon2_lib(
         ad: &[],
         hash_length: 32,
     };
-    let hash = argon2::hash_raw(composite_key, salt, &config).unwrap();
+    let hash = ::argon2::hash_raw(composite_key, salt, &config).unwrap();
     println!(
         "P: {:0x?}, S: {:0x?}, H: {:0x?}, C: {:#?}",
         composite_key, salt, hash, config

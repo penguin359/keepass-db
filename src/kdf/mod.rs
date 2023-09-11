@@ -11,8 +11,12 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::{KDF_AES_KDBX3, MapValue};
 
-mod argon2;
 pub use self::argon2::*;
+
+mod argon2;
+
+#[cfg(test)]
+mod tests;
 
 pub const KDF_PARAM_UUID: &str = "$UUID"; // UUID, KDF used to derive master key
 pub const KDF_PARAM_SALT: &str = "S"; // Byte[], Generates 32 bytes, required
