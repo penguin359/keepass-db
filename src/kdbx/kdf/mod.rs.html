@@ -128,6 +128,8 @@
 <a href="#128" id="128">128</a>
 <a href="#129" id="129">129</a>
 <a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::convert::TryInto;
 <span class="kw">use </span>std::io;
 <span class="kw">use </span>std::io::Cursor;
@@ -141,7 +143,7 @@
 <span class="kw">use crate</span>::{KDF_AES_KDBX3, MapValue};
 
 <span class="kw">mod </span>argon2;
-<span class="kw">pub use </span>argon2::<span class="kw-2">*</span>;
+<span class="kw">pub use </span><span class="self">self</span>::argon2::<span class="kw-2">*</span>;
 
 <span class="kw">pub const </span>KDF_PARAM_UUID: <span class="kw-2">&amp;</span>str = <span class="string">&quot;$UUID&quot;</span>; <span class="comment">// UUID, KDF used to derive master key
 </span><span class="kw">pub const </span>KDF_PARAM_SALT: <span class="kw-2">&amp;</span>str = <span class="string">&quot;S&quot;</span>; <span class="comment">// Byte[], Generates 32 bytes, required
@@ -197,6 +199,7 @@
     }
 
     <span class="kw">fn </span>transform_key(<span class="kw-2">&amp;</span><span class="self">self</span>, composite_key: <span class="kw-2">&amp;</span>[u8]) -&gt; io::Result&lt;Vec&lt;u8&gt;&gt; {
+        <span class="macro">info!</span>(<span class="string">&quot;Found AES KDF&quot;</span>);
         <span class="macro">println!</span>(<span class="string">&quot;Calculating transformed key ({})&quot;</span>, <span class="self">self</span>.rounds);
 
         <span class="kw">let </span><span class="kw-2">mut </span>transform_key = composite_key.to_owned();
@@ -237,6 +240,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>c = Cursor::new(<span class="kw-2">&amp;</span>custom_data[KDF_PARAM_ROUNDS]);
     <span class="kw">let </span>transform_round = c.read_u64::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
 
+    <span class="macro">info!</span>(<span class="string">&quot;Found AES KDF&quot;</span>);
     <span class="macro">println!</span>(<span class="string">&quot;Calculating transformed key ({})&quot;</span>, transform_round);
 
     <span class="kw">let </span><span class="kw-2">mut </span>transform_key = composite_key.to_owned();

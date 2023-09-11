@@ -197,7 +197,14 @@
 <a href="#197" id="197">197</a>
 <a href="#198" id="198">198</a>
 <a href="#199" id="199">199</a>
-</pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">&quot;rust-argon2&quot;</span>)]
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>log::{info, debug};
+
+<span class="attr">#[cfg(feature = <span class="string">&quot;rust-argon2&quot;</span>)]
 </span><span class="kw">extern crate </span>argon2;
 <span class="attr">#[cfg(feature = <span class="string">&quot;argonautica&quot;</span>)]
 </span><span class="kw">extern crate </span>argonautica;
@@ -227,6 +234,7 @@
     time_cost: u32,
     lanes: u32,
 ) -&gt; io::Result&lt;Vec&lt;u8&gt;&gt; {
+    <span class="macro">debug!</span>(<span class="string">&quot;Rust Argon2&quot;</span>);
     <span class="kw">let </span>version = <span class="kw">match </span>version {
         <span class="number">0x13 </span>=&gt; Version::Version13,
         <span class="number">0x10 </span>=&gt; Version::Version10,
@@ -262,6 +270,7 @@
     time_cost: u32,
     lanes: u32,
 ) -&gt; io::Result&lt;Vec&lt;u8&gt;&gt; {
+    <span class="macro">debug!</span>(<span class="string">&quot;Argonautica&quot;</span>);
     <span class="kw">let </span>version = <span class="kw">match </span>version {
         <span class="number">0x13 </span>=&gt; Version::_0x13,
         <span class="number">0x10 </span>=&gt; Version::_0x10,
@@ -292,6 +301,7 @@
     composite_key: <span class="kw-2">&amp;</span>[u8],
     custom_data: <span class="kw-2">&amp;</span>HashMap&lt;String, Vec&lt;u8&gt;&gt;,
 ) -&gt; io::Result&lt;Vec&lt;u8&gt;&gt; {
+    <span class="macro">info!</span>(<span class="string">&quot;Found Argon2 KDF&quot;</span>);
     <span class="kw">let </span>salt = <span class="kw">match </span>custom_data.get(KDF_PARAM_SALT) {
         <span class="prelude-val">Some</span>(x) =&gt; x,
         <span class="prelude-val">None </span>=&gt; {
