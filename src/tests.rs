@@ -24,9 +24,10 @@ fn test_user_password() {
 }
 
 #[test]
-#[ignore]
 #[cfg(feature = "rust-argon2")]
 fn test_argon2() {
+    use ::argon2::{Config, ThreadMode, Variant, Version};
+
     let password = b"password";
     let salt = b"othersalt";
     let config = Config {
@@ -55,7 +56,7 @@ fn make_u32(value: u32) -> Vec<u8> {
 //const ARGON2_HASH : &str = "4eb4d1f66ae3c88d85445fb49ae7c4a8fd51eeaa132c53cb8b37610f02569371";
 
 #[test]
-#[ignore]
+#[cfg(any(feature = "rust-argon2", feature = "argonautica"))]
 fn test_argon2_kdf() {
     //let data = Vec::from_hex(PASSWORD_SIMPLE).unwrap();
     //let mut key = Key::new();
@@ -74,16 +75,16 @@ fn test_argon2_kdf() {
 }
 
 #[test]
-#[ignore]
+#[cfg(any(feature = "rust-argon2", feature = "argonautica"))]
 fn test_argon2_kdf_alternate() {
     let password = b"asdf";
     let salt = b"7kAWcXSFs31RtR0g";
-    let hash = "eff8bd51dae17d129c135de8097049362977529d81aa4f279190ee73b8a08810";
+    let hash = "ebe1a1494699ef897bed68f8d934697644e3c5f9b0e9162e2e888d2901fa1ee7";
     let hash_raw = Vec::from_hex(hash).unwrap();
     let mut custom_data = HashMap::new();
     custom_data.insert("S".to_string(), salt.to_vec());
     custom_data.insert("V".to_string(), make_u32(0x13));
-    custom_data.insert("M".to_string(), make_u64(24));
+    custom_data.insert("M".to_string(), make_u64(32*1024));
     custom_data.insert("I".to_string(), make_u64(20));
     custom_data.insert("P".to_string(), make_u32(3));
     let transform_key = transform_argon2(&password[..], &custom_data);
@@ -93,13 +94,13 @@ fn test_argon2_kdf_alternate() {
 }
 
 #[test]
-#[ignore]
+#[ignore = "Test incomplete"]
 fn test_argon2_kdf_defaults() {
     assert!(false);
 }
 
 #[test]
-#[ignore]
+#[ignore = "Test incomplete"]
 fn test_argon2_kdf_secret_and_associative() {
     assert!(false);
 }

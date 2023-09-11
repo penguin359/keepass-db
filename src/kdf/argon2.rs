@@ -1,3 +1,5 @@
+use log::{info, debug};
+
 #[cfg(feature = "rust-argon2")]
 extern crate argon2;
 #[cfg(feature = "argonautica")]
@@ -28,6 +30,7 @@ fn transform_argon2_lib(
     time_cost: u32,
     lanes: u32,
 ) -> io::Result<Vec<u8>> {
+    debug!("Rust Argon2");
     let version = match version {
         0x13 => Version::Version13,
         0x10 => Version::Version10,
@@ -63,6 +66,7 @@ fn transform_argon2_lib(
     time_cost: u32,
     lanes: u32,
 ) -> io::Result<Vec<u8>> {
+    debug!("Argonautica");
     let version = match version {
         0x13 => Version::_0x13,
         0x10 => Version::_0x10,
@@ -93,6 +97,7 @@ pub fn transform_argon2(
     composite_key: &[u8],
     custom_data: &HashMap<String, Vec<u8>>,
 ) -> io::Result<Vec<u8>> {
+    info!("Found Argon2 KDF");
     let salt = match custom_data.get(KDF_PARAM_SALT) {
         Some(x) => x,
         None => {

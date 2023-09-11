@@ -11,7 +11,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use crate::{KDF_AES_KDBX3, MapValue};
 
 mod argon2;
-pub use argon2::*;
+pub use self::argon2::*;
 
 pub const KDF_PARAM_UUID: &str = "$UUID"; // UUID, KDF used to derive master key
 pub const KDF_PARAM_SALT: &str = "S"; // Byte[], Generates 32 bytes, required
@@ -67,6 +67,7 @@ impl Kdf for AesKdf {
     }
 
     fn transform_key(&self, composite_key: &[u8]) -> io::Result<Vec<u8>> {
+        info!("Found AES KDF");
         println!("Calculating transformed key ({})", self.rounds);
 
         let mut transform_key = composite_key.to_owned();
@@ -107,6 +108,7 @@ pub fn transform_aes_kdf(
     let mut c = Cursor::new(&custom_data[KDF_PARAM_ROUNDS]);
     let transform_round = c.read_u64::<LittleEndian>()?;
 
+    info!("Found AES KDF");
     println!("Calculating transformed key ({})", transform_round);
 
     let mut transform_key = composite_key.to_owned();
