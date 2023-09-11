@@ -14,8 +14,9 @@ use uuid::Uuid;
 use rand::Rng;
 use ring::digest::{Context, SHA256, SHA512};
 
-use crate::{make_u64, Key, unmake_u64_be};
+use crate::Key;
 use crate::kdf::{transform_aes_kdf, KDF_PARAM_ROUNDS, KDF_PARAM_SALT};
+use crate::utils::{make_u64, unmake_u64_be};
 
 use super::{Group, Entry, Times, AutoType, ProtectedString, ProtectedValue, ProtectedBinary, BinaryRef, TITLE_FIELD, USER_NAME_FIELD, PASSWORD_FIELD, URL_FIELD, NOTES_FIELD};
 

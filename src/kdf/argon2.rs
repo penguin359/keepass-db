@@ -10,7 +10,7 @@ use argonautica::{
 #[cfg(feature = "argon2-kdf")]
 use argon2_kdf::{Hasher, Algorithm};
 
-use crate::{unmake_u32, unmake_u64};
+use crate::utils::{unmake_u32, unmake_u64};
 use super::*;
 
 /* TODO Use these defaults */
