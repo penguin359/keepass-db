@@ -1,17 +1,14 @@
 use log::{info, debug};
 
 #[cfg(feature = "rust-argon2")]
-extern crate argon2;
-#[cfg(feature = "argonautica")]
-extern crate argonautica;
-
-#[cfg(feature = "rust-argon2")]
 use argon2::{Config, ThreadMode, Variant, Version};
 #[cfg(feature = "argonautica")]
 use argonautica::{
     config::{Variant, Version},
     Hasher,
 };
+#[cfg(feature = "argon2-kdf")]
+use argon2_kdf::{Hasher, Algorithm};
 
 use crate::{unmake_u32, unmake_u64};
 use super::*;
@@ -92,7 +89,30 @@ fn transform_argon2_lib(
         .to_owned())
 }
 
-#[cfg(any(feature = "rust-argon2", feature = "argonautica"))]
+#[cfg(feature = "argon2-kdf")]
+fn transform_argon2_lib(
+    composite_key: &[u8],
+    salt: &[u8],
+    version: u32,
+    mem_cost: u32,
+    time_cost: u32,
+    lanes: u32,
+) -> io::Result<Vec<u8>> {
+    debug!("Argon2-KDF");
+    Ok(Hasher::new()
+            .algorithm(Algorithm::Argon2d)
+            .custom_salt(salt)
+            .hash_length(32)
+            .iterations(time_cost)
+            .memory_cost_kib(mem_cost)
+            .threads(lanes)
+            .hash(composite_key)
+            .unwrap()
+            .as_bytes()
+            .to_owned())
+}
+
+#[cfg(any(feature = "rust-argon2", feature = "argonautica", feature = "argon2-kdf"))]
 pub fn transform_argon2(
     composite_key: &[u8],
     custom_data: &HashMap<String, Vec<u8>>,
@@ -195,7 +215,7 @@ pub fn transform_argon2(
     Ok(hash)
 }
 
-#[cfg(not(any(feature = "rust-argon2", feature = "argonautica")))]
+#[cfg(not(any(feature = "rust-argon2", feature = "argonautica", feature = "argon2-kdf")))]
 pub fn transform_argon2(
     _composite_key: &[u8],
     custom_data: &HashMap<String, Vec<u8>>,

@@ -3,3 +3,4 @@
 target/
 **/*.rs.bk
 /data.xml
+Cargo.lock
