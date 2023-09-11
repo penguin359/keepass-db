@@ -1,25 +1,5 @@
 //! Read, modify and write KeePass 2.x databases
 
-extern crate base64;
-extern crate byteorder;
-extern crate chacha20;
-extern crate chrono;
-extern crate flate2;
-extern crate hex;
-extern crate openssl;
-extern crate ring;
-extern crate rpassword;
-extern crate sxd_document;
-extern crate sxd_xpath;
-extern crate uuid;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate num_derive;
-extern crate clap;
-extern crate rand;
-extern crate xml;
-
 use std::collections::VecDeque;
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryInto;
@@ -33,7 +13,10 @@ use std::process;
 //use std::rc::Rc;
 use std::cmp;
 
+use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
+
+use log::debug;
 
 //use hex::ToHex;
 // use hex::FromHex;

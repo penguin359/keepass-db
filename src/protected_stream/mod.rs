@@ -1,3 +1,4 @@
+use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 
 use hex_literal::hex;

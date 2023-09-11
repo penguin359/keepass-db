@@ -3,6 +3,7 @@ use std::io;
 use std::io::Cursor;
 use std::collections::HashMap;
 
+use log::info;
 use uuid::Uuid;
 use openssl::symm::{Cipher, Crypter, Mode};
 use ring::digest::{Context, SHA256};
