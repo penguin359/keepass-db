@@ -1,0 +1,4 @@
+(function() {var implementors = {
+"serde":[],
+"serde_xml_rs":[["impl&lt;'w, W&gt; <a class=\"trait\" href=\"serde/ser/trait.Serializer.html\" title=\"trait serde::ser::Serializer\">Serializer</a> for &amp;'w mut <a class=\"struct\" href=\"serde_xml_rs/ser/struct.Serializer.html\" title=\"struct serde_xml_rs::ser::Serializer\">Serializer</a>&lt;W&gt;<span class=\"where fmt-newline\">where\n    W: <a class=\"trait\" href=\"https://doc.rust-lang.org/1.71.0/std/io/trait.Write.html\" title=\"trait std::io::Write\">Write</a>,</span>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

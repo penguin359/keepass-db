@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["camel_case","captial_case","change_case","constant_case","dot_case","header_case","lower_case","lower_case_first","param_case","pascal_case","path_case","sentence_case","snake_case","swap_case","title_case","upper_case","upper_case_first"],"struct":["Options"]};

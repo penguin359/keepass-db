@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["Buffer","Fanout","Flush","Send","SendAll","SinkFromErr","SinkMapErr","Wait","With","WithFlatMap"],"trait":["Sink"],"type":["BoxSink"]};

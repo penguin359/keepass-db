@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"chacha20":[["impl <a class=\"trait\" href=\"stream_cipher/trait.NewStreamCipher.html\" title=\"trait stream_cipher::NewStreamCipher\">NewStreamCipher</a> for <a class=\"struct\" href=\"chacha20/struct.ChaCha20.html\" title=\"struct chacha20::ChaCha20\">ChaCha20</a>"],["impl <a class=\"trait\" href=\"stream_cipher/trait.NewStreamCipher.html\" title=\"trait stream_cipher::NewStreamCipher\">NewStreamCipher</a> for <a class=\"struct\" href=\"chacha20/struct.XChaCha20.html\" title=\"struct chacha20::XChaCha20\">XChaCha20</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

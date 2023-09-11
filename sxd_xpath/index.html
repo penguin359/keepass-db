@@ -1,0 +1,86 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="SXD-XPath"><title>sxd_xpath - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../static.files/rustdoc-f3501f0f5ae15dfb.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="sxd_xpath" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.0 (8ede3aae2 2023-07-12)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-f0540c1d82cde29b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="logo-container" href="../sxd_xpath/index.html"><img class="rust-logo" src="../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><h2></h2></nav><nav class="sidebar"><a class="logo-container" href="../sxd_xpath/index.html"><img class="rust-logo" src="../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><h2 class="location"><a href="#">Crate sxd_xpath</a></h2><div class="sidebar-elems"><ul class="block"><li class="version">Version 0.4.2</li><li><a id="all-types" href="all.html">All Items</a></li></ul><section><ul class="block"><li><a href="#reexports">Re-exports</a></li><li><a href="#modules">Modules</a></li><li><a href="#macros">Macros</a></li><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#functions">Functions</a></li></ul></section></div></nav><main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Crate <a class="mod" href="#">sxd_xpath</a><button id="copy-path" title="Copy item path to clipboard"><img src="../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="srclink" href="../src/sxd_xpath/lib.rs.html#1-677">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="sxd-xpath"><a href="#sxd-xpath">SXD-XPath</a></h2>
+<p>This is a pure-Rust implementation of XPath, a language for
+addressing parts of an XML document. It aims to implement <a href="https://www.w3.org/TR/xpath/">version
+1.0 of the XPath specification</a>.</p>
+<p>XPath is wonderful for quickly navigating the complicated
+hierarchy that is present in many XML documents while having a
+concise syntax.</p>
+<h4 id="examples"><a href="#examples">Examples</a></h4>
+<p>The quickest way to evaluate an XPath against an XML document is
+to use <a href="fn.evaluate_xpath.html"><code>evaluate_xpath</code></a>.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">extern crate </span>sxd_document;
+<span class="kw">extern crate </span>sxd_xpath;
+
+<span class="kw">use </span>sxd_document::parser;
+<span class="kw">use </span>sxd_xpath::{evaluate_xpath, Value};
+
+<span class="kw">fn </span>main() {
+    <span class="kw">let </span>package = parser::parse(<span class="string">&quot;&lt;root&gt;hello&lt;/root&gt;&quot;</span>).expect(<span class="string">&quot;failed to parse XML&quot;</span>);
+    <span class="kw">let </span>document = package.as_document();
+
+    <span class="kw">let </span>value = evaluate_xpath(<span class="kw-2">&amp;</span>document, <span class="string">&quot;/root&quot;</span>).expect(<span class="string">&quot;XPath evaluation failed&quot;</span>);
+
+    <span class="macro">assert_eq!</span>(<span class="string">&quot;hello&quot;</span>, value.string());
+}</code></pre></div>
+<p>Evaluating an XPath returns a <a href="enum.Value.html"><code>Value</code></a>, representing the
+primary XPath types.</p>
+<p>For more complex needs, XPath parsing and evaluation can be split
+apart. This allows the user to specify namespaces, variables,
+extra functions, and which node evaluation should begin with. You
+may also compile an XPath once and reuse it multiple times.</p>
+<p>Parsing is handled with the <a href="struct.Factory.html"><code>Factory</code></a> and evaluation relies on
+the <a href="context/struct.Context.html"><code>Context</code></a>. Similar functionality to above can be
+accomplished:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">extern crate </span>sxd_document;
+<span class="kw">extern crate </span>sxd_xpath;
+
+<span class="kw">use </span>sxd_document::parser;
+<span class="kw">use </span>sxd_xpath::{Factory, Context, Value};
+
+<span class="kw">fn </span>main() {
+    <span class="kw">let </span>package = parser::parse(<span class="string">&quot;&lt;root&gt;hello&lt;/root&gt;&quot;</span>)
+        .expect(<span class="string">&quot;failed to parse XML&quot;</span>);
+    <span class="kw">let </span>document = package.as_document();
+
+    <span class="kw">let </span>factory = Factory::new();
+    <span class="kw">let </span>xpath = factory.build(<span class="string">&quot;/root&quot;</span>).expect(<span class="string">&quot;Could not compile XPath&quot;</span>);
+    <span class="kw">let </span>xpath = xpath.expect(<span class="string">&quot;No XPath was compiled&quot;</span>);
+
+    <span class="kw">let </span>context = Context::new();
+
+    <span class="kw">let </span>value = xpath.evaluate(<span class="kw-2">&amp;</span>context, document.root())
+        .expect(<span class="string">&quot;XPath evaluation failed&quot;</span>);
+
+    <span class="macro">assert_eq!</span>(<span class="string">&quot;hello&quot;</span>, value.string());
+}</code></pre></div>
+<p>See <a href="context/struct.Context.html"><code>Context</code></a> for details on how to customize the
+evaluation of the XPath.</p>
+<h4 id="programmatically-created-xml"><a href="#programmatically-created-xml">Programmatically-created XML</a></h4>
+<p>The XPath specification assumes certain properties about the XML
+being processed. If you are processing XML that was parsed from
+text, this will be true by construction. If you have
+programmatically created XML, please note the following cases.</p>
+<h5 id="namespaces"><a href="#namespaces">Namespaces</a></h5>
+<p>If you have programmatically created XML with namespaces but not
+defined prefixes, some XPath behavior may be confusing:</p>
+<ol>
+<li>The <code>name</code> method will not include a prefix, even if the
+element or attribute has a namespace.</li>
+<li>The <code>namespace</code> axis will not include namespaces without
+prefixes.</li>
+</ol>
+<h5 id="document-order"><a href="#document-order">Document order</a></h5>
+<p>If you have programmatically created XML but not attached the
+nodes to the document, some XPath behavior may be confusing:</p>
+<ol>
+<li>These nodes have no <a href="https://www.w3.org/TR/xpath/#dt-document-order"><em>document order</em></a>. If you create a
+variable containing these nodes and apply a predicate to them,
+these nodes will appear after any nodes that are present in the
+document, but the relative order of the nodes is undefined.</li>
+</ol>
+</div></details><h2 id="reexports" class="small-section-header"><a href="#reexports">Re-exports</a></h2><ul class="item-table"><li><div class="item-name" id="reexport.Context"><code>pub use context::<a class="struct" href="context/struct.Context.html" title="struct sxd_xpath::context::Context">Context</a>;</code></div></li></ul><h2 id="modules" class="small-section-header"><a href="#modules">Modules</a></h2><ul class="item-table"><li><div class="item-name"><a class="mod" href="context/index.html" title="mod sxd_xpath::context">context</a></div><div class="desc docblock-short">Support for the various types of contexts before and during XPath
+evaluation.</div></li><li><div class="item-name"><a class="mod" href="function/index.html" title="mod sxd_xpath::function">function</a></div><div class="desc docblock-short">Support for registering and creating XPath functions.</div></li><li><div class="item-name"><a class="mod" href="macros/index.html" title="mod sxd_xpath::macros">macros</a></div></li><li><div class="item-name"><a class="mod" href="nodeset/index.html" title="mod sxd_xpath::nodeset">nodeset</a></div><div class="desc docblock-short">Support for collections of nodes.</div></li></ul><h2 id="macros" class="small-section-header"><a href="#macros">Macros</a></h2><ul class="item-table"><li><div class="item-name"><a class="macro" href="macro.nodeset.html" title="macro sxd_xpath::nodeset">nodeset</a></div><div class="desc docblock-short">Convenience constructor for a nodeset</div></li></ul><h2 id="structs" class="small-section-header"><a href="#structs">Structs</a></h2><ul class="item-table"><li><div class="item-name"><a class="struct" href="struct.ExecutionError.html" title="struct sxd_xpath::ExecutionError">ExecutionError</a></div><div class="desc docblock-short">Errors that may occur when executing an XPath</div></li><li><div class="item-name"><a class="struct" href="struct.Factory.html" title="struct sxd_xpath::Factory">Factory</a></div><div class="desc docblock-short">The primary entrypoint to convert an XPath represented as a string
+to a structure that can be evaluated.</div></li><li><div class="item-name"><a class="struct" href="struct.OwnedPrefixedName.html" title="struct sxd_xpath::OwnedPrefixedName">OwnedPrefixedName</a></div></li><li><div class="item-name"><a class="struct" href="struct.OwnedQName.html" title="struct sxd_xpath::OwnedQName">OwnedQName</a></div></li><li><div class="item-name"><a class="struct" href="struct.ParserError.html" title="struct sxd_xpath::ParserError">ParserError</a></div><div class="desc docblock-short">Errors that may occur when parsing an XPath</div></li><li><div class="item-name"><a class="struct" href="struct.XPath.html" title="struct sxd_xpath::XPath">XPath</a></div><div class="desc docblock-short">A compiled XPath. Construct via <a href="struct.Factory.html"><code>Factory</code></a>.</div></li></ul><h2 id="enums" class="small-section-header"><a href="#enums">Enums</a></h2><ul class="item-table"><li><div class="item-name"><a class="enum" href="enum.Error.html" title="enum sxd_xpath::Error">Error</a></div><div class="desc docblock-short">The failure modes of executing an XPath.</div></li><li><div class="item-name"><a class="enum" href="enum.Value.html" title="enum sxd_xpath::Value">Value</a></div><div class="desc docblock-short">The primary types of values that an XPath expression accepts
+as an argument or returns as a result.</div></li></ul><h2 id="functions" class="small-section-header"><a href="#functions">Functions</a></h2><ul class="item-table"><li><div class="item-name"><a class="fn" href="fn.evaluate_xpath.html" title="fn sxd_xpath::evaluate_xpath">evaluate_xpath</a></div><div class="desc docblock-short">Easily evaluate an XPath expression</div></li></ul></section></div></main></body></html>

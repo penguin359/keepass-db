@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["mpsc","oneshot"],"struct":["BiLock","BiLockAcquire","BiLockAcquired","BiLockGuard"]};

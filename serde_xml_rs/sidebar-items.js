@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ErrorKind"],"mod":["de","ser"],"struct":["Error","EventReader","ParserConfig"]};

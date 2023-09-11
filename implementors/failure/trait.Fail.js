@@ -1,0 +1,4 @@
+(function() {var implementors = {
+"argonautica":[["impl <a class=\"trait\" href=\"failure/trait.Fail.html\" title=\"trait failure::Fail\">Fail</a> for <a class=\"struct\" href=\"argonautica/struct.Error.html\" title=\"struct argonautica::Error\">Error</a>"],["impl <a class=\"trait\" href=\"failure/trait.Fail.html\" title=\"trait failure::Fail\">Fail</a> for <a class=\"enum\" href=\"argonautica/enum.ErrorKind.html\" title=\"enum argonautica::ErrorKind\">ErrorKind</a>"]],
+"failure":[]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

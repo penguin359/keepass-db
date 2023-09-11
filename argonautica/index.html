@@ -1,0 +1,295 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Build Status Crates.io Documentation Github.com License"><title>argonautica - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../static.files/rustdoc-f3501f0f5ae15dfb.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="argonautica" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.0 (8ede3aae2 2023-07-12)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-f0540c1d82cde29b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="logo-container" href="../argonautica/index.html"><img class="rust-logo" src="../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><h2></h2></nav><nav class="sidebar"><a class="logo-container" href="../argonautica/index.html"><img class="rust-logo" src="../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><h2 class="location"><a href="#">Crate argonautica</a></h2><div class="sidebar-elems"><ul class="block"><li class="version">Version 0.2.0</li><li><a id="all-types" href="all.html">All Items</a></li></ul><section><ul class="block"><li><a href="#modules">Modules</a></li><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li></ul></section></div></nav><main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Crate <a class="mod" href="#">argonautica</a><button id="copy-path" title="Copy item path to clipboard"><img src="../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="srclink" href="../src/argonautica/lib.rs.html#1-328">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p><a href="https://travis-ci.org/bcmyers/argonautica"><img src="https://travis-ci.org/bcmyers/argonautica.svg?branch=master" alt="Build Status" /></a>
+<a href="https://crates.io/crates/argonautica"><img src="https://img.shields.io/crates/v/argonautica.svg" alt="Crates.io" /></a>
+<a href="https://docs.rs/argonautica/"><img src="https://docs.rs/argonautica/badge.svg" alt="Documentation" /></a>
+<a href="http://www.github.com/bcmyers/argonautica"><img src="https://img.shields.io/badge/github-bcmyers%2Fargonautica-blue.svg" alt="Github.com" /></a>
+<img src="https://img.shields.io/crates/l/argonautica.svg" alt="License" /></p>
+<h2 id="overview"><a href="#overview">Overview</a></h2>
+<p><b>argonautica</b> is a Rust crate for hashing passwords using the cryptographically-secure
+<a href="https://en.wikipedia.org/wiki/Argon2">Argon2 hashing algorithm</a>.</p>
+<p><a href="https://en.wikipedia.org/wiki/Argon2">Argon2</a> won the
+<a href="https://password-hashing.net/">Password Hashing Competition</a> in 2015, a several
+year project to identify a successor to <a href="https://en.wikipedia.org/wiki/Bcrypt">bcrypt</a>,
+<a href="https://en.wikipedia.org/wiki/Scrypt">scrypt</a>, and other common cryptographically-secure
+hashing algorithms.</p>
+<p>The <b>argonautica</b> crate was designed:</p>
+<ul>
+<li>to be easy to use,</li>
+<li>to have robust, beginner-friendly documentation, and</li>
+<li>to (as much as possible) follow the
+<a href="https://rust-lang-nursery.github.io/api-guidelines/">Rust API guidelines</a></li>
+</ul>
+<p><b>argonautica</b> was built with a simple use-case in mind: hashing passwords for storage in a
+website’s database. That said, it’s also “feature-complete”, meaning anything you can do with
+the cannonical <a href="https://github.com/P-H-C/phc-winner-argon2">C implementation</a> of Argon2
+you can do with argonautica*.</p>
+<p><i>* Indeed, argonautica has a feature that even the cannonical C implementation
+lacks, i.e. hashing passwords with secret keys (the C implementation implements this, but
+does not expose it publicly)</i></p>
+<h2 id="hashing"><a href="#hashing">Hashing</a></h2>
+<p>Hashing passwords with <b>argonautica</b> is simple.  Just instantiate a default
+<a href="struct.Hasher.html"><code>Hasher</code></a>, provide it with a password and a secret key, and then
+call the <a href="struct.Hasher.html#method.hash"><code>hash</code></a> method.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">extern crate </span>argonautica;
+
+<span class="kw">use </span>argonautica::Hasher;
+
+<span class="kw">fn </span>main() {
+    <span class="kw">let </span><span class="kw-2">mut </span>hasher = Hasher::default();
+    <span class="kw">let </span>hash = hasher
+        .with_password(<span class="string">&quot;P@ssw0rd&quot;</span>)
+        .with_secret_key(<span class="string">&quot;\
+            secret key that you should really store in a .env file \
+            instead of in code, but this is just an example\
+        &quot;</span>)
+        .hash()
+        .unwrap();
+
+    <span class="macro">println!</span>(<span class="string">&quot;{}&quot;</span>, <span class="kw-2">&amp;</span>hash);
+    <span class="comment">// 👆 prints a hash, which will be random since the default Hasher uses a random salt
+</span>}</code></pre></div>
+<h2 id="verifying"><a href="#verifying">Verifying</a></h2>
+<p>Verifying passwords against a hash is equally as simple. Just instantiate a default
+<a href="struct.Verifier.html"><code>Verifier</code></a>, provide it with the password and the hash you would
+like to compare, provide it with the secret key that was used to create the hash, and
+then call the <a href="struct.Verifier.html#method.verify"><code>verify</code></a> method.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">extern crate </span>argonautica;
+
+<span class="kw">use </span>argonautica::Verifier;
+
+<span class="kw">fn </span>main() {
+    <span class="kw">let </span><span class="kw-2">mut </span>verifier = Verifier::default();
+    <span class="kw">let </span>is_valid = verifier
+        .with_hash(<span class="string">&quot;
+            $argon2id$v=19$m=4096,t=192,p=4$\
+            o2y5PU86Vt+sr93N7YUGgC7AMpTKpTQCk4tNGUPZMY4$\
+            yzP/ukZRPIbZg6PvgnUUobUMbApfF9RH6NagL9L4Xr4\
+        &quot;</span>)
+        .with_password(<span class="string">&quot;P@ssw0rd&quot;</span>)
+        .with_secret_key(<span class="string">&quot;\
+            secret key that you should really store in a .env file \
+            instead of in code, but this is just an example\
+        &quot;</span>)
+        .verify()
+        .unwrap();
+
+    <span class="macro">assert!</span>(is_valid);
+}</code></pre></div>
+<h2 id="alternatives"><a href="#alternatives">Alternatives</a></h2>
+<p>If <b>argonautica</b> isn’t your cup of tea, other Rust crates that will do Argon2 hashing for you
+include <a href="https://github.com/bryant/argon2rs">argon2rs</a> and
+<a href="https://github.com/sru-systems/rust-argon2">rust-argon2</a>. If you’re interesting
+in password hashing with a different algorithm,
+<a href="https://github.com/Keats/rust-bcrypt">rust-bcrypt</a> might be worth checking out.</p>
+<p>For what it’s worth, besides API differences, <b>argonautica</b> has three key features that
+other crates currently lack:</p>
+<ul>
+<li>The ability to use <a href="https://en.wikipedia.org/wiki/SIMD">SIMD</a> instructions (even on stable),
+which can lead to significantly faster hashing times
+<ul>
+<li>For example, on default settings, argonautica with SIMD runs <b>over twice
+as fast</b> as other crates on the developer’s early-2014 Macbook, which has access to
+<a href="https://software.intel.com/sites/landingpage/IntrinsicsGuide/">SIMD instructions</a>
+through
+<a href="https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#Advanced_Vector_Extensions">AVX2</a></li>
+<li><i>Note: SIMD instructions are specific to your CPU; so if you’re compiling for
+machines other than your own, you should not turn on the SIMD feature</i></li>
+</ul>
+</li>
+<li>The ability to hash passwords with a secret key, which not even the
+<a href="https://github.com/P-H-C/phc-winner-argon2">C implementation</a> exposes publicly</li>
+<li>The newest Argon2 variant: Argon2id</li>
+</ul>
+<h2 id="configuration"><a href="#configuration">Configuration</a></h2>
+<p>The default configurations for <a href="struct.Hasher.html"><code>Hasher</code></a> and
+<a href="struct.Verifier.html"><code>Verifier</code></a> were chosen to be reasonably secure for the general
+use-case of hashing passwords for storage in a website database, but if you want to use
+<b>argonautica</b> for different reasons or if you just disagree with the chosen defaults,
+customizing <b>argonautica</b> to meet your needs should hopefully be as easy and as intuitive
+as using the defaults.</p>
+<p>Here is an example that shows how to use <a href="struct.Hasher.html"><code>Hasher</code></a>’s custom
+configuration options. It provides color on each of the options.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">extern crate </span>argonautica;
+<span class="kw">extern crate </span>futures_cpupool;
+
+<span class="kw">use </span>argonautica::Hasher;
+<span class="kw">use </span>argonautica::config::{Backend, Variant, Version};
+<span class="kw">use </span>futures_cpupool::CpuPool;
+
+<span class="kw">fn </span>main() {
+    <span class="kw">let </span><span class="kw-2">mut </span>hasher = Hasher::default();
+    hasher
+        .configure_backend(Backend::C) <span class="comment">// Default is `Backend::C`
+        // 👆 argonautica was designed to support multiple backends (meaning multiple
+        // implementations of the underlying Argon2 algorithm). Currently only the C backend
+        // is supported, which uses the cannonical Argon2 library written in C to actually
+        // do the work. In the future hopefully a Rust backend will also be supported, but,
+        // for the moment, you must use `Backend::C`, which is the default. Using
+        // `Backend::Rust` will result in an error (again, for the moment).
+        </span>.configure_cpu_pool(CpuPool::new(<span class="number">2</span>))
+        <span class="comment">// 👆 There are two non-blocking methods on `Hasher` that perform computation on
+        // a separate thread and return a `Future` instead of a `Result` (`hash_non_blocking`
+        // and `hash_raw_non_blocking`). These methods allow argonautica to play nicely with
+        // futures-heavy code, but need a `CpuPool` in order to work. The blocking
+        // methods `hash` and `hash_raw` do not use a &#39;CpuPool&#39;; so if you are using only
+        // these blocking methods you can ignore this configuration entirely. If, however,
+        // you are using the non-blocking methods and would like to provide your own `CpuPool`
+        // instead of using the default, which is a lazily created `CpuPool` with the number
+        // of threads equal to the number of logical cores on your machine, you can
+        // configure your `Hasher` with a custom `CpuPool` using this method. This
+        // might be useful if, for example, you are writing code in an environment which
+        // makes heavy use of futures, the code you are writing uses both a `Hasher` and
+        // a `Verifier`, and you would like both of them to share the same underlying
+        // `CpuPool`.
+        </span>.configure_hash_len(<span class="number">16</span>) <span class="comment">// Default is `32`
+        // 👆 The hash length in bytes is configurable. The default is 32. This is probably
+        // a good number to use. 16 is also probably fine. You probably shouldn&#39;t go below 16
+        </span>.configure_iterations(<span class="number">192</span>) <span class="comment">// Default is `192`
+        // 👆 Argon2 has a notion of &quot;iterations&quot; or &quot;time cost&quot;. All else equal and generally
+        // speaking, the greater the number of iterations, the longer it takes to perform the
+        // hash and the more secure the resulting hash. More iterations basically means more
+        // CPU load. This and &quot;memory size&quot; (see below) are the two primary parameters to
+        // adjust in order to increase or decrease the security of your hash. The default is
+        // 192 iterations, which was chosen because, along with the default memory size of
+        // 4096, this leads to a hashing time of approximately 300 milliseconds on the
+        // early-2014 Macbook Air that is the developer&#39;s machine. If you&#39;re going to use
+        // argonautica in production, you should probably tweak this parameter (and the memory
+        // size parameter) in order to increase the time it takes to hash to the maximum you
+        // can reasonably allow for your use-case (e.g. to probably about 300-500 milliseconds
+        // for the use-case of hashing user passwords for a website)
+        </span>.configure_lanes(<span class="number">2</span>) <span class="comment">// Default is number of logical cores on your machine
+        // 👆 Argon2 can break up its work into one or more &quot;lanes&quot; during some parts of
+        // the hashing algorithm. If you configure it with multiple lanes and you also
+        // use multiple threads (see below) the hashing algorithm will performed its
+        // work in parallel in some parts, potentially speeding up the time it takes to
+        // produce a hash without diminishing the security of the result. By default,
+        // the number of lanes is set to the number of logical cores on your machine
+        </span>.configure_memory_size(<span class="number">4096</span>) <span class="comment">// Default is `4096`
+        // 👆 Argon2 has a notion of &quot;memory size&quot; or &quot;memory cost&quot; (in kibibytes). All else
+        // equal and generally speaking, the greater the memory size, the longer it takes to
+        // perform the hash and the more secure the resulting hash. More memory size basically
+        // means more memory used. This and &quot;iterations&quot; (see above) are, again, generally
+        // speaking, the two parameters to adjust in order to increase or decrease the
+        // security of your hash. The default is 4096 kibibytes, which was chosen because,
+        // again, along with the default iterations of 192, this leads to a hashing time of
+        // approximately 300 milliseconds on the early-2014 Macbook Air that is the
+        // developer&#39;s machine. If you&#39;re going to use argonautica in production, you should
+        // probably tweak this parameter (and the iterations parameter) in order to increase
+        // the time it takes to hash to the maximum you can reasonably allow for your use-case
+        // (e.g. to probably about 300-500 milliseconds for the use-case of hashing user
+        // passwords for a website)
+        </span>.configure_password_clearing(<span class="bool-val">false</span>) <span class="comment">// Default is `false`
+        // 👆 It is possible to have the underlying bytes of the password you provided
+        // to `Hasher` be erased after each call to `hash`, `hash_raw` or their non-blocking
+        // equivalents. If you want this extra security feature, set this configuration
+        // to `true` (the default is `false`). If you set this configuration to `true`,
+        // you will be required to provide `Hasher` with a mutable password (e.g.
+        // a `String`, a `Vec&lt;u8&gt;`, a `&amp;mut str`, or a `&amp;mut [u8]` instead of a
+        // `&amp;str` or a `&amp;[u8]`)
+        </span>.configure_secret_key_clearing(<span class="bool-val">false</span>) <span class="comment">// Default is `false`
+        // 👆 It is also possible to have the underlying bytes of the secret key you provided
+        // to `Hasher` be erased after each call to `hash`, `hash_raw` or their non-blocking
+        // equivalents. If you want this extra security feature, set this configuration
+        // to `true` (the default is `false`). If you set this configuration to `true`,
+        // you will be required to provide `Hasher` with a mutable secret key (e.g.
+        // a `String`, a `Vec&lt;u8&gt;`, a `&amp;mut str`, or a `&amp;mut [u8]` instead of a `&amp;str`
+        // or a `&amp;[u8]`)
+        </span>.configure_threads(<span class="number">2</span>) <span class="comment">// Default is number of logical cores on your machine
+        // 👆 If you have configured `Hasher` to use more than one lane (see above), you
+        // can get the hashing algorithm to run in parallel during some parts of the
+        // computation by setting the number of threads to be greater than one as well,
+        // potentially speeding up the time it takes to produce a hash without diminishing
+        // the security of the result. By default, the number of threads is set to the number
+        // of logical cores on your machine. If you set the number of threads to a number
+        // greater than the number of lanes, `Hasher` will automatically reduce the number
+        // of threads to the number of lanes
+        </span>.configure_variant(Variant::Argon2id) <span class="comment">// Default is `Variant::Argon2id`
+        // 👆 Argon2 has three variants: Argon2d, Argon2i, and Argon2id. Here is how these
+        // variants are explained in the RFC: &quot;Argon2 has one primary variant: Argon2id,
+        // and two supplementary variants: Argon2d and Argon2i. Argon2d uses data-dependent
+        // memory access, which makes it suitable for ... applications with no threats from
+        // side-channel timing attacks. Argon2i uses data-independent memory access, which
+        // is preferred for password hashing and password-based key derivation. Argon2id
+        // works as Argon2i for the first half of the first iteration over the memory, and
+        // as Argon2d for the rest, thus providing both side-channel attack protection and
+        // brute-force cost savings due to time-memory tradeoffs.&quot; If you do not know which
+        // variant to use, use the default, which is Argon2id
+        </span>.configure_version(Version::_0x13) <span class="comment">// Default is `Version::_0x13`
+        // 👆 Argon2 has two versions: 0x10 and 0x13. The latest version is 0x13 (as of 5/18).
+        // Unless you have a very specific reason not to, you should use the latest
+        // version (0x13), which is also the default
+        </span>.opt_out_of_secret_key(<span class="bool-val">true</span>); <span class="comment">// Default is `false`
+        // 👆 As an extra security measure, if you want to hash without a secret key, which
+        // is not recommended, you must explicitly declare that this is your intention
+        // by calling this method and setting the `opt_out_of_secret_key` configuration to
+        // `true` (by default, it is set to `false`); otherwise hashing will return an error
+        // when you fail to provide a secret key
+
+    </span><span class="kw">let </span>hash = hasher
+        .with_password(<span class="string">&quot;P@ssw0rd&quot;</span>)
+        .with_salt(<span class="string">&quot;somesalt&quot;</span>)
+        .hash()
+        .unwrap();
+        <span class="comment">// 👆 Note: We are able to hash witout a secret key because we explicitly
+        // set `opt_out_of_secret_key` to `true` above
+
+    </span><span class="macro">assert_eq!</span>(
+        <span class="kw-2">&amp;</span>hash,
+        <span class="string">&quot;$argon2id$v=19$m=4096,t=192,p=2$c29tZXNhbHQ$sw41ZsxebJmOJ6vSHe6BGQ&quot;</span>,
+    );
+}</code></pre></div>
+<h2 id="installation"><a href="#installation">Installation</a></h2>
+<p><b>argonautica</b> should be relatively straightforward to include in your Rust project:</p>
+<ul>
+<li>Place <code>extern crate argonautica;</code> in your code (typically in either <code>lib.rs</code> or <code>main.rs</code>)</li>
+<li>In the <code>[dependencies]</code> section of your <code>Cargo.toml</code>, place …
+<ul>
+<li>… if you’re building for your own machine …
+<ul>
+<li><code>argonautica = { version = &quot;0.2&quot;, features = [&quot;simd&quot;] }</code>, or</li>
+<li><code>argonautica = { version = &quot;0.2&quot;, features = [&quot;serde&quot;, &quot;simd&quot;] }</code></li>
+</ul>
+</li>
+<li>… if you’re building for a different machine …
+<ul>
+<li><code>argonautica = &quot;0.2&quot;</code>, or</li>
+<li><code>argonautica = { version = &quot;0.2&quot;, features = [&quot;serde&quot;] }</code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>That said, <b>argonautica</b> uses <a href="https://github.com/alexcrichton/cc-rs">cc</a> and
+<a href="https://github.com/rust-lang-nursery/rust-bindgen">bindgen</a> to compile the cannonical
+<a href="https://github.com/P-H-C/phc-winner-argon2">C implemenation</a> of Argon2 into a
+static archive during the build process. This means you need a C compiler on your
+machine in order to build <b>argonautica</b>. More specifically, you need:</p>
+<ul>
+<li><a href="https://llvm.org/">LLVM/Clang</a> (version 3.9 or higher)
+<ul>
+<li>Mac OS: <code>brew install llvm</code>, which requires <a href="https://brew.sh/">Homebrew</a></li>
+<li>Debian-based linux: <code>apt-get install clang llvm-dev libclang-dev</code></li>
+<li>Arch linux: <code>pacman -S clang</code></li>
+<li>Windows: Download a pre-built binary <a href="http://releases.llvm.org/download.html">here</a></li>
+</ul>
+</li>
+</ul>
+<p><b>argonautica</b> runs on stable Rust version 1.26.0 or greater.</p>
+<h2 id="license"><a href="#license">License</a></h2>
+<p><b>argonautica</b> is licensed under either of:</p>
+<ul>
+<li><a href="http://www.apache.org/licenses/LICENSE-2.0">The Apache License, Version 2.0</a>, or</li>
+<li><a href="http://opensource.org/licenses/MIT">The MIT license</a></li>
+</ul>
+<p>at your option.</p>
+</div></details><h2 id="modules" class="small-section-header"><a href="#modules">Modules</a></h2><ul class="item-table"><li><div class="item-name"><a class="mod" href="config/index.html" title="mod argonautica::config">config</a></div><div class="desc docblock-short">Enums and defaults for Argon2 configuration options (e.g. <code>hash_len</code>,
+<a href="config/enum.Variant.html"><code>Variant</code></a>, <a href="config/enum.Version.html"><code>Version</code></a>, etc.)</div></li><li><div class="item-name"><a class="mod" href="input/index.html" title="mod argonautica::input">input</a></div><div class="desc docblock-short">Type-safe structs representing data to hash (i.e.
+<a href="input/struct.Password.html"><code>Password</code></a>,
+<a href="input/struct.Salt.html"><code>Salt</code></a>,
+<a href="input/struct.SecretKey.html"><code>SecretKey</code></a>, and
+<a href="input/struct.AdditionalData.html"><code>AdditionalData</code></a>)</div></li><li><div class="item-name"><a class="mod" href="output/index.html" title="mod argonautica::output">output</a></div><div class="desc docblock-short">Struct representing raw hash output.</div></li><li><div class="item-name"><a class="mod" href="utils/index.html" title="mod argonautica::utils">utils</a></div><div class="desc docblock-short">Utility functions for generating random bytes, which can be useful for generating
+<a href="input/struct.SecretKey.html"><code>SecretKey</code></a>s, for example.</div></li></ul><h2 id="structs" class="small-section-header"><a href="#structs">Structs</a></h2><ul class="item-table"><li><div class="item-name"><a class="struct" href="struct.Error.html" title="struct argonautica::Error">Error</a></div><div class="desc docblock-short">Struct representing an error, which implements the
+<a href="https://docs.rs/failure/0.1.1/failure/trait.Fail.html"><code>Fail</code></a> trait
+from <a href="https://github.com/rust-lang-nursery/failure">failure</a></div></li><li><div class="item-name"><a class="struct" href="struct.Hasher.html" title="struct argonautica::Hasher">Hasher</a></div><div class="desc docblock-short"><b><u>One of the two main structs.</u></b> Use it to turn passwords into hashes</div></li><li><div class="item-name"><a class="struct" href="struct.Verifier.html" title="struct argonautica::Verifier">Verifier</a></div><div class="desc docblock-short"><b><u>One of the two main structs.</u></b> Use it to verify passwords against hashes</div></li></ul><h2 id="enums" class="small-section-header"><a href="#enums">Enums</a></h2><ul class="item-table"><li><div class="item-name"><a class="enum" href="enum.ErrorKind.html" title="enum argonautica::ErrorKind">ErrorKind</a></div><div class="desc docblock-short">Enum representing the various kinds of errors</div></li></ul></section></div></main></body></html>

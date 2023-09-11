@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Error","Expr","LookAround"],"struct":["Captures","Match","Regex","RegexBuilder","SubCaptureMatches"],"type":["Result"]};

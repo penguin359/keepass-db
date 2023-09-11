@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["CONSTANTS","IV_BITS","IV_BYTES","IV_WORDS","KEY_BITS","KEY_BYTES","KEY_WORDS","STATE_BYTES","STATE_WORDS"],"externcrate":["stream_cipher"],"struct":["Ctr"],"trait":["SalsaFamilyCipher"]};

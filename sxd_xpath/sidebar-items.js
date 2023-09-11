@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Error","Value"],"fn":["evaluate_xpath"],"macro":["nodeset"],"mod":["context","function","macros","nodeset"],"struct":["ExecutionError","Factory","OwnedPrefixedName","OwnedQName","ParserError","XPath"]};

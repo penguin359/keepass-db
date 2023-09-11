@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["spawn","with_notify"],"struct":["NotifyHandle","Spawn"],"trait":["Notify","UnsafeNotify"]};

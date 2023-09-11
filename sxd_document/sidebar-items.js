@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["dom","parser","writer"],"struct":["Package","PrefixedName","QName"],"trait":["XmlChar"]};
