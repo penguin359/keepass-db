@@ -50,6 +50,7 @@ use derive_getters::Getters;
 use kdbx_derive::{KdbxParse, KdbxSerialize};
 
 mod kdb1;
+mod utils;
 pub mod protected_stream;
 
 
@@ -88,37 +89,6 @@ trait KdbxSerialize<C>: Sized {
 
 #[cfg(test)]
 mod tests;
-
-fn make_u64(value: u64) -> Vec<u8> {
-    let out = vec![0; 8];
-    let mut cursor = Cursor::new(out);
-    cursor.write_u64::<LittleEndian>(value).unwrap();
-    cursor.into_inner()
-}
-
-fn unmake_u32(value: &[u8]) -> Option<u32> {
-    if value.len() != 4 {
-        return None;
-    }
-    let mut cursor = Cursor::new(value);
-    Some(cursor.read_u32::<LittleEndian>().unwrap())
-}
-
-fn unmake_u64(value: &[u8]) -> Option<u64> {
-    if value.len() != 8 {
-        return None;
-    }
-    let mut cursor = Cursor::new(value);
-    Some(cursor.read_u64::<LittleEndian>().unwrap())
-}
-
-fn unmake_u64_be(value: &[u8]) -> Option<u64> {
-    if value.len() != 8 {
-        return None;
-    }
-    let mut cursor = Cursor::new(value);
-    Some(cursor.read_u64::<BigEndian>().unwrap())
-}
 
 #[derive(FromPrimitive, ToPrimitive)]
 enum Compression {

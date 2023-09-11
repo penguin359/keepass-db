@@ -2,15 +2,8 @@ use hex::FromHex;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crate::{make_u64};
+use crate::utils::{make_u32, make_u64};
 use super::*;
-
-fn make_u32(value: u32) -> Vec<u8> {
-    let out = vec![0; 4];
-    let mut cursor = Cursor::new(out);
-    cursor.write_u32::<LittleEndian>(value).unwrap();
-    cursor.into_inner()
-}
 
 #[test]
 #[cfg(feature = "rust-argon2")]
