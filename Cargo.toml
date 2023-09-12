@@ -4,15 +4,13 @@ version = "0.0.1"
 authors = ["Loren M. Lang <lorenl@north-winds.org>"]
 license = "MIT"
 edition = "2018"
-description = "KeePass password database"
+description = "KeePass password database library and tools"
 #readme = "README.md"
-#documentation = "https://docs.rs/kdbx"
-homepage = "https://github.north-winds.org/"
-repository = "https://github.com/penguin359/kdbx"
-keywords = ["password"]
+#documentation = "https://docs.rs/keepass-db"
+homepage = "https://github.north-winds.org/keepass-db"
+repository = "https://github.com/penguin359/keepass-db"
+keywords = ["keepass", "kdbx", "password"]
 categories = ["cryptography"]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
 #default = ["rust-argon2"]
@@ -40,7 +38,7 @@ env_logger = "0.7.1"
 rand = "0.7.2"
 clap = "2.33.0"
 xml-rs = "0.8.0"
-kdbx_derive = { path = "kdbx_derive/" }
+kdbx_derive = { version = "0.0.1", path = "kdbx_derive/" }
 num-derive = "0.4.0"
 num-traits = "0.2.16"
 salsa20 = "0.10.2"
