@@ -49,7 +49,7 @@ impl KdbxAttributes {
     fn parse(attrs: &[Attribute]) -> Self {
         let mut element_name = None;
         let mut flatten = false;
-        for attr in attrs.iter().filter(|a| a.path.is_ident("kdbx")) {
+        for attr in attrs.iter().filter(|a| a.path.is_ident("keepass_db")) {
             let mut attr_token = attr.tokens.clone().into_iter();
             if let Some(TokenTree::Group(value)) = attr_token.next() {
                 if value.delimiter() == Delimiter::Parenthesis {
@@ -238,7 +238,7 @@ fn decode_struct(ast: &syn::DeriveInput) -> Vec<KdbxField> {
     }
 }
 
-#[proc_macro_derive(KdbxParse, attributes(kdbx))]
+#[proc_macro_derive(KdbxParse, attributes(keepass_db))]
 pub fn derive_deserializer(input: TS1) -> TS1 {
     derive_deserializer2(input.into()).into()
 }
@@ -426,7 +426,7 @@ fn derive_deserializer2(input: TokenStream) -> TokenStream {
     results
 }
 
-#[proc_macro_derive(KdbxSerialize, attributes(kdbx))]
+#[proc_macro_derive(KdbxSerialize, attributes(keepass_db))]
 pub fn derive_serializer(input: TS1) -> TS1 {
     derive_serializer2(input.into()).into()
 }

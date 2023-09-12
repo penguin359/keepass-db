@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'kdbx'",
+            "name": "Debug executable 'keepass_db'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=kdbx",
-                    "--package=kdbx"
+                    "--bin=keepass-db",
+                    "--package=keepass-db"
                 ],
                 "filter": {
-                    "name": "kdbx",
+                    "name": "keepass-db",
                     "kind": "bin"
                 }
             },
@@ -36,16 +36,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'kdbx'",
+            "name": "Debug unit tests in executable 'keepass_db'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=kdbx",
-                    "--package=kdbx"
+                    "--bin=keepass-db",
+                    "--package=keepass-db"
                 ],
                 "filter": {
-                    "name": "kdbx",
+                    "name": "keepass-db",
                     "kind": "bin"
                 }
             },

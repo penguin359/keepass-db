@@ -47,7 +47,7 @@ use xml::reader::{EventReader, ParserConfig, XmlEvent};
 use xml::writer::EventWriter;
 use derive_getters::Getters;
 
-use kdbx_derive::{KdbxParse, KdbxSerialize};
+use keepass_db_derive::{KdbxParse, KdbxSerialize};
 
 mod kdb1;
 mod utils;
@@ -1379,14 +1379,14 @@ struct MemoryProtection {
     protect_title: bool,
     protect_user_name: bool,
     protect_password: bool,
-    #[kdbx(element = "ProtectURL")]
+    #[keepass_db(element = "ProtectURL")]
     protect_url: bool,
     protect_notes: bool,
 }
 
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
 struct Icon {
-    #[kdbx(element = "UUID")]
+    #[keepass_db(element = "UUID")]
     uuid: Uuid,
     last_modification_time: Option<DateTime<Utc>>,
     data: Vec<u8>,
@@ -1421,7 +1421,7 @@ struct Meta {
     memory_protection: MemoryProtection,
     custom_icons: Vec<Icon>,
     recycle_bin_enabled: bool,
-    #[kdbx(element = "RecycleBinUUID")]
+    #[keepass_db(element = "RecycleBinUUID")]
     recycle_bin_uuid: Option<Uuid>,
     recycle_bin_changed: DateTime<Utc>,
     entry_templates_group: Uuid,  // TODO should be optional?
@@ -1671,13 +1671,13 @@ impl<C> KdbxSerialize<C> for BinaryRef {
 
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize, Getters)]
 pub struct Group {
-    #[kdbx(element = "UUID")]
+    #[keepass_db(element = "UUID")]
     uuid: Uuid,
     name: String,
     notes: String,
-    #[kdbx(element = "IconID")]
+    #[keepass_db(element = "IconID")]
     icon_id: u32,
-    #[kdbx(element = "CustomIconUUID")]
+    #[keepass_db(element = "CustomIconUUID")]
     custom_icon_uuid: Option<Uuid>,
     times: Times,
     is_expanded: bool,
@@ -1688,10 +1688,10 @@ pub struct Group {
     // TODO custom_data: CustomData,
     previous_parent_group: Option<Uuid>,
     tags: Option<String>,  // TODO Should be a Vec
-    #[kdbx(flatten)]
+    #[keepass_db(flatten)]
     #[getter(rename = "entries")]
     entry: Vec<Entry>,
-    #[kdbx(flatten)]
+    #[keepass_db(flatten)]
     #[getter(rename = "groups")]
     group: Vec<Group>,
 }
@@ -1794,32 +1794,32 @@ struct AutoType {
     enabled: bool,
     data_transfer_obfuscation: i64,
     default_sequence: Option<String>,
-    #[kdbx(flatten)]
+    #[keepass_db(flatten)]
     association: Vec<Association>,
 }
 
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize, Getters)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Entry {
-    #[kdbx(element = "UUID")]
+    #[keepass_db(element = "UUID")]
     uuid: Uuid,
-    #[kdbx(element = "IconID")]
+    #[keepass_db(element = "IconID")]
     icon_id: u32,
-    #[kdbx(element = "CustomIconUUID")]
+    #[keepass_db(element = "CustomIconUUID")]
     custom_icon_uuid: Option<Uuid>,
     foreground_color: String,
     background_color: String,
-    #[kdbx(element = "OverrideURL")]
+    #[keepass_db(element = "OverrideURL")]
     override_url: String,
     quality_check: Option<bool>,
     tags: String,
     previous_parent_group: Option<Uuid>,
     times: Times,
     custom_data: Vec<Item>,
-    #[kdbx(flatten)]
+    #[keepass_db(flatten)]
     #[getter(skip)]
     string: Vec<ProtectedString>,
-    #[kdbx(flatten)]
+    #[keepass_db(flatten)]
     #[getter(skip)]
     binary: Vec<ProtectedBinary>,
     #[getter(skip)]
@@ -1861,14 +1861,14 @@ impl Entry {
 
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
 pub struct DeletedObject {
-    #[kdbx(element = "UUID")]
+    #[keepass_db(element = "UUID")]
     uuid: Uuid,
     deletion_time: DateTime<Utc>,
 }
 
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize, Getters)]
 pub struct Root {
-    #[kdbx(flatten)]
+    #[keepass_db(flatten)]
     group: Vec<Group>,
     deleted_objects: Vec<DeletedObject>,
 }

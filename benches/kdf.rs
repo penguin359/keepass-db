@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use test::Bencher;
 
-use kdbx::{AesKdf, Kdf, Key, MapValue, KDF_AES_KDBX3, KDF_PARAM_UUID};
+use keepass_db::{AesKdf, Kdf, Key, MapValue, KDF_AES_KDBX3, KDF_PARAM_UUID};
 
 #[bench]
 fn bench_me(b: &mut Bencher) {

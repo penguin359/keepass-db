@@ -5,7 +5,7 @@ use std::fs::File;
 use clap::{App, Arg};
 use rpassword::read_password;
 
-use kdbx::{Key, lib_main, save_file};
+use keepass_db::{Key, lib_main, save_file};
 
 fn main() -> io::Result<()> {
     env_logger::init();

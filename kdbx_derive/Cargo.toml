@@ -1,5 +1,5 @@
 [package]
-name = "kdbx_derive"
+name = "keepass_db_derive"
 version = "0.0.1"
 authors = ["Loren M. Lang <lorenl@north-winds.org>"]
 edition = "2018"
