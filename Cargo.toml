@@ -38,7 +38,7 @@ env_logger = "0.7.1"
 rand = "0.7.2"
 clap = "2.33.0"
 xml-rs = "0.8.0"
-keepass_db_derive = { version = "0.0.1", path = "keepass_db_derive/" }
+keepass-db-derive = { version = "0.0.1", path = "keepass-db-derive/" }
 num-derive = "0.4.0"
 num-traits = "0.2.16"
 salsa20 = "0.10.2"
@@ -47,4 +47,4 @@ derive-getters = "0.3.0"
 generic-array = "0.14.7"
 
 [workspace]
-members = [ "keepass_db_derive" ]
+members = [ "keepass-db-derive" ]

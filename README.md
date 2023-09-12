@@ -19,7 +19,7 @@ variants only supported via extensions.
 
 Write support is currently experimental.
 
-![Rust workflow](https://github.com/penguin359/kdbx/actions/workflows/rust.yml/badge.svg)
+![Rust workflow](https://github.com/penguin359/keepass-db/actions/workflows/rust.yml/badge.svg)
 
 ## Crate features
 
