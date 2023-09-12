@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["CachedIntoIter","CachedIterMut","CachedThreadLocal","IntoIter","IterMut","ThreadLocal"]};

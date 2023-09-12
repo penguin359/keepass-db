@@ -13,7 +13,7 @@
     UnknownFlag(<a class="struct" href="https://doc.rust-lang.org/1.71.0/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>),
     NonUnicodeUnsupported,
     InvalidBackref,
-    InnerError(<a class="enum" href="../regex/error/enum.Error.html" title="enum regex::error::Error">Error</a>),
+    InnerError(Error),
     StackOverflow,
     BacktrackLimitExceeded,
     // some variants omitted
@@ -32,7 +32,7 @@
 </div><section id="variant.UnknownFlag" class="variant"><a href="#variant.UnknownFlag" class="anchor">§</a><h3 class="code-header">UnknownFlag(<a class="struct" href="https://doc.rust-lang.org/1.71.0/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>)</h3></section><div class="docblock"><p>Unknown group flag</p>
 </div><section id="variant.NonUnicodeUnsupported" class="variant"><a href="#variant.NonUnicodeUnsupported" class="anchor">§</a><h3 class="code-header">NonUnicodeUnsupported</h3></section><div class="docblock"><p>Disabling Unicode not supported</p>
 </div><section id="variant.InvalidBackref" class="variant"><a href="#variant.InvalidBackref" class="anchor">§</a><h3 class="code-header">InvalidBackref</h3></section><div class="docblock"><p>Invalid back reference</p>
-</div><section id="variant.InnerError" class="variant"><a href="#variant.InnerError" class="anchor">§</a><h3 class="code-header">InnerError(<a class="enum" href="../regex/error/enum.Error.html" title="enum regex::error::Error">Error</a>)</h3></section><div class="docblock"><p>Regex crate error</p>
+</div><section id="variant.InnerError" class="variant"><a href="#variant.InnerError" class="anchor">§</a><h3 class="code-header">InnerError(Error)</h3></section><div class="docblock"><p>Regex crate error</p>
 </div><section id="variant.StackOverflow" class="variant"><a href="#variant.StackOverflow" class="anchor">§</a><h3 class="code-header">StackOverflow</h3></section><div class="docblock"><p>Max stack size exceeded for backtracking while executing regex.</p>
 </div><section id="variant.BacktrackLimitExceeded" class="variant"><a href="#variant.BacktrackLimitExceeded" class="anchor">§</a><h3 class="code-header">BacktrackLimitExceeded</h3></section><div class="docblock"><p>Max limit for backtracking count exceeded while executing the regex.
 Configure using

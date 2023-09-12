@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"macro":["deserialize_and_validate","serialize_and_validate","test_for_attribute_type","test_for_type"],"mod":["de","ser"],"trait":["Visitor","YaDeserialize","YaSerialize"]};

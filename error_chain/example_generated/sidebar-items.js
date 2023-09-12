@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["ErrorKind"],"mod":["inner"],"struct":["Error"],"trait":["ResultExt"],"type":["Result"]};

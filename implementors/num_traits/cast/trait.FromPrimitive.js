@@ -1,5 +1,5 @@
 (function() {var implementors = {
 "chrono":[["impl <a class=\"trait\" href=\"num_traits/cast/trait.FromPrimitive.html\" title=\"trait num_traits::cast::FromPrimitive\">FromPrimitive</a> for <a class=\"enum\" href=\"chrono/enum.Weekday.html\" title=\"enum chrono::Weekday\">Weekday</a>"],["impl <a class=\"trait\" href=\"num_traits/cast/trait.FromPrimitive.html\" title=\"trait num_traits::cast::FromPrimitive\">FromPrimitive</a> for <a class=\"enum\" href=\"chrono/enum.Month.html\" title=\"enum chrono::Month\">Month</a>"]],
-"kdbx":[["impl <a class=\"trait\" href=\"num_traits/cast/trait.FromPrimitive.html\" title=\"trait num_traits::cast::FromPrimitive\">FromPrimitive</a> for <a class=\"enum\" href=\"kdbx/protected_stream/enum.CipherType.html\" title=\"enum kdbx::protected_stream::CipherType\">CipherType</a>"]],
+"keepass_db":[["impl <a class=\"trait\" href=\"num_traits/cast/trait.FromPrimitive.html\" title=\"trait num_traits::cast::FromPrimitive\">FromPrimitive</a> for <a class=\"enum\" href=\"keepass_db/protected_stream/enum.CipherType.html\" title=\"enum keepass_db::protected_stream::CipherType\">CipherType</a>"]],
 "num_traits":[]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
