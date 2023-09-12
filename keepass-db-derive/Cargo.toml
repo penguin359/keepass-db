@@ -2,7 +2,13 @@
 name = "keepass-db-derive"
 version = "0.0.1"
 authors = ["Loren M. Lang <lorenl@north-winds.org>"]
+license = "MIT"
 edition = "2018"
+description = "Serialization/deserialization macros for KeePass-DB"
+homepage = "https://github.north-winds.org/keepass-db"
+repository = "https://github.com/penguin359/keepass-db"
+keywords = ["keepass", "kdbx", "password"]
+categories = ["cryptography"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
