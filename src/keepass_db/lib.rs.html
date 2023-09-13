@@ -2599,21 +2599,6 @@
 <a href="#2599" id="2599">2599</a>
 <a href="#2600" id="2600">2600</a>
 <a href="#2601" id="2601">2601</a>
-<a href="#2602" id="2602">2602</a>
-<a href="#2603" id="2603">2603</a>
-<a href="#2604" id="2604">2604</a>
-<a href="#2605" id="2605">2605</a>
-<a href="#2606" id="2606">2606</a>
-<a href="#2607" id="2607">2607</a>
-<a href="#2608" id="2608">2608</a>
-<a href="#2609" id="2609">2609</a>
-<a href="#2610" id="2610">2610</a>
-<a href="#2611" id="2611">2611</a>
-<a href="#2612" id="2612">2612</a>
-<a href="#2613" id="2613">2613</a>
-<a href="#2614" id="2614">2614</a>
-<a href="#2615" id="2615">2615</a>
-<a href="#2616" id="2616">2616</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Read, modify and write KeePass 2.x databases
 
 </span><span class="kw">use </span>std::collections::VecDeque;
@@ -4188,30 +4173,7 @@
         } <span class="kw">else </span>{
             decode_optional_string(reader, name, attributes).map(|o| o.map(|v| <span class="self">Self</span>::Unprotected(v)))
         }
-<span class="comment">//        loop {
-//            let event = reader.next().unwrap();
-//            match event {
-//                XmlEvent::StartDocument { .. } =&gt; {
-//                    println!(&quot;Start&quot;);
-//                }
-//                XmlEvent::StartElement {
-//                    name, attributes, ..
-//                } =&gt; {
-//                    // TODO Check top-level tag name
-//                    let mut context = KdbxContext::default();
-//                    context.major_version = major_version;
-//                    my_doc = Some(KeePassFile::parse(&amp;mut reader, name, attributes, &amp;mut context)
-//                        .map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?
-//                        .unwrap());
-//                }
-//                XmlEvent::EndDocument =&gt; {
-//                    println!(&quot;End&quot;);
-//                    break;
-//                }
-//                _ =&gt; {}
-//            }
-//        }
-    </span>}
+    }
 }
 
 <span class="kw">impl</span>&lt;C&gt; KdbxSerialize&lt;C&gt; <span class="kw">for </span>ProtectedValue {
@@ -4287,15 +4249,19 @@
 }
 
 
-<span class="attr">#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize, Getters)]
+<span class="doccomment">/// Group of password entries and subgroups
+</span><span class="attr">#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize, Getters)]
 </span><span class="kw">pub struct </span>Group {
     <span class="attr">#[keepass_db(element = <span class="string">&quot;UUID&quot;</span>)]
     </span>uuid: Uuid,
     name: String,
-    notes: String,
-    <span class="attr">#[keepass_db(element = <span class="string">&quot;IconID&quot;</span>)]
+    <span class="doccomment">/// Additional notes about group
+    </span>notes: String,
+    <span class="doccomment">/// Group Icon unless a custom icon is provided
+    </span><span class="attr">#[keepass_db(element = <span class="string">&quot;IconID&quot;</span>)]
     </span>icon_id: u32,
-    <span class="attr">#[keepass_db(element = <span class="string">&quot;CustomIconUUID&quot;</span>)]
+    <span class="doccomment">/// Provides a custom icon for the group overiding icon_id
+    </span><span class="attr">#[keepass_db(element = <span class="string">&quot;CustomIconUUID&quot;</span>)]
     </span>custom_icon_uuid: <span class="prelude-ty">Option</span>&lt;Uuid&gt;,
     times: Times,
     is_expanded: bool,
@@ -4323,6 +4289,7 @@
 //        self.entry.iter()
 //    }
 
+    // Iterate over all groups in database
     </span><span class="kw">pub fn </span>all_groups(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; GroupIter {
         <span class="kw">return </span>GroupIter {
             first: <span class="bool-val">true</span>,
@@ -4332,7 +4299,8 @@
         }
     }
 
-    <span class="kw">pub fn </span>all_entries(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; EntryIter {
+    <span class="comment">// Iterate over all password entries in database
+    </span><span class="kw">pub fn </span>all_entries(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; EntryIter {
         <span class="kw">let </span><span class="kw-2">mut </span>groups = <span class="self">self</span>.all_groups();
         <span class="kw">return </span>EntryIter {
             entries: groups.next().map(|e| e.entries().iter()),
@@ -4416,7 +4384,8 @@
     </span>association: Vec&lt;Association&gt;,
 }
 
-<span class="attr">#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize, Getters)]
+<span class="doccomment">/// Password entry
+</span><span class="attr">#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize, Getters)]
 #[cfg_attr(test, derive(PartialEq))]
 </span><span class="kw">pub struct </span>Entry {
     <span class="attr">#[keepass_db(element = <span class="string">&quot;UUID&quot;</span>)]
@@ -4491,17 +4460,19 @@
     deleted_objects: Vec&lt;DeletedObject&gt;,
 }
 
-<span class="attr">#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
+<span class="doccomment">/// Testing doc macros
+/// ```
+/// assert!(true);
+/// ```
+/// Does it work?
+</span><span class="attr">#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
 </span><span class="kw">pub struct </span>KeePassFile {
     meta: Meta,
     root: Root,
 }
 
 <span class="kw">impl </span>KeePassFile {
-<span class="comment">//    pub fn groups(&amp;self) -&gt; Iter&lt;&#39;_, Group&gt; {
-//        self.root.group.iter()
-//    }
-    </span><span class="kw">pub fn </span>groups(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Vec&lt;Group&gt; {
+    <span class="kw">pub fn </span>groups(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Vec&lt;Group&gt; {
         <span class="kw-2">&amp;</span><span class="self">self</span>.root.group
     }
 }
@@ -4512,172 +4483,714 @@
 <span class="kw">const </span>KDBX2_BETA_MAGIC_TYPE: u32 = <span class="number">0xB54BFB66</span>;
 <span class="kw">const </span>KDBX2_MAGIC_TYPE: u32 = <span class="number">0xB54BFB67</span>;
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;write&quot;</span>)]
-</span><span class="kw">pub fn </span>save_file(doc: <span class="kw-2">&amp;</span>KeePassFile, major_version: u16) -&gt; io::Result&lt;()&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>file = File::create(<span class="string">&quot;data-out.kdbx&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let </span>minor_version = <span class="number">0</span>;
-    <span class="kw">let </span><span class="kw-2">mut </span>header = <span class="macro">vec!</span>[];
-    header.write_u32::&lt;LittleEndian&gt;(KDBX_MAGIC)<span class="question-mark">?</span>;
-    header.write_u32::&lt;LittleEndian&gt;(KDBX2_MAGIC_TYPE)<span class="question-mark">?</span>;
-    header.write_u16::&lt;LittleEndian&gt;(minor_version)<span class="question-mark">?</span>;
-    header.write_u16::&lt;LittleEndian&gt;(major_version)<span class="question-mark">?</span>;
-    <span class="kw">let </span><span class="kw-2">mut </span>key = Key::new();
-    key.set_user_password(<span class="string">&quot;asdf&quot;</span>);
-    <span class="kw">let </span>composite_key = key.composite_key();
-    <span class="kw">let </span>kdf = AesKdf::default();
-    <span class="kw">let </span><span class="kw-2">mut </span>custom_data = HashMap::new();
-    custom_data.insert(
-        KDF_PARAM_UUID.to_string(),
-        MapValue::ByteArray(KDF_AES_KDBX3.into_bytes().to_vec()),
-    );
-    kdf.save(<span class="kw-2">&amp;mut </span>custom_data);
-    <span class="kw">let </span>transform_key = kdf
-        .transform_key(<span class="kw-2">&amp;</span>composite_key)
-        .expect(<span class="string">&quot;Failed to transform key&quot;</span>);
-    <span class="kw">let </span>master_seed = [<span class="number">0u8</span>; <span class="number">32</span>];
-    <span class="kw">let </span>iv = [<span class="number">0u8</span>; <span class="number">16</span>];
-    <span class="kw">let </span>stream_cipher = <span class="number">2u32</span>;
-    <span class="kw">let </span>stream_key = [<span class="number">0u8</span>; <span class="number">32</span>];
-    <span class="kw">let </span><span class="kw-2">mut </span>tlvs = BTreeMap::new();
-    tlvs.insert(
-        TlvType::MasterSeed.to_u8().unwrap(),
-        <span class="macro">vec!</span>[master_seed.to_vec()],
-    );
-    tlvs.insert(
-        TlvType::CipherId.to_u8().unwrap(),
-        <span class="macro">vec!</span>[CIPHER_ID_AES256_CBC.into_bytes().to_vec()],
-    );
-    tlvs.insert(TlvType::EncryptionIv.to_u8().unwrap(), <span class="macro">vec!</span>[iv.to_vec()]);
-    tlvs.insert(
-        TlvType::CompressionFlags.to_u8().unwrap(),
-        <span class="macro">vec!</span>[Compression::None.to_u32().unwrap().to_le_bytes().to_vec()],
-    );
-    <span class="kw">let </span>start_stream = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">32</span>]; <span class="comment">// TODO Randomize this
-    </span><span class="kw">if </span>major_version &lt; <span class="number">4 </span>{
+<span class="doccomment">/// A KeePass database
+</span><span class="attr">#[derive(Default)]
+</span><span class="kw">pub struct </span>KeePassDoc {
+    <span class="kw">pub </span>file: KeePassFile,
+    <span class="kw">pub </span>cipher: CipherValue,
+}
+
+<span class="kw">impl </span>KeePassDoc {
+    <span class="doccomment">/// Read in an existing KeePass database
+    </span><span class="kw">pub fn </span>load_file(filename: <span class="kw-2">&amp;</span>str, key: <span class="kw-2">&amp;</span>Key) -&gt; io::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>composite_key = key.composite_key();
+
+        <span class="kw">let </span><span class="kw-2">mut </span>file = File::open(filename)<span class="question-mark">?</span>;
+        <span class="kw">let </span>magic = file.read_u32::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
+        <span class="kw">let </span>magic_type = file.read_u32::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
+
+        <span class="kw">if </span>magic != KDBX_MAGIC {
+            <span class="macro">eprintln!</span>(<span class="string">&quot;Invalid database file\n&quot;</span>);
+            process::exit(<span class="number">1</span>);
+        }
+
+        <span class="kw">let </span><span class="kw-2">mut </span>custom_data = HashMap::&lt;String, Vec&lt;u8&gt;&gt;::new();
+        <span class="kw">let </span><span class="kw-2">mut </span>custom_data2 = HashMap::&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;::new();
+
+        <span class="kw">match </span>magic_type {
+            KDBX1_MAGIC_TYPE =&gt; {
+                <span class="kw">use </span>kdb1::read_kdb1_header;
+                read_kdb1_header(<span class="kw-2">&amp;mut </span>file, <span class="kw-2">&amp;</span>key)<span class="question-mark">?</span>;
+                <span class="kw">return </span><span class="prelude-val">Ok</span>(KeePassDoc::default());
+            }
+            <span class="comment">// KDBX2_BETA_MAGIC_TYPE =&gt; {
+            //     // XXX Untested
+            //     eprintln!(&quot;KeePass 2.x Beta files not supported\n&quot;);
+            //     process::exit(1);
+            // },
+            </span>KDBX2_MAGIC_TYPE | KDBX2_BETA_MAGIC_TYPE =&gt; {
+                <span class="macro">println!</span>(<span class="string">&quot;Opening KeePass 2.x database&quot;</span>);
+            }
+            <span class="kw">_ </span>=&gt; {
+                <span class="comment">// XXX Untested
+                </span><span class="macro">eprintln!</span>(<span class="string">&quot;Unknown KeePass database format\n&quot;</span>);
+                process::exit(<span class="number">1</span>);
+            }
+        };
+
+        <span class="comment">// Version field is defined as uint32_t, but it&#39;s broken up into
+        // major and minor 16-bit components. Due to the nature of little
+        // endian, this puts the minor part first.
+        </span><span class="kw">let </span>minor_version = file.read_u16::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
+        <span class="kw">let </span>major_version = file.read_u16::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
+        <span class="kw">match </span>major_version {
+            <span class="number">3 </span>=&gt; {
+                <span class="kw">unsafe </span>{
+                    KDBX4 = <span class="bool-val">false</span>;
+                };
+                custom_data.insert(
+                    KDF_PARAM_UUID.to_string(),
+                    KDF_AES_KDBX3.as_bytes().to_vec(),
+                );
+            }
+            <span class="number">4 </span>=&gt; {}
+            <span class="number">1 </span>=&gt; {
+                custom_data.insert(
+                    KDF_PARAM_UUID.to_string(),
+                    KDF_AES_KDBX3.as_bytes().to_vec(),
+                );
+            }
+            <span class="kw">_ </span>=&gt; {
+                <span class="macro">eprintln!</span>(
+                    <span class="string">&quot;Unsupported KeePass 2.x database version ({}.{})\n&quot;</span>,
+                    major_version, minor_version
+                );
+                process::exit(<span class="number">1</span>);
+            }
+        };
+        <span class="kw">let </span><span class="kw-2">mut </span>tlvs = HashMap::new();
+        <span class="kw">let </span><span class="kw-2">mut </span>inner_tlvs = BTreeMap::&lt;u8, Vec&lt;Vec&lt;u8&gt;&gt;&gt;::new();
+        inner_tlvs.insert(<span class="number">3u8</span>, <span class="macro">vec!</span>[]);
+        <span class="kw">loop </span>{
+            <span class="kw">let </span>tlv_type = file.read_u8()<span class="question-mark">?</span>;
+            <span class="kw">let </span>tlv_len = <span class="kw">if </span>major_version == <span class="number">4 </span>{
+                file.read_u32::&lt;LittleEndian&gt;()<span class="question-mark">?
+            </span>} <span class="kw">else </span>{
+                <span class="comment">// XXX Untested
+                </span>file.read_u16::&lt;LittleEndian&gt;()<span class="question-mark">? </span><span class="kw">as </span>u32
+            };
+            <span class="kw">let </span><span class="kw-2">mut </span>tlv_data = <span class="macro">vec!</span>[<span class="number">0</span>; tlv_len <span class="kw">as </span>usize];
+            file.read_exact(<span class="kw-2">&amp;mut </span>tlv_data)<span class="question-mark">?</span>;
+            <span class="macro">debug!</span>(<span class="string">&quot;TLV({}, {}): {:?}&quot;</span>, tlv_type, tlv_len, tlv_data);
+            <span class="kw">match </span>tlv_type {
+                <span class="number">0 </span>=&gt; {
+                    <span class="kw">break</span>;
+                }
+                <span class="number">5 </span>=&gt; {
+                    custom_data.insert(KDF_PARAM_SALT.to_string(), tlv_data.clone());
+                    custom_data2.insert(KDF_PARAM_SALT.to_string(), MapValue::ByteArray(tlv_data));
+                }
+                <span class="number">6 </span>=&gt; {
+                    custom_data.insert(KDF_PARAM_ROUNDS.to_string(), tlv_data.clone());
+                    custom_data2.insert(
+                        KDF_PARAM_ROUNDS.to_string(),
+                        MapValue::UInt64(u64::from_le_bytes(tlv_data[<span class="number">0</span>..<span class="number">8</span>].try_into().unwrap())),
+                    );
+                }
+                <span class="number">8 </span>=&gt; {
+                    inner_tlvs.insert(<span class="number">2u8</span>, <span class="macro">vec!</span>[tlv_data]);
+                }
+                <span class="number">10 </span>=&gt; {
+                    inner_tlvs.insert(<span class="number">1u8</span>, <span class="macro">vec!</span>[tlv_data]);
+                }
+                <span class="number">11 </span>=&gt; {
+                    custom_data2 = load_map(<span class="kw-2">&amp;</span>tlv_data).unwrap();
+                    <span class="kw">let </span>kdf_parameters = <span class="kw-2">&amp;</span>tlv_data;
+                    <span class="kw">let </span><span class="kw-2">mut </span>c = Cursor::new(kdf_parameters);
+                    <span class="kw">let </span>variant_minor = c.read_u8()<span class="question-mark">?</span>;
+                    <span class="kw">let </span>variant_major = c.read_u8()<span class="question-mark">?</span>;
+                    <span class="kw">if </span>variant_major != <span class="number">1 </span>{
+                        <span class="macro">eprintln!</span>(
+                            <span class="string">&quot;Unsupported variant dictionary version ({}.{})\n&quot;</span>,
+                            variant_major, variant_minor
+                        );
+                        process::exit(<span class="number">1</span>);
+                    };
+
+                    <span class="kw">loop </span>{
+                        <span class="kw">let </span>item_type = c.read_u8()<span class="question-mark">?</span>;
+                        <span class="kw">if </span>item_type == <span class="number">0 </span>{
+                            <span class="kw">break</span>;
+                        }
+                        <span class="kw">let </span>item_key_len = c.read_u32::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
+                        <span class="kw">let </span><span class="kw-2">mut </span>item_key = <span class="macro">vec!</span>[<span class="number">0</span>; item_key_len <span class="kw">as </span>usize];
+                        c.read_exact(<span class="kw-2">&amp;mut </span>item_key)<span class="question-mark">?</span>;
+                        <span class="kw">let </span>item_key_str = String::from_utf8_lossy(<span class="kw-2">&amp;</span>item_key).to_owned();
+                        <span class="kw">let </span>item_value_len = c.read_u32::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
+                        <span class="kw">let </span><span class="kw-2">mut </span>item_value = <span class="macro">vec!</span>[<span class="number">0</span>; item_value_len <span class="kw">as </span>usize];
+                        c.read_exact(<span class="kw-2">&amp;mut </span>item_value)<span class="question-mark">?</span>;
+                        <span class="macro">debug!</span>(<span class="string">&quot;K: {}, V: {:0x?}&quot;</span>, item_key_str, item_value);
+                        custom_data.insert(item_key_str.to_owned().to_string(), item_value);
+                    }
+                }
+                <span class="kw">_ </span>=&gt; {
+                    tlvs.insert(tlv_type, tlv_data);
+                }
+            }
+        }
+
+        <span class="comment">//let src = &amp;tlvs[&amp;2u8];
+        //let mut uuid = [0; 16];
+        //let b = &amp;src[..uuid.len()];
+        //uuid.copy_from_slice(b);
+        //let d = Builder::from_bytes(uuid).build();
+        </span><span class="kw">let </span>cipher_id = Uuid::from_slice(<span class="kw-2">&amp;</span>tlvs[<span class="kw-2">&amp;</span><span class="number">2u8</span>]).unwrap();
+        <span class="macro">println!</span>(<span class="string">&quot;D: {:?}&quot;</span>, cipher_id);
+        <span class="kw">if </span>cipher_id != CIPHER_ID_AES256_CBC {
+            <span class="macro">eprintln!</span>(<span class="string">&quot;Unknown cipher\n&quot;</span>);
+            process::exit(<span class="number">1</span>);
+        }
+        <span class="macro">println!</span>(<span class="string">&quot;AES&quot;</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>c = Cursor::new(<span class="kw-2">&amp;</span>tlvs[<span class="kw-2">&amp;</span><span class="number">3u8</span>]);
+        <span class="kw">let </span>compression_flags = c.read_u32::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
+        <span class="kw">enum </span>Compression {
+            <span class="prelude-val">None</span>,
+            Gzip,
+        }
+        <span class="kw">let </span>compress = <span class="kw">match </span>compression_flags {
+            <span class="number">0 </span>=&gt; {
+                <span class="comment">// XX Untested
+                // eprintln!(&quot;Unsupported no compressed file\n&quot;);
+                //process::exit(1);
+                </span>Compression::None
+            }
+            <span class="number">1 </span>=&gt; {
+                <span class="macro">println!</span>(<span class="string">&quot;Gzip compression&quot;</span>);
+                Compression::Gzip
+            }
+            <span class="kw">_ </span>=&gt; {
+                <span class="comment">// XX Untested
+                </span><span class="macro">eprintln!</span>(<span class="string">&quot;Unsupported compression method\n&quot;</span>);
+                process::exit(<span class="number">1</span>);
+            }
+        };
+
+        <span class="kw">let </span>master_seed = <span class="kw-2">&amp;</span>tlvs[<span class="kw-2">&amp;</span><span class="number">4u8</span>];
+        <span class="kw">let </span>encryption_iv = <span class="kw-2">&amp;</span>tlvs[<span class="kw-2">&amp;</span><span class="number">7u8</span>];
+
+        <span class="comment">//let mut header = vec![];
+        </span><span class="kw">let </span><span class="kw-2">mut </span>context = Context::new(<span class="kw-2">&amp;</span>SHA256);
+        <span class="kw">let </span>pos = file.seek(SeekFrom::Current(<span class="number">0</span>))<span class="question-mark">?</span>;
+        file.seek(SeekFrom::Start(<span class="number">0</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>header = <span class="macro">vec!</span>[<span class="number">0</span>; (pos) <span class="kw">as </span>usize];
+        file.read_exact(<span class="kw-2">&amp;mut </span>header)<span class="question-mark">?</span>;
+        file.seek(SeekFrom::Start(pos))<span class="question-mark">?</span>;
+        context.update(<span class="kw-2">&amp;</span>header);
+        <span class="kw">let </span>digest = context.finish();
+        <span class="kw">if </span>major_version == <span class="number">4 </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>expected_hash = [<span class="number">0</span>; <span class="number">32</span>];
+            file.read_exact(<span class="kw-2">&amp;mut </span>expected_hash)<span class="question-mark">?</span>;
+            <span class="kw">if </span>digest.as_ref() != expected_hash {
+                <span class="macro">eprintln!</span>(<span class="string">&quot;Possible header corruption\n&quot;</span>);
+                process::exit(<span class="number">1</span>);
+            }
+        }
+
+        <span class="kw">let </span>kdf_id = Uuid::from_slice(<span class="kw-2">&amp;</span>custom_data[KDF_PARAM_UUID]).unwrap();
+        <span class="macro">println!</span>(<span class="string">&quot;KDF: {:?}&quot;</span>, kdf_id);
+
+        <span class="kw">let </span>transform_key = <span class="kw">match </span>kdf_id {
+            x <span class="kw">if </span>x == KDF_AES_KDBX3 =&gt; {
+                <span class="comment">//unimplemented!(&quot;KDBX 3 AES-KDF not supported!&quot;);
+                </span>AesKdf::load(<span class="kw-2">&amp;</span>custom_data2)<span class="question-mark">?</span>.transform_key(<span class="kw-2">&amp;</span>composite_key)<span class="question-mark">?
+                </span><span class="comment">// transform_aes_kdf(&amp;composite_key, &amp;custom_data)?
+            </span>}
+            x <span class="kw">if </span>x == KDF_AES_KDBX4 =&gt; {
+                <span class="macro">unimplemented!</span>(<span class="string">&quot;KDBX 4 AES-KDF not supported!&quot;</span>);
+            }
+            x <span class="kw">if </span>x == KDF_ARGON2_D =&gt; {
+                transform_argon2(<span class="kw-2">&amp;</span>composite_key, <span class="kw-2">&amp;</span>custom_data)<span class="question-mark">?
+                </span><span class="comment">//unimplemented!(&quot;Argon2 KDF not supported!&quot;);
+            </span>}
+            <span class="kw">_ </span>=&gt; {
+                <span class="macro">unimplemented!</span>(<span class="string">&quot;Unknown&quot;</span>);
+            }
+        };
+
+        <span class="macro">println!</span>(<span class="string">&quot;Key OUT: {:0x?}&quot;</span>, transform_key);
+
+        <span class="macro">println!</span>(<span class="string">&quot;Calculating master key&quot;</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>hmac_context = Context::new(<span class="kw-2">&amp;</span>SHA512);
+
+        <span class="kw">let </span><span class="kw-2">mut </span>master_key = master_seed.to_owned();
+        master_key.extend(transform_key);
+        <span class="kw">let </span><span class="kw-2">mut </span>context = Context::new(<span class="kw-2">&amp;</span>SHA256);
+        context.update(<span class="kw-2">&amp;</span>master_key);
+        hmac_context.update(<span class="kw-2">&amp;</span>master_key);
+        hmac_context.update(<span class="kw-2">&amp;</span>[<span class="number">1u8</span>]);
+        master_key = context.finish().as_ref().to_owned();
+        <span class="kw">let </span>hmac_key_base = hmac_context.finish().as_ref().to_owned();
+        <span class="macro">println!</span>(<span class="string">&quot;Master OUT: {:0x?}&quot;</span>, master_key);
+        <span class="macro">println!</span>(<span class="string">&quot;HMAC OUT: {:0x?}&quot;</span>, hmac_key_base);
+
+        <span class="kw">let </span><span class="kw-2">mut </span>hmac_context = Context::new(<span class="kw-2">&amp;</span>SHA512);
+        hmac_context.update(<span class="kw-2">&amp;</span>[<span class="number">0xff</span>; <span class="number">8</span>]);
+        hmac_context.update(<span class="kw-2">&amp;</span>hmac_key_base);
+        <span class="kw">let </span>hmac_key = hmac_context.finish().as_ref().to_owned();
+
+        <span class="kw">let </span><span class="kw-2">mut </span>hmac_tag = [<span class="number">0</span>; <span class="number">32</span>];
+        <span class="comment">//println!(&quot;HMAC Tag: {:0x?}&quot;, hmac_tag);
+        </span><span class="kw">let </span>hmac_key = hmac::Key::new(hmac::HMAC_SHA256, <span class="kw-2">&amp;</span>hmac_key);
+        <span class="kw">if </span>major_version == <span class="number">4 </span>{
+            file.read_exact(<span class="kw-2">&amp;mut </span>hmac_tag)<span class="question-mark">?</span>;
+            <span class="macro">println!</span>(<span class="string">&quot;Verifying HMAC&quot;</span>);
+            hmac::verify(<span class="kw-2">&amp;</span>hmac_key, <span class="kw-2">&amp;</span>header, <span class="kw-2">&amp;</span>hmac_tag).unwrap();
+            <span class="macro">println!</span>(<span class="string">&quot;Complete&quot;</span>);
+        }
+
+        <span class="kw">let </span>contents = <span class="kw">if </span>major_version == <span class="number">4 </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>ciphertext = <span class="macro">vec!</span>[];
+            <span class="kw">for </span>idx <span class="kw">in </span><span class="number">0</span>.. {
+                <span class="macro">println!</span>(<span class="string">&quot;Block {}&quot;</span>, idx);
+                file.read_exact(<span class="kw-2">&amp;mut </span>hmac_tag)<span class="question-mark">?</span>;
+                <span class="kw">let </span>block_size = file.read_u32::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
+                <span class="kw">if </span>block_size == <span class="number">0 </span>{
+                    <span class="kw">break</span>;
+                }
+                <span class="kw">let </span><span class="kw-2">mut </span>block = <span class="macro">vec!</span>[<span class="number">0</span>; block_size <span class="kw">as </span>usize];
+                file.read_exact(<span class="kw-2">&amp;mut </span>block)<span class="question-mark">?</span>;
+
+                <span class="kw">let </span><span class="kw-2">mut </span>hmac_context = Context::new(<span class="kw-2">&amp;</span>SHA512);
+                <span class="kw">let </span><span class="kw-2">mut </span>buf = Cursor::new(Vec::new());
+                buf.write_u64::&lt;LittleEndian&gt;(idx)<span class="question-mark">?</span>;
+                hmac_context.update(buf.get_ref());
+                hmac_context.update(<span class="kw-2">&amp;</span>hmac_key_base);
+                <span class="kw">let </span>hmac_key = hmac_context.finish().as_ref().to_owned();
+                buf.write_u32::&lt;LittleEndian&gt;(block_size)<span class="question-mark">?</span>;
+                buf.write(<span class="kw-2">&amp;</span>block)<span class="question-mark">?</span>;
+                <span class="kw">let </span>hmac_key = hmac::Key::new(hmac::HMAC_SHA256, <span class="kw-2">&amp;</span>hmac_key);
+                <span class="macro">println!</span>(<span class="string">&quot;Verifying HMAC&quot;</span>);
+                hmac::verify(<span class="kw-2">&amp;</span>hmac_key, buf.get_ref(), <span class="kw-2">&amp;</span>hmac_tag).unwrap();
+                <span class="macro">println!</span>(<span class="string">&quot;Complete&quot;</span>);
+                ciphertext.extend(block);
+            }
+
+            <span class="kw">let </span>data = decrypt(
+                Cipher::aes_256_cbc(),
+                <span class="kw-2">&amp;</span>master_key,
+                <span class="prelude-val">Some</span>(encryption_iv),
+                <span class="kw-2">&amp;</span>ciphertext,
+            )
+            .unwrap();
+            <span class="comment">// let mut gz = if let compress = Compression::None {
+            //     GzDecoder::new(Cursor::new(data))
+            // } else{
+            //     GzDecoder::new(Cursor::new(data))
+            // };
+            </span><span class="kw">let </span><span class="kw-2">mut </span>gz: Box&lt;<span class="kw">dyn </span>Read&gt; = <span class="kw">match </span>compress {
+                Compression::Gzip =&gt; Box::new(GzDecoder::new(Cursor::new(data))),
+                Compression::None =&gt; Box::new(Cursor::new(data)),
+            };
+
+            inner_tlvs = load_tlvs(<span class="kw-2">&amp;mut </span>gz, major_version)<span class="question-mark">?</span>.<span class="number">0</span>;
+            <span class="kw">let </span><span class="kw-2">mut </span>contents = String::new();
+            gz.read_to_string(<span class="kw-2">&amp;mut </span>contents)<span class="question-mark">?</span>;
+            contents
+        } <span class="kw">else </span>{
+            <span class="comment">/* KDBX 3.x format encrypts the database after breaking
+             * the stream into blocks */
+            </span><span class="kw">let </span><span class="kw-2">mut </span>ciphertext = <span class="macro">vec!</span>[];
+            file.read_to_end(<span class="kw-2">&amp;mut </span>ciphertext)<span class="question-mark">?</span>;
+            <span class="kw">let </span>data = decrypt(
+                Cipher::aes_256_cbc(),
+                <span class="kw-2">&amp;</span>master_key,
+                <span class="prelude-val">Some</span>(encryption_iv),
+                <span class="kw-2">&amp;</span>ciphertext,
+            )
+            .unwrap();
+            <span class="kw">let </span><span class="kw-2">mut </span>c = Cursor::new(data);
+
+            <span class="comment">/* Start stream header is used to verify successful decrypt */
+            </span><span class="kw">let </span><span class="kw-2">mut </span>start_stream = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">32</span>];
+            c.read_exact(<span class="kw-2">&amp;mut </span>start_stream)<span class="question-mark">?</span>;
+            <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>start_stream, <span class="kw-2">&amp;</span>tlvs[<span class="kw-2">&amp;</span><span class="number">9u8</span>]);
+            <span class="macro">println!</span>(<span class="string">&quot;Master Key appears valid&quot;</span>);
+
+            <span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[];
+            <span class="kw">for </span>idx <span class="kw">in </span><span class="number">0</span>.. {
+                <span class="macro">println!</span>(<span class="string">&quot;Block {}&quot;</span>, idx);
+                <span class="kw">let </span>block_id = c.read_u32::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
+                <span class="macro">assert_eq!</span>(idx <span class="kw">as </span>u32, block_id);
+                <span class="kw">let </span><span class="kw-2">mut </span>block_hash_expected = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">32</span>];
+                c.read_exact(<span class="kw-2">&amp;mut </span>block_hash_expected)<span class="question-mark">?</span>;
+                <span class="kw">let </span>block_size = c.read_u32::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>block_data = <span class="macro">vec!</span>[<span class="number">0</span>; block_size <span class="kw">as </span>usize];
+                c.read_exact(<span class="kw-2">&amp;mut </span>block_data)<span class="question-mark">?</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>context = Context::new(<span class="kw-2">&amp;</span>SHA256);
+                context.update(<span class="kw-2">&amp;</span>block_data);
+                <span class="kw">let </span>block_hash = context.finish().as_ref().to_owned();
+                <span class="kw">if </span>block_size == <span class="number">0 </span>{
+                    <span class="kw">break</span>;
+                }
+                <span class="macro">assert_eq!</span>(block_hash_expected, block_hash, <span class="string">&quot;Failed hash&quot;</span>);
+                buf.extend(block_data);
+            }
+            <span class="kw">let </span><span class="kw-2">mut </span>gz: Box&lt;<span class="kw">dyn </span>Read&gt; = <span class="kw">match </span>compress {
+                Compression::Gzip =&gt; Box::new(GzDecoder::new(Cursor::new(buf))),
+                Compression::None =&gt; Box::new(Cursor::new(buf)),
+            };
+            <span class="kw">let </span><span class="kw-2">mut </span>xml_file = File::create(<span class="string">&quot;data2.xml&quot;</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span><span class="kw-2">mut </span>contents = String::new();
+            gz.read_to_string(<span class="kw-2">&amp;mut </span>contents)<span class="question-mark">?</span>;
+            <span class="kw">let _ </span>= xml_file.write(<span class="kw-2">&amp;</span>contents.as_bytes());
+            <span class="comment">// println!(&quot;{:#?}&quot;, &amp;contents);
+            </span><span class="kw">if </span><span class="kw-2">&amp;</span>contents[<span class="number">0</span>..<span class="number">3</span>] == <span class="string">&quot;\u{feff}&quot; </span>{
+                contents = contents[<span class="number">3</span>..].to_string();
+            }
+            <span class="kw">let </span>package = parser::parse(<span class="kw-2">&amp;</span>contents).unwrap();
+            <span class="kw">let </span>document = package.as_document();
+            <span class="kw">let </span>header_hash = evaluate_xpath(<span class="kw-2">&amp;</span>document, <span class="string">&quot;/KeePassFile/Meta/HeaderHash/text()&quot;</span>)
+                .expect(<span class="string">&quot;Missing header hash&quot;</span>);
+            <span class="kw">if </span>header_hash.string() != <span class="string">&quot;&quot; </span>{
+                <span class="macro">println!</span>(<span class="string">&quot;Header Hash: &#39;{}&#39;&quot;</span>, header_hash.string());
+                <span class="kw">let </span>expected_hash = decode(<span class="kw-2">&amp;</span>header_hash.string()).expect(<span class="string">&quot;Valid base64&quot;</span>);
+                <span class="kw">if </span>expected_hash != digest.as_ref() {
+                    <span class="macro">eprintln!</span>(<span class="string">&quot;Possible header corruption\n&quot;</span>);
+                    process::exit(<span class="number">1</span>);
+                }
+            }
+            contents
+        };
+
+        <span class="kw">let </span>default = <span class="macro">vec!</span>[<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]];
+        <span class="kw">let </span>inner_stream_cipher = <span class="kw-2">&amp;</span>inner_tlvs.get(<span class="kw-2">&amp;</span><span class="number">1u8</span>).unwrap_or(<span class="kw-2">&amp;</span>default)[<span class="number">0</span>];  <span class="comment">// Defaults to ARC4
+        </span><span class="kw">if </span>inner_stream_cipher.len() != <span class="number">4 </span>{
+            <span class="macro">panic!</span>(<span class="string">&quot;Invalid inner cipher&quot;</span>);
+        }
+        <span class="kw">let </span>inner_cipher_type = u32::from_le_bytes(inner_stream_cipher[..].try_into().unwrap());
+        <span class="macro">println!</span>(<span class="string">&quot;Inner Cipher: {inner_cipher_type}&quot;</span>);
+        <span class="kw">let </span>p_key = <span class="kw-2">&amp;</span>inner_tlvs[<span class="kw-2">&amp;</span><span class="number">0x02u8</span>][<span class="number">0</span>];
+        <span class="macro">println!</span>(<span class="string">&quot;p_key: {p_key:02x?} ({})&quot;</span>, p_key.len());
+        <span class="kw">let </span><span class="kw-2">mut </span>inner_cipher = protected_stream::new_stream(inner_cipher_type, p_key).expect(<span class="string">&quot;Unknown inner cipher&quot;</span>);
+
+        <span class="kw">let </span><span class="kw-2">mut </span>xml_file = File::create(<span class="string">&quot;data.xml&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let _ </span>= xml_file.write(<span class="kw-2">&amp;</span>contents.as_bytes());
+        <span class="kw">const </span>KDBX4_TIME_OFFSET: i64 = <span class="number">62135596800</span>;
+        <span class="macro">println!</span>(<span class="string">&quot;XML Body len: {}&quot;</span>, contents.len());
+        <span class="kw">let </span>package = parser::parse(<span class="kw-2">&amp;</span>contents).unwrap();
+        <span class="kw">let </span>document = package.as_document();
+        <span class="macro">println!</span>(
+            <span class="string">&quot;Root element: {}&quot;</span>,
+            document.root().children()[<span class="number">0</span>]
+                .element()
+                .unwrap()
+                .name()
+                .local_part()
+        );
+        <span class="kw">let </span>database_name_node = evaluate_xpath(<span class="kw-2">&amp;</span>document, <span class="string">&quot;/KeePassFile/Meta/DatabaseName/text()&quot;</span>)
+            .expect(<span class="string">&quot;Missing database name&quot;</span>);
+        <span class="macro">println!</span>(<span class="string">&quot;Database Name: {}&quot;</span>, database_name_node.string());
+        <span class="kw">let </span>database_name_changed_node =
+            evaluate_xpath(<span class="kw-2">&amp;</span>document, <span class="string">&quot;/KeePassFile/Meta/DatabaseNameChanged/text()&quot;</span>)
+                .expect(<span class="string">&quot;Missing database name changed&quot;</span>);
+        <span class="kw">let </span>change_time = <span class="kw">if </span>database_name_changed_node.string() == <span class="string">&quot;&quot; </span>{
+            <span class="string">&quot;&lt;missing&gt;&quot;</span>.to_owned()
+        } <span class="kw">else </span>{
+            <span class="kw">let </span>datetime: DateTime&lt;Local&gt; = <span class="kw">if </span>major_version &lt;= <span class="number">3 </span>{
+                DateTime::parse_from_rfc3339(<span class="kw-2">&amp;</span>database_name_changed_node.string())
+                    .expect(<span class="string">&quot;failed to parse timestamp&quot;</span>)
+                    .with_timezone(<span class="kw-2">&amp;</span>Local)
+            } <span class="kw">else </span>{
+                <span class="kw">let </span>timestamp =
+                    Cursor::new(decode(<span class="kw-2">&amp;</span>database_name_changed_node.string()).expect(<span class="string">&quot;Valid base64&quot;</span>))
+                        .read_i64::&lt;LittleEndian&gt;()<span class="question-mark">?
+                        </span>- KDBX4_TIME_OFFSET;
+                <span class="comment">//let naive = NaiveDateTime::from_timestamp(timestamp, 0);
+                //let datetime: DateTime&lt;Utc&gt; = DateTime::from_utc(naive, Utc);
+                </span>Local.timestamp_opt(timestamp, <span class="number">0</span>).unwrap()
+            };
+            datetime.format(<span class="string">&quot;%Y-%m-%d %l:%M:%S %p %Z&quot;</span>).to_string()
+        };
+        <span class="macro">println!</span>(<span class="string">&quot;Database Name Changed: {}&quot;</span>, change_time);
+
+        <span class="kw">let </span>xpath_context = XPathContext::new();
+        <span class="kw">let </span>protected_nodes = evaluate_xpath(<span class="kw-2">&amp;</span>document, <span class="string">&quot;//Value[@Protected = &#39;True&#39;]/text()&quot;</span>)
+            .expect(<span class="string">&quot;Missing database entries&quot;</span>);
+        <span class="kw">let </span>xpath_current = Factory::new()
+            .build(<span class="string">&quot;.&quot;</span>)
+            .expect(<span class="string">&quot;Failed to compile XPath&quot;</span>)
+            .expect(<span class="string">&quot;Empty XPath expression&quot;</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>protected_offset = <span class="number">0</span>;
+        <span class="kw">match </span>protected_nodes {
+            Value::Nodeset(nodes) =&gt; {
+                <span class="kw">for </span>entry <span class="kw">in </span>nodes.document_order() {
+                    <span class="kw">let </span>p = xpath_current
+                        .evaluate(<span class="kw-2">&amp;</span>xpath_context, entry)
+                        .expect(<span class="string">&quot;Missing entry text&quot;</span>);
+                    <span class="macro">println!</span>(<span class="string">&quot;P: {:?}, (&#39;{}&#39;)&quot;</span>, p, p.string());
+                    <span class="kw">let </span><span class="kw-2">mut </span>p_ciphertext = decode(<span class="kw-2">&amp;</span>p.string()).expect(<span class="string">&quot;Valid base64&quot;</span>);
+                    <span class="macro">println!</span>(<span class="string">&quot;Protected Value Ciphertext: {p_ciphertext:#04X?} (+{protected_offset})&quot;</span>);
+                    protected_offset += p_ciphertext.len();
+                    inner_cipher.apply_keystream(<span class="kw-2">&amp;mut </span>p_ciphertext);
+                    <span class="macro">println!</span>(<span class="string">&quot;Protected Value Plaintext: {p_ciphertext:#04X?}&quot;</span>);
+                    <span class="kw">let </span>value = String::from_utf8(p_ciphertext)
+                        .unwrap_or(<span class="string">&quot;«Failed to decrypt value»&quot;</span>.to_owned());
+                    <span class="macro">println!</span>(<span class="string">&quot;Protected Value: {:?}&quot;</span>, <span class="kw-2">&amp;</span>value);
+                    <span class="kw">match </span>entry {
+                        sxd_xpath::nodeset::Node::Text(t) =&gt; {
+                            t.set_text(<span class="kw-2">&amp;</span>value);
+                        }
+                        <span class="kw">_ </span>=&gt; {}
+                    }
+                }
+            }
+            <span class="kw">_ </span>=&gt; {
+                <span class="macro">panic!</span>(<span class="string">&quot;XML corruption&quot;</span>);
+            }
+        }
+        <span class="kw">let </span>xpath_username = Factory::new()
+            .build(<span class="string">&quot;String[Key/text() = &#39;UserName&#39;]/Value/text()&quot;</span>)
+            .expect(<span class="string">&quot;Failed to compile XPath&quot;</span>)
+            .expect(<span class="string">&quot;Empty XPath expression&quot;</span>);
+        <span class="kw">let </span>xpath_last_mod_time = Factory::new()
+            .build(<span class="string">&quot;Times/LastModificationTime/text()&quot;</span>)
+            .expect(<span class="string">&quot;Failed to compile XPath&quot;</span>)
+            .expect(<span class="string">&quot;Empty XPath expression&quot;</span>);
+        <span class="kw">let </span>xpath_password = Factory::new()
+            .build(<span class="string">&quot;String[Key/text() = &#39;Password&#39;]/Value[@Protected = &#39;True&#39;]/text()&quot;</span>)
+            .expect(<span class="string">&quot;Failed to compile XPath&quot;</span>)
+            .expect(<span class="string">&quot;Empty XPath expression&quot;</span>);
+        <span class="comment">//let entry_nodes = evaluate_xpath(&amp;document, &quot;/KeePassFile/Root/Group/Entry&quot;).expect(&quot;Missing database entries&quot;);
+        </span><span class="kw">let </span>entry_nodes = evaluate_xpath(<span class="kw-2">&amp;</span>document, <span class="string">&quot;//Entry&quot;</span>).expect(<span class="string">&quot;Missing database entries&quot;</span>);
+        <span class="kw">match </span>entry_nodes {
+            Value::Nodeset(nodes) =&gt; {
+                <span class="kw">for </span>entry <span class="kw">in </span>nodes.document_order() {
+                    <span class="comment">//let n = evaluate_xpath(&amp;document, &quot;/KeePassFile/Root/Group/Entry/String[Key/text() = &#39;UserName&#39;]/Value/text()&quot;).expect(&quot;Missing entry username&quot;);
+                    </span><span class="kw">let </span>n = xpath_username
+                        .evaluate(<span class="kw-2">&amp;</span>xpath_context, entry)
+                        .expect(<span class="string">&quot;Missing entry username&quot;</span>);
+                    <span class="kw">let </span>t = xpath_last_mod_time
+                        .evaluate(<span class="kw-2">&amp;</span>xpath_context, entry)
+                        .expect(<span class="string">&quot;Missing entry modification&quot;</span>);
+                    <span class="kw">let </span>p = xpath_password
+                        .evaluate(<span class="kw-2">&amp;</span>xpath_context, entry)
+                        .expect(<span class="string">&quot;Missing entry password&quot;</span>);
+                    <span class="macro">println!</span>(<span class="string">&quot;Name: {}&quot;</span>, n.string());
+                    <span class="kw">let </span>change_time = <span class="kw">if </span>database_name_changed_node.string() == <span class="string">&quot;&quot; </span>{
+                        <span class="string">&quot;&lt;missing&gt;&quot;</span>.to_owned()
+                    } <span class="kw">else </span>{
+                        <span class="kw">let </span>datetime: DateTime&lt;Local&gt; = <span class="kw">if </span>major_version &lt;= <span class="number">3 </span>{
+                            DateTime::parse_from_rfc3339(<span class="kw-2">&amp;</span>t.string())
+                                .expect(<span class="string">&quot;failed to parse timestamp&quot;</span>)
+                                .with_timezone(<span class="kw-2">&amp;</span>Local)
+                        } <span class="kw">else </span>{
+                            <span class="macro">println!</span>(<span class="string">&quot;Inner: {:?}&quot;</span>, <span class="kw-2">&amp;</span>t.string());
+                            <span class="kw">let </span>timestamp =
+                                Cursor::new(decode(<span class="kw-2">&amp;</span>t.string()).expect(<span class="string">&quot;Valid base64&quot;</span>))
+                                    .read_i64::&lt;LittleEndian&gt;()<span class="question-mark">?
+                                    </span>- KDBX4_TIME_OFFSET;
+                            <span class="comment">//let naive = NaiveDateTime::from_timestamp(timestamp, 0);
+                            //let datetime: DateTime&lt;Utc&gt; = DateTime::from_utc(naive, Utc);
+                            </span>Local.timestamp_opt(timestamp, <span class="number">0</span>).unwrap()
+                        };
+                        datetime.format(<span class="string">&quot;%Y-%m-%d %l:%M:%S %p %Z&quot;</span>).to_string()
+                    };
+                    <span class="macro">println!</span>(<span class="string">&quot;Changed: {}&quot;</span>, change_time);
+                    <span class="macro">println!</span>(<span class="string">&quot;Password: {:?}&quot;</span>, p.string());
+                }
+            }
+            <span class="kw">_ </span>=&gt; {
+                <span class="macro">panic!</span>(<span class="string">&quot;XML corruption&quot;</span>);
+            }
+        };
+
+        <span class="kw">let </span>content_cursor = Cursor::new(<span class="kw-2">&amp;</span>contents);
+        <span class="kw">let </span><span class="kw-2">mut </span>reader = ParserConfig::new()
+            .cdata_to_characters(<span class="bool-val">true</span>)
+            .create_reader(content_cursor);
+        <span class="kw">let </span><span class="kw-2">mut </span>my_doc = <span class="prelude-val">None</span>;
+        <span class="kw">loop </span>{
+            <span class="kw">let </span>event = reader.next().unwrap();
+            <span class="kw">match </span>event {
+                XmlEvent::StartDocument { .. } =&gt; {
+                    <span class="macro">println!</span>(<span class="string">&quot;Start&quot;</span>);
+                }
+                XmlEvent::StartElement {
+                    name, attributes, ..
+                } =&gt; {
+                    <span class="comment">// TODO Check top-level tag name
+                    </span><span class="kw">let </span><span class="kw-2">mut </span>context = KdbxContext::default();
+                    context.major_version = major_version;
+                    context.binaries = inner_tlvs.remove(<span class="kw-2">&amp;</span><span class="number">3u8</span>).unwrap();
+                    my_doc = <span class="prelude-val">Some</span>(KeePassFile::parse(<span class="kw-2">&amp;mut </span>reader, name, attributes, <span class="kw-2">&amp;mut </span>context)
+                        .map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))<span class="question-mark">?
+                        </span>.unwrap());
+                }
+                XmlEvent::EndDocument =&gt; {
+                    <span class="macro">println!</span>(<span class="string">&quot;End&quot;</span>);
+                    <span class="kw">break</span>;
+                }
+                <span class="kw">_ </span>=&gt; {}
+            }
+        }
+
+        <span class="prelude-val">Ok</span>(KeePassDoc {
+            file: my_doc.expect(<span class="string">&quot;Missing top-level element&quot;</span>),
+            cipher: inner_cipher,
+        })
+    }
+
+    <span class="attr">#[cfg(feature = <span class="string">&quot;write&quot;</span>)]
+    </span><span class="kw">pub fn </span>save_file(<span class="kw-2">&amp;</span><span class="self">self</span>, major_version: u16) -&gt; io::Result&lt;()&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>file = File::create(<span class="string">&quot;data-out.kdbx&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>minor_version = <span class="number">0</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>header = <span class="macro">vec!</span>[];
+        header.write_u32::&lt;LittleEndian&gt;(KDBX_MAGIC)<span class="question-mark">?</span>;
+        header.write_u32::&lt;LittleEndian&gt;(KDBX2_MAGIC_TYPE)<span class="question-mark">?</span>;
+        header.write_u16::&lt;LittleEndian&gt;(minor_version)<span class="question-mark">?</span>;
+        header.write_u16::&lt;LittleEndian&gt;(major_version)<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>key = Key::new();
+        key.set_user_password(<span class="string">&quot;asdf&quot;</span>);
+        <span class="kw">let </span>composite_key = key.composite_key();
+        <span class="kw">let </span>kdf = AesKdf::default();
+        <span class="kw">let </span><span class="kw-2">mut </span>custom_data = HashMap::new();
+        custom_data.insert(
+            KDF_PARAM_UUID.to_string(),
+            MapValue::ByteArray(KDF_AES_KDBX3.into_bytes().to_vec()),
+        );
+        kdf.save(<span class="kw-2">&amp;mut </span>custom_data);
+        <span class="kw">let </span>transform_key = kdf
+            .transform_key(<span class="kw-2">&amp;</span>composite_key)
+            .expect(<span class="string">&quot;Failed to transform key&quot;</span>);
+        <span class="kw">let </span>master_seed = [<span class="number">0u8</span>; <span class="number">32</span>];
+        <span class="kw">let </span>iv = [<span class="number">0u8</span>; <span class="number">16</span>];
+        <span class="kw">let </span>stream_cipher = <span class="number">2u32</span>;
+        <span class="kw">let </span>stream_key = [<span class="number">0u8</span>; <span class="number">32</span>];
+        <span class="kw">let </span><span class="kw-2">mut </span>tlvs = BTreeMap::new();
         tlvs.insert(
-            TlvType::TransformSeed.to_u8().unwrap(),
+            TlvType::MasterSeed.to_u8().unwrap(),
             <span class="macro">vec!</span>[master_seed.to_vec()],
         );
         tlvs.insert(
-            TlvType::TransformRounds.to_u8().unwrap(),
-            <span class="macro">vec!</span>[<span class="kw">match </span>custom_data[KDF_PARAM_ROUNDS] {
-                MapValue::UInt64(x) =&gt; x.to_le_bytes().to_vec(),
-                <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;Wrong&quot;</span>),
-            }],
+            TlvType::CipherId.to_u8().unwrap(),
+            <span class="macro">vec!</span>[CIPHER_ID_AES256_CBC.into_bytes().to_vec()],
         );
+        tlvs.insert(TlvType::EncryptionIv.to_u8().unwrap(), <span class="macro">vec!</span>[iv.to_vec()]);
         tlvs.insert(
-            TlvType::StreamStartBytes.to_u8().unwrap(),
-            <span class="macro">vec!</span>[start_stream.to_vec()],
+            TlvType::CompressionFlags.to_u8().unwrap(),
+            <span class="macro">vec!</span>[Compression::None.to_u32().unwrap().to_le_bytes().to_vec()],
         );
-        tlvs.insert(
-            TlvType::ProtectedStreamKey.to_u8().unwrap(),
-            <span class="macro">vec!</span>[stream_key.to_vec()],
-        );
-        tlvs.insert(
-            TlvType::InnerRandomStreamId.to_u8().unwrap(),
-            <span class="macro">vec!</span>[stream_cipher.to_le_bytes().to_vec()],
-        );
-    } <span class="kw">else </span>{
-        tlvs.insert(
-            TlvType::KdfParameters.to_u8().unwrap(),
-            <span class="macro">vec!</span>[save_map(<span class="kw-2">&amp;</span>custom_data)],
-        );
-    }
-    header.append(<span class="kw-2">&amp;mut </span>save_tlvs(<span class="kw-2">&amp;mut </span>io::sink(), <span class="kw-2">&amp;</span>tlvs, major_version).unwrap());
-    file.write(<span class="kw-2">&amp;</span>header)<span class="question-mark">?</span>;
-    <span class="kw">let </span><span class="kw-2">mut </span>context = Context::new(<span class="kw-2">&amp;</span>SHA256);
-    context.update(<span class="kw-2">&amp;</span>header);
-    <span class="kw">let </span>digest = context.finish();
-    <span class="kw">if </span>major_version &gt;= <span class="number">4 </span>{
-        file.write(digest.as_ref())<span class="question-mark">?</span>;
-        <span class="comment">// header.append(&amp;mut digest.as_ref().to_owned());
-    </span>}
+        <span class="kw">let </span>start_stream = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">32</span>]; <span class="comment">// TODO Randomize this
+        </span><span class="kw">if </span>major_version &lt; <span class="number">4 </span>{
+            tlvs.insert(
+                TlvType::TransformSeed.to_u8().unwrap(),
+                <span class="macro">vec!</span>[master_seed.to_vec()],
+            );
+            tlvs.insert(
+                TlvType::TransformRounds.to_u8().unwrap(),
+                <span class="macro">vec!</span>[<span class="kw">match </span>custom_data[KDF_PARAM_ROUNDS] {
+                    MapValue::UInt64(x) =&gt; x.to_le_bytes().to_vec(),
+                    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;Wrong&quot;</span>),
+                }],
+            );
+            tlvs.insert(
+                TlvType::StreamStartBytes.to_u8().unwrap(),
+                <span class="macro">vec!</span>[start_stream.to_vec()],
+            );
+            tlvs.insert(
+                TlvType::ProtectedStreamKey.to_u8().unwrap(),
+                <span class="macro">vec!</span>[stream_key.to_vec()],
+            );
+            tlvs.insert(
+                TlvType::InnerRandomStreamId.to_u8().unwrap(),
+                <span class="macro">vec!</span>[stream_cipher.to_le_bytes().to_vec()],
+            );
+        } <span class="kw">else </span>{
+            tlvs.insert(
+                TlvType::KdfParameters.to_u8().unwrap(),
+                <span class="macro">vec!</span>[save_map(<span class="kw-2">&amp;</span>custom_data)],
+            );
+        }
+        header.append(<span class="kw-2">&amp;mut </span>save_tlvs(<span class="kw-2">&amp;mut </span>io::sink(), <span class="kw-2">&amp;</span>tlvs, major_version).unwrap());
+        file.write(<span class="kw-2">&amp;</span>header)<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>context = Context::new(<span class="kw-2">&amp;</span>SHA256);
+        context.update(<span class="kw-2">&amp;</span>header);
+        <span class="kw">let </span>digest = context.finish();
+        <span class="kw">if </span>major_version &gt;= <span class="number">4 </span>{
+            file.write(digest.as_ref())<span class="question-mark">?</span>;
+            <span class="comment">// header.append(&amp;mut digest.as_ref().to_owned());
+        </span>}
 
-    <span class="kw">let </span><span class="kw-2">mut </span>master_key = master_seed.to_vec();
-    master_key.extend(transform_key);
-    <span class="kw">let </span><span class="kw-2">mut </span>context = Context::new(<span class="kw-2">&amp;</span>SHA256);
-    <span class="kw">let </span><span class="kw-2">mut </span>hmac_context = Context::new(<span class="kw-2">&amp;</span>SHA512);
-    context.update(<span class="kw-2">&amp;</span>master_key);
-    hmac_context.update(<span class="kw-2">&amp;</span>master_key);
-    hmac_context.update(<span class="kw-2">&amp;</span>[<span class="number">1u8</span>]);
-    master_key = context.finish().as_ref().to_owned();
-    <span class="kw">let </span>hmac_key_base = hmac_context.finish().as_ref().to_owned();
+        <span class="kw">let </span><span class="kw-2">mut </span>master_key = master_seed.to_vec();
+        master_key.extend(transform_key);
+        <span class="kw">let </span><span class="kw-2">mut </span>context = Context::new(<span class="kw-2">&amp;</span>SHA256);
+        <span class="kw">let </span><span class="kw-2">mut </span>hmac_context = Context::new(<span class="kw-2">&amp;</span>SHA512);
+        context.update(<span class="kw-2">&amp;</span>master_key);
+        hmac_context.update(<span class="kw-2">&amp;</span>master_key);
+        hmac_context.update(<span class="kw-2">&amp;</span>[<span class="number">1u8</span>]);
+        master_key = context.finish().as_ref().to_owned();
+        <span class="kw">let </span>hmac_key_base = hmac_context.finish().as_ref().to_owned();
 
-    <span class="kw">let </span><span class="kw-2">mut </span>hmac_context = Context::new(<span class="kw-2">&amp;</span>SHA512);
-    hmac_context.update(<span class="kw-2">&amp;</span>[<span class="number">0xff</span>; <span class="number">8</span>]);
-    hmac_context.update(<span class="kw-2">&amp;</span>hmac_key_base);
-    <span class="kw">let </span>hmac_key = hmac_context.finish().as_ref().to_owned();
+        <span class="kw">let </span><span class="kw-2">mut </span>hmac_context = Context::new(<span class="kw-2">&amp;</span>SHA512);
+        hmac_context.update(<span class="kw-2">&amp;</span>[<span class="number">0xff</span>; <span class="number">8</span>]);
+        hmac_context.update(<span class="kw-2">&amp;</span>hmac_key_base);
+        <span class="kw">let </span>hmac_key = hmac_context.finish().as_ref().to_owned();
 
-    <span class="kw">let </span>hmac_key = hmac::Key::new(hmac::HMAC_SHA256, <span class="kw-2">&amp;</span>hmac_key);
-    <span class="kw">let </span>hmac_tag = hmac::sign(<span class="kw-2">&amp;</span>hmac_key, <span class="kw-2">&amp;</span>header);
-    <span class="kw">if </span>major_version &gt;= <span class="number">4 </span>{
-        file.write(hmac_tag.as_ref())<span class="question-mark">?</span>;
-    } <span class="kw">else </span>{
-        <span class="kw">let </span>output = Cursor::new(Vec::&lt;u8&gt;::new());
-        <span class="kw">let </span><span class="kw-2">mut </span>context = KdbxContext::default();
-        context.major_version = major_version;
+        <span class="kw">let </span>hmac_key = hmac::Key::new(hmac::HMAC_SHA256, <span class="kw-2">&amp;</span>hmac_key);
+        <span class="kw">let </span>hmac_tag = hmac::sign(<span class="kw-2">&amp;</span>hmac_key, <span class="kw-2">&amp;</span>header);
+        <span class="kw">if </span>major_version &gt;= <span class="number">4 </span>{
+            file.write(hmac_tag.as_ref())<span class="question-mark">?</span>;
+        } <span class="kw">else </span>{
+            <span class="kw">let </span>output = Cursor::new(Vec::&lt;u8&gt;::new());
+            <span class="kw">let </span><span class="kw-2">mut </span>context = KdbxContext::default();
+            context.major_version = major_version;
+            <span class="kw">let </span><span class="kw-2">mut </span>writer = xml::writer::EventWriter::new(output);
+            writer
+                .write(xml::writer::XmlEvent::start_element(<span class="string">&quot;KeePassFile&quot;</span>))
+                .expect(<span class="string">&quot;Success!&quot;</span>);
+            KeePassFile::serialize2(<span class="kw-2">&amp;mut </span>writer, doc.clone(), <span class="kw-2">&amp;mut </span>context).unwrap();
+            writer
+                .write(xml::writer::XmlEvent::end_element())
+                .expect(<span class="string">&quot;Success!&quot;</span>);
+            <span class="kw">let </span>output = writer.into_inner().into_inner();
+            <span class="kw">let </span><span class="kw-2">mut </span>buf = Cursor::new(Vec::&lt;u8&gt;::new());
+            buf.write_all(<span class="kw-2">&amp;</span>start_stream).unwrap();
+            buf.write_all(<span class="kw-2">&amp;</span><span class="number">0u32</span>.to_le_bytes()).unwrap();
+            <span class="kw">let </span><span class="kw-2">mut </span>context = Context::new(<span class="kw-2">&amp;</span>SHA256);
+            context.update(<span class="kw-2">&amp;</span>output);
+            buf.write_all(<span class="kw-2">&amp;</span>context.finish().as_ref().to_owned()).unwrap();
+            buf.write_all(<span class="kw-2">&amp;</span>(output.len() <span class="kw">as </span>u32).to_le_bytes()).unwrap();
+            buf.write_all(<span class="kw-2">&amp;</span>output).unwrap();
+            buf.write_all(<span class="kw-2">&amp;</span><span class="number">1u32</span>.to_le_bytes()).unwrap();
+            <span class="kw">let </span>context = Context::new(<span class="kw-2">&amp;</span>SHA256);
+            buf.write_all(<span class="kw-2">&amp;</span>context.finish().as_ref().to_owned()).unwrap();
+            <span class="comment">//buf.write_all(&amp;[0u8; 32]).unwrap();
+            </span>buf.write_all(<span class="kw-2">&amp;</span><span class="number">0u32</span>.to_le_bytes()).unwrap();
+            <span class="kw">let </span>data = encrypt(
+                Cipher::aes_256_cbc(),
+                <span class="kw-2">&amp;</span>master_key,
+                <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>iv),
+                <span class="kw-2">&amp;</span>buf.into_inner(),
+            ).unwrap();
+            file.write_all(<span class="kw-2">&amp;</span>data).unwrap();
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+        }
+
+        <span class="kw">let </span>output = BlockWriter::new(<span class="kw-2">&amp;</span>hmac_key_base, file);
+        <span class="kw">let </span>cipher = Cipher::aes_256_cbc();
+        <span class="kw">let </span><span class="kw-2">mut </span>output = Crypto::new(cipher, <span class="kw-2">&amp;</span>master_key, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>iv), output).unwrap();
+
+        <span class="kw">if </span>major_version &gt;= <span class="number">4 </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>inner_tlvs = BTreeMap::new();
+            inner_tlvs.insert(<span class="number">1</span>, <span class="macro">vec!</span>[stream_cipher.to_le_bytes().to_vec()]);
+            inner_tlvs.insert(<span class="number">2</span>, <span class="macro">vec!</span>[stream_key.to_vec()]);
+            save_tlvs(<span class="kw-2">&amp;mut </span>output, <span class="kw-2">&amp;</span>inner_tlvs, major_version).unwrap();
+        }
         <span class="kw">let </span><span class="kw-2">mut </span>writer = xml::writer::EventWriter::new(output);
         writer
             .write(xml::writer::XmlEvent::start_element(<span class="string">&quot;KeePassFile&quot;</span>))
             .expect(<span class="string">&quot;Success!&quot;</span>);
-        KeePassFile::serialize2(<span class="kw-2">&amp;mut </span>writer, doc.clone(), <span class="kw-2">&amp;mut </span>context).unwrap();
+        KeePassFile::serialize2(<span class="kw-2">&amp;mut </span>writer, doc.clone(), <span class="kw-2">&amp;mut </span>KdbxContext::default()).unwrap();
         writer
             .write(xml::writer::XmlEvent::end_element())
             .expect(<span class="string">&quot;Success!&quot;</span>);
-        <span class="kw">let </span>output = writer.into_inner().into_inner();
-        <span class="kw">let </span><span class="kw-2">mut </span>buf = Cursor::new(Vec::&lt;u8&gt;::new());
-        buf.write_all(<span class="kw-2">&amp;</span>start_stream).unwrap();
-        buf.write_all(<span class="kw-2">&amp;</span><span class="number">0u32</span>.to_le_bytes()).unwrap();
-        <span class="kw">let </span><span class="kw-2">mut </span>context = Context::new(<span class="kw-2">&amp;</span>SHA256);
-        context.update(<span class="kw-2">&amp;</span>output);
-        buf.write_all(<span class="kw-2">&amp;</span>context.finish().as_ref().to_owned()).unwrap();
-        buf.write_all(<span class="kw-2">&amp;</span>(output.len() <span class="kw">as </span>u32).to_le_bytes()).unwrap();
-        buf.write_all(<span class="kw-2">&amp;</span>output).unwrap();
-        buf.write_all(<span class="kw-2">&amp;</span><span class="number">1u32</span>.to_le_bytes()).unwrap();
-        <span class="kw">let </span>context = Context::new(<span class="kw-2">&amp;</span>SHA256);
-        buf.write_all(<span class="kw-2">&amp;</span>context.finish().as_ref().to_owned()).unwrap();
-        <span class="comment">//buf.write_all(&amp;[0u8; 32]).unwrap();
-        </span>buf.write_all(<span class="kw-2">&amp;</span><span class="number">0u32</span>.to_le_bytes()).unwrap();
-        <span class="kw">let </span>data = encrypt(
-            Cipher::aes_256_cbc(),
-            <span class="kw-2">&amp;</span>master_key,
-            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>iv),
-            <span class="kw-2">&amp;</span>buf.into_inner(),
-        ).unwrap();
-        file.write_all(<span class="kw-2">&amp;</span>data).unwrap();
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+        <span class="kw">let </span><span class="kw-2">mut </span>output = writer.into_inner();
+        output.flush()<span class="question-mark">?</span>;
+        <span class="comment">// output.flush()?;
+        // drop(output);
+
+        </span><span class="prelude-val">Ok</span>(())
     }
-
-    <span class="kw">let </span>output = BlockWriter::new(<span class="kw-2">&amp;</span>hmac_key_base, file);
-    <span class="kw">let </span>cipher = Cipher::aes_256_cbc();
-    <span class="kw">let </span><span class="kw-2">mut </span>output = Crypto::new(cipher, <span class="kw-2">&amp;</span>master_key, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>iv), output).unwrap();
-
-    <span class="kw">if </span>major_version &gt;= <span class="number">4 </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>inner_tlvs = BTreeMap::new();
-        inner_tlvs.insert(<span class="number">1</span>, <span class="macro">vec!</span>[stream_cipher.to_le_bytes().to_vec()]);
-        inner_tlvs.insert(<span class="number">2</span>, <span class="macro">vec!</span>[stream_key.to_vec()]);
-        save_tlvs(<span class="kw-2">&amp;mut </span>output, <span class="kw-2">&amp;</span>inner_tlvs, major_version).unwrap();
-    }
-    <span class="kw">let </span><span class="kw-2">mut </span>writer = xml::writer::EventWriter::new(output);
-    writer
-        .write(xml::writer::XmlEvent::start_element(<span class="string">&quot;KeePassFile&quot;</span>))
-        .expect(<span class="string">&quot;Success!&quot;</span>);
-    KeePassFile::serialize2(<span class="kw-2">&amp;mut </span>writer, doc.clone(), <span class="kw-2">&amp;mut </span>KdbxContext::default()).unwrap();
-    writer
-        .write(xml::writer::XmlEvent::end_element())
-        .expect(<span class="string">&quot;Success!&quot;</span>);
-    <span class="kw">let </span><span class="kw-2">mut </span>output = writer.into_inner();
-    output.flush()<span class="question-mark">?</span>;
-    <span class="comment">// output.flush()?;
-    // drop(output);
-
-    </span><span class="prelude-val">Ok</span>(())
-}
-
-<span class="attr">#[derive(Default)]
-</span><span class="kw">pub struct </span>KeePassDoc {
-    <span class="kw">pub </span>file: KeePassFile,
-    <span class="kw">pub </span>cipher: CipherValue,
 }
 
 <span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>KeePassDoc {
@@ -4686,548 +5199,5 @@
             .field(<span class="string">&quot;file&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.file)
             .finish()
     }
-}
-
-<span class="doccomment">/// This is a temporary solution until a proper API is ready
-/// ```
-/// assert!(true);
-/// ```
-/// Does it work?
-</span><span class="kw">pub fn </span>lib_main(filename: <span class="kw-2">&amp;</span>str, key: <span class="kw-2">&amp;</span>Key) -&gt; io::Result&lt;KeePassDoc&gt; {
-    <span class="kw">let </span>composite_key = key.composite_key();
-
-    <span class="kw">let </span><span class="kw-2">mut </span>file = File::open(filename)<span class="question-mark">?</span>;
-    <span class="kw">let </span>magic = file.read_u32::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
-    <span class="kw">let </span>magic_type = file.read_u32::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
-
-    <span class="kw">if </span>magic != KDBX_MAGIC {
-        <span class="macro">eprintln!</span>(<span class="string">&quot;Invalid database file\n&quot;</span>);
-        process::exit(<span class="number">1</span>);
-    }
-
-    <span class="kw">let </span><span class="kw-2">mut </span>custom_data = HashMap::&lt;String, Vec&lt;u8&gt;&gt;::new();
-    <span class="kw">let </span><span class="kw-2">mut </span>custom_data2 = HashMap::&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;::new();
-
-    <span class="kw">match </span>magic_type {
-        KDBX1_MAGIC_TYPE =&gt; {
-            <span class="kw">use </span>kdb1::read_kdb1_header;
-            read_kdb1_header(<span class="kw-2">&amp;mut </span>file, <span class="kw-2">&amp;</span>key)<span class="question-mark">?</span>;
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(KeePassDoc::default());
-        }
-        <span class="comment">// KDBX2_BETA_MAGIC_TYPE =&gt; {
-        //     // XXX Untested
-        //     eprintln!(&quot;KeePass 2.x Beta files not supported\n&quot;);
-        //     process::exit(1);
-        // },
-        </span>KDBX2_MAGIC_TYPE | KDBX2_BETA_MAGIC_TYPE =&gt; {
-            <span class="macro">println!</span>(<span class="string">&quot;Opening KeePass 2.x database&quot;</span>);
-        }
-        <span class="kw">_ </span>=&gt; {
-            <span class="comment">// XXX Untested
-            </span><span class="macro">eprintln!</span>(<span class="string">&quot;Unknown KeePass database format\n&quot;</span>);
-            process::exit(<span class="number">1</span>);
-        }
-    };
-
-    <span class="comment">// Version field is defined as uint32_t, but it&#39;s broken up into
-    // major and minor 16-bit components. Due to the nature of little
-    // endian, this puts the minor part first.
-    </span><span class="kw">let </span>minor_version = file.read_u16::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
-    <span class="kw">let </span>major_version = file.read_u16::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
-    <span class="kw">match </span>major_version {
-        <span class="number">3 </span>=&gt; {
-            <span class="kw">unsafe </span>{
-                KDBX4 = <span class="bool-val">false</span>;
-            };
-            custom_data.insert(
-                KDF_PARAM_UUID.to_string(),
-                KDF_AES_KDBX3.as_bytes().to_vec(),
-            );
-        }
-        <span class="number">4 </span>=&gt; {}
-        <span class="number">1 </span>=&gt; {
-            custom_data.insert(
-                KDF_PARAM_UUID.to_string(),
-                KDF_AES_KDBX3.as_bytes().to_vec(),
-            );
-        }
-        <span class="kw">_ </span>=&gt; {
-            <span class="macro">eprintln!</span>(
-                <span class="string">&quot;Unsupported KeePass 2.x database version ({}.{})\n&quot;</span>,
-                major_version, minor_version
-            );
-            process::exit(<span class="number">1</span>);
-        }
-    };
-    <span class="kw">let </span><span class="kw-2">mut </span>tlvs = HashMap::new();
-    <span class="kw">let </span><span class="kw-2">mut </span>inner_tlvs = BTreeMap::&lt;u8, Vec&lt;Vec&lt;u8&gt;&gt;&gt;::new();
-    inner_tlvs.insert(<span class="number">3u8</span>, <span class="macro">vec!</span>[]);
-    <span class="kw">loop </span>{
-        <span class="kw">let </span>tlv_type = file.read_u8()<span class="question-mark">?</span>;
-        <span class="kw">let </span>tlv_len = <span class="kw">if </span>major_version == <span class="number">4 </span>{
-            file.read_u32::&lt;LittleEndian&gt;()<span class="question-mark">?
-        </span>} <span class="kw">else </span>{
-            <span class="comment">// XXX Untested
-            </span>file.read_u16::&lt;LittleEndian&gt;()<span class="question-mark">? </span><span class="kw">as </span>u32
-        };
-        <span class="kw">let </span><span class="kw-2">mut </span>tlv_data = <span class="macro">vec!</span>[<span class="number">0</span>; tlv_len <span class="kw">as </span>usize];
-        file.read_exact(<span class="kw-2">&amp;mut </span>tlv_data)<span class="question-mark">?</span>;
-        <span class="macro">debug!</span>(<span class="string">&quot;TLV({}, {}): {:?}&quot;</span>, tlv_type, tlv_len, tlv_data);
-        <span class="kw">match </span>tlv_type {
-            <span class="number">0 </span>=&gt; {
-                <span class="kw">break</span>;
-            }
-            <span class="number">5 </span>=&gt; {
-                custom_data.insert(KDF_PARAM_SALT.to_string(), tlv_data.clone());
-                custom_data2.insert(KDF_PARAM_SALT.to_string(), MapValue::ByteArray(tlv_data));
-            }
-            <span class="number">6 </span>=&gt; {
-                custom_data.insert(KDF_PARAM_ROUNDS.to_string(), tlv_data.clone());
-                custom_data2.insert(
-                    KDF_PARAM_ROUNDS.to_string(),
-                    MapValue::UInt64(u64::from_le_bytes(tlv_data[<span class="number">0</span>..<span class="number">8</span>].try_into().unwrap())),
-                );
-            }
-            <span class="number">8 </span>=&gt; {
-                inner_tlvs.insert(<span class="number">2u8</span>, <span class="macro">vec!</span>[tlv_data]);
-            }
-            <span class="number">10 </span>=&gt; {
-                inner_tlvs.insert(<span class="number">1u8</span>, <span class="macro">vec!</span>[tlv_data]);
-            }
-            <span class="number">11 </span>=&gt; {
-                custom_data2 = load_map(<span class="kw-2">&amp;</span>tlv_data).unwrap();
-                <span class="kw">let </span>kdf_parameters = <span class="kw-2">&amp;</span>tlv_data;
-                <span class="kw">let </span><span class="kw-2">mut </span>c = Cursor::new(kdf_parameters);
-                <span class="kw">let </span>variant_minor = c.read_u8()<span class="question-mark">?</span>;
-                <span class="kw">let </span>variant_major = c.read_u8()<span class="question-mark">?</span>;
-                <span class="kw">if </span>variant_major != <span class="number">1 </span>{
-                    <span class="macro">eprintln!</span>(
-                        <span class="string">&quot;Unsupported variant dictionary version ({}.{})\n&quot;</span>,
-                        variant_major, variant_minor
-                    );
-                    process::exit(<span class="number">1</span>);
-                };
-
-                <span class="kw">loop </span>{
-                    <span class="kw">let </span>item_type = c.read_u8()<span class="question-mark">?</span>;
-                    <span class="kw">if </span>item_type == <span class="number">0 </span>{
-                        <span class="kw">break</span>;
-                    }
-                    <span class="kw">let </span>item_key_len = c.read_u32::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
-                    <span class="kw">let </span><span class="kw-2">mut </span>item_key = <span class="macro">vec!</span>[<span class="number">0</span>; item_key_len <span class="kw">as </span>usize];
-                    c.read_exact(<span class="kw-2">&amp;mut </span>item_key)<span class="question-mark">?</span>;
-                    <span class="kw">let </span>item_key_str = String::from_utf8_lossy(<span class="kw-2">&amp;</span>item_key).to_owned();
-                    <span class="kw">let </span>item_value_len = c.read_u32::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
-                    <span class="kw">let </span><span class="kw-2">mut </span>item_value = <span class="macro">vec!</span>[<span class="number">0</span>; item_value_len <span class="kw">as </span>usize];
-                    c.read_exact(<span class="kw-2">&amp;mut </span>item_value)<span class="question-mark">?</span>;
-                    <span class="macro">debug!</span>(<span class="string">&quot;K: {}, V: {:0x?}&quot;</span>, item_key_str, item_value);
-                    custom_data.insert(item_key_str.to_owned().to_string(), item_value);
-                }
-            }
-            <span class="kw">_ </span>=&gt; {
-                tlvs.insert(tlv_type, tlv_data);
-            }
-        }
-    }
-
-    <span class="comment">//let src = &amp;tlvs[&amp;2u8];
-    //let mut uuid = [0; 16];
-    //let b = &amp;src[..uuid.len()];
-    //uuid.copy_from_slice(b);
-    //let d = Builder::from_bytes(uuid).build();
-    </span><span class="kw">let </span>cipher_id = Uuid::from_slice(<span class="kw-2">&amp;</span>tlvs[<span class="kw-2">&amp;</span><span class="number">2u8</span>]).unwrap();
-    <span class="macro">println!</span>(<span class="string">&quot;D: {:?}&quot;</span>, cipher_id);
-    <span class="kw">if </span>cipher_id != CIPHER_ID_AES256_CBC {
-        <span class="macro">eprintln!</span>(<span class="string">&quot;Unknown cipher\n&quot;</span>);
-        process::exit(<span class="number">1</span>);
-    }
-    <span class="macro">println!</span>(<span class="string">&quot;AES&quot;</span>);
-    <span class="kw">let </span><span class="kw-2">mut </span>c = Cursor::new(<span class="kw-2">&amp;</span>tlvs[<span class="kw-2">&amp;</span><span class="number">3u8</span>]);
-    <span class="kw">let </span>compression_flags = c.read_u32::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
-    <span class="kw">enum </span>Compression {
-        <span class="prelude-val">None</span>,
-        Gzip,
-    }
-    <span class="kw">let </span>compress = <span class="kw">match </span>compression_flags {
-        <span class="number">0 </span>=&gt; {
-            <span class="comment">// XX Untested
-            // eprintln!(&quot;Unsupported no compressed file\n&quot;);
-            //process::exit(1);
-            </span>Compression::None
-        }
-        <span class="number">1 </span>=&gt; {
-            <span class="macro">println!</span>(<span class="string">&quot;Gzip compression&quot;</span>);
-            Compression::Gzip
-        }
-        <span class="kw">_ </span>=&gt; {
-            <span class="comment">// XX Untested
-            </span><span class="macro">eprintln!</span>(<span class="string">&quot;Unsupported compression method\n&quot;</span>);
-            process::exit(<span class="number">1</span>);
-        }
-    };
-
-    <span class="kw">let </span>master_seed = <span class="kw-2">&amp;</span>tlvs[<span class="kw-2">&amp;</span><span class="number">4u8</span>];
-    <span class="kw">let </span>encryption_iv = <span class="kw-2">&amp;</span>tlvs[<span class="kw-2">&amp;</span><span class="number">7u8</span>];
-
-    <span class="comment">//let mut header = vec![];
-    </span><span class="kw">let </span><span class="kw-2">mut </span>context = Context::new(<span class="kw-2">&amp;</span>SHA256);
-    <span class="kw">let </span>pos = file.seek(SeekFrom::Current(<span class="number">0</span>))<span class="question-mark">?</span>;
-    file.seek(SeekFrom::Start(<span class="number">0</span>))<span class="question-mark">?</span>;
-    <span class="kw">let </span><span class="kw-2">mut </span>header = <span class="macro">vec!</span>[<span class="number">0</span>; (pos) <span class="kw">as </span>usize];
-    file.read_exact(<span class="kw-2">&amp;mut </span>header)<span class="question-mark">?</span>;
-    file.seek(SeekFrom::Start(pos))<span class="question-mark">?</span>;
-    context.update(<span class="kw-2">&amp;</span>header);
-    <span class="kw">let </span>digest = context.finish();
-    <span class="kw">if </span>major_version == <span class="number">4 </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>expected_hash = [<span class="number">0</span>; <span class="number">32</span>];
-        file.read_exact(<span class="kw-2">&amp;mut </span>expected_hash)<span class="question-mark">?</span>;
-        <span class="kw">if </span>digest.as_ref() != expected_hash {
-            <span class="macro">eprintln!</span>(<span class="string">&quot;Possible header corruption\n&quot;</span>);
-            process::exit(<span class="number">1</span>);
-        }
-    }
-
-    <span class="kw">let </span>kdf_id = Uuid::from_slice(<span class="kw-2">&amp;</span>custom_data[KDF_PARAM_UUID]).unwrap();
-    <span class="macro">println!</span>(<span class="string">&quot;KDF: {:?}&quot;</span>, kdf_id);
-
-    <span class="kw">let </span>transform_key = <span class="kw">match </span>kdf_id {
-        x <span class="kw">if </span>x == KDF_AES_KDBX3 =&gt; {
-            <span class="comment">//unimplemented!(&quot;KDBX 3 AES-KDF not supported!&quot;);
-            </span>AesKdf::load(<span class="kw-2">&amp;</span>custom_data2)<span class="question-mark">?</span>.transform_key(<span class="kw-2">&amp;</span>composite_key)<span class="question-mark">?
-            </span><span class="comment">// transform_aes_kdf(&amp;composite_key, &amp;custom_data)?
-        </span>}
-        x <span class="kw">if </span>x == KDF_AES_KDBX4 =&gt; {
-            <span class="macro">unimplemented!</span>(<span class="string">&quot;KDBX 4 AES-KDF not supported!&quot;</span>);
-        }
-        x <span class="kw">if </span>x == KDF_ARGON2_D =&gt; {
-            transform_argon2(<span class="kw-2">&amp;</span>composite_key, <span class="kw-2">&amp;</span>custom_data)<span class="question-mark">?
-            </span><span class="comment">//unimplemented!(&quot;Argon2 KDF not supported!&quot;);
-        </span>}
-        <span class="kw">_ </span>=&gt; {
-            <span class="macro">unimplemented!</span>(<span class="string">&quot;Unknown&quot;</span>);
-        }
-    };
-
-    <span class="macro">println!</span>(<span class="string">&quot;Key OUT: {:0x?}&quot;</span>, transform_key);
-
-    <span class="macro">println!</span>(<span class="string">&quot;Calculating master key&quot;</span>);
-    <span class="kw">let </span><span class="kw-2">mut </span>hmac_context = Context::new(<span class="kw-2">&amp;</span>SHA512);
-
-    <span class="kw">let </span><span class="kw-2">mut </span>master_key = master_seed.to_owned();
-    master_key.extend(transform_key);
-    <span class="kw">let </span><span class="kw-2">mut </span>context = Context::new(<span class="kw-2">&amp;</span>SHA256);
-    context.update(<span class="kw-2">&amp;</span>master_key);
-    hmac_context.update(<span class="kw-2">&amp;</span>master_key);
-    hmac_context.update(<span class="kw-2">&amp;</span>[<span class="number">1u8</span>]);
-    master_key = context.finish().as_ref().to_owned();
-    <span class="kw">let </span>hmac_key_base = hmac_context.finish().as_ref().to_owned();
-    <span class="macro">println!</span>(<span class="string">&quot;Master OUT: {:0x?}&quot;</span>, master_key);
-    <span class="macro">println!</span>(<span class="string">&quot;HMAC OUT: {:0x?}&quot;</span>, hmac_key_base);
-
-    <span class="kw">let </span><span class="kw-2">mut </span>hmac_context = Context::new(<span class="kw-2">&amp;</span>SHA512);
-    hmac_context.update(<span class="kw-2">&amp;</span>[<span class="number">0xff</span>; <span class="number">8</span>]);
-    hmac_context.update(<span class="kw-2">&amp;</span>hmac_key_base);
-    <span class="kw">let </span>hmac_key = hmac_context.finish().as_ref().to_owned();
-
-    <span class="kw">let </span><span class="kw-2">mut </span>hmac_tag = [<span class="number">0</span>; <span class="number">32</span>];
-    <span class="comment">//println!(&quot;HMAC Tag: {:0x?}&quot;, hmac_tag);
-    </span><span class="kw">let </span>hmac_key = hmac::Key::new(hmac::HMAC_SHA256, <span class="kw-2">&amp;</span>hmac_key);
-    <span class="kw">if </span>major_version == <span class="number">4 </span>{
-        file.read_exact(<span class="kw-2">&amp;mut </span>hmac_tag)<span class="question-mark">?</span>;
-        <span class="macro">println!</span>(<span class="string">&quot;Verifying HMAC&quot;</span>);
-        hmac::verify(<span class="kw-2">&amp;</span>hmac_key, <span class="kw-2">&amp;</span>header, <span class="kw-2">&amp;</span>hmac_tag).unwrap();
-        <span class="macro">println!</span>(<span class="string">&quot;Complete&quot;</span>);
-    }
-
-    <span class="kw">let </span>contents = <span class="kw">if </span>major_version == <span class="number">4 </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>ciphertext = <span class="macro">vec!</span>[];
-        <span class="kw">for </span>idx <span class="kw">in </span><span class="number">0</span>.. {
-            <span class="macro">println!</span>(<span class="string">&quot;Block {}&quot;</span>, idx);
-            file.read_exact(<span class="kw-2">&amp;mut </span>hmac_tag)<span class="question-mark">?</span>;
-            <span class="kw">let </span>block_size = file.read_u32::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
-            <span class="kw">if </span>block_size == <span class="number">0 </span>{
-                <span class="kw">break</span>;
-            }
-            <span class="kw">let </span><span class="kw-2">mut </span>block = <span class="macro">vec!</span>[<span class="number">0</span>; block_size <span class="kw">as </span>usize];
-            file.read_exact(<span class="kw-2">&amp;mut </span>block)<span class="question-mark">?</span>;
-
-            <span class="kw">let </span><span class="kw-2">mut </span>hmac_context = Context::new(<span class="kw-2">&amp;</span>SHA512);
-            <span class="kw">let </span><span class="kw-2">mut </span>buf = Cursor::new(Vec::new());
-            buf.write_u64::&lt;LittleEndian&gt;(idx)<span class="question-mark">?</span>;
-            hmac_context.update(buf.get_ref());
-            hmac_context.update(<span class="kw-2">&amp;</span>hmac_key_base);
-            <span class="kw">let </span>hmac_key = hmac_context.finish().as_ref().to_owned();
-            buf.write_u32::&lt;LittleEndian&gt;(block_size)<span class="question-mark">?</span>;
-            buf.write(<span class="kw-2">&amp;</span>block)<span class="question-mark">?</span>;
-            <span class="kw">let </span>hmac_key = hmac::Key::new(hmac::HMAC_SHA256, <span class="kw-2">&amp;</span>hmac_key);
-            <span class="macro">println!</span>(<span class="string">&quot;Verifying HMAC&quot;</span>);
-            hmac::verify(<span class="kw-2">&amp;</span>hmac_key, buf.get_ref(), <span class="kw-2">&amp;</span>hmac_tag).unwrap();
-            <span class="macro">println!</span>(<span class="string">&quot;Complete&quot;</span>);
-            ciphertext.extend(block);
-        }
-
-        <span class="kw">let </span>data = decrypt(
-            Cipher::aes_256_cbc(),
-            <span class="kw-2">&amp;</span>master_key,
-            <span class="prelude-val">Some</span>(encryption_iv),
-            <span class="kw-2">&amp;</span>ciphertext,
-        )
-        .unwrap();
-        <span class="comment">// let mut gz = if let compress = Compression::None {
-        //     GzDecoder::new(Cursor::new(data))
-        // } else{
-        //     GzDecoder::new(Cursor::new(data))
-        // };
-        </span><span class="kw">let </span><span class="kw-2">mut </span>gz: Box&lt;<span class="kw">dyn </span>Read&gt; = <span class="kw">match </span>compress {
-            Compression::Gzip =&gt; Box::new(GzDecoder::new(Cursor::new(data))),
-            Compression::None =&gt; Box::new(Cursor::new(data)),
-        };
-
-        inner_tlvs = load_tlvs(<span class="kw-2">&amp;mut </span>gz, major_version)<span class="question-mark">?</span>.<span class="number">0</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>contents = String::new();
-        gz.read_to_string(<span class="kw-2">&amp;mut </span>contents)<span class="question-mark">?</span>;
-        contents
-    } <span class="kw">else </span>{
-        <span class="comment">/* KDBX 3.x format encrypts the database after breaking
-         * the stream into blocks */
-        </span><span class="kw">let </span><span class="kw-2">mut </span>ciphertext = <span class="macro">vec!</span>[];
-        file.read_to_end(<span class="kw-2">&amp;mut </span>ciphertext)<span class="question-mark">?</span>;
-        <span class="kw">let </span>data = decrypt(
-            Cipher::aes_256_cbc(),
-            <span class="kw-2">&amp;</span>master_key,
-            <span class="prelude-val">Some</span>(encryption_iv),
-            <span class="kw-2">&amp;</span>ciphertext,
-        )
-        .unwrap();
-        <span class="kw">let </span><span class="kw-2">mut </span>c = Cursor::new(data);
-
-        <span class="comment">/* Start stream header is used to verify successful decrypt */
-        </span><span class="kw">let </span><span class="kw-2">mut </span>start_stream = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">32</span>];
-        c.read_exact(<span class="kw-2">&amp;mut </span>start_stream)<span class="question-mark">?</span>;
-        <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>start_stream, <span class="kw-2">&amp;</span>tlvs[<span class="kw-2">&amp;</span><span class="number">9u8</span>]);
-        <span class="macro">println!</span>(<span class="string">&quot;Master Key appears valid&quot;</span>);
-
-        <span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[];
-        <span class="kw">for </span>idx <span class="kw">in </span><span class="number">0</span>.. {
-            <span class="macro">println!</span>(<span class="string">&quot;Block {}&quot;</span>, idx);
-            <span class="kw">let </span>block_id = c.read_u32::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
-            <span class="macro">assert_eq!</span>(idx <span class="kw">as </span>u32, block_id);
-            <span class="kw">let </span><span class="kw-2">mut </span>block_hash_expected = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">32</span>];
-            c.read_exact(<span class="kw-2">&amp;mut </span>block_hash_expected)<span class="question-mark">?</span>;
-            <span class="kw">let </span>block_size = c.read_u32::&lt;LittleEndian&gt;()<span class="question-mark">?</span>;
-            <span class="kw">let </span><span class="kw-2">mut </span>block_data = <span class="macro">vec!</span>[<span class="number">0</span>; block_size <span class="kw">as </span>usize];
-            c.read_exact(<span class="kw-2">&amp;mut </span>block_data)<span class="question-mark">?</span>;
-            <span class="kw">let </span><span class="kw-2">mut </span>context = Context::new(<span class="kw-2">&amp;</span>SHA256);
-            context.update(<span class="kw-2">&amp;</span>block_data);
-            <span class="kw">let </span>block_hash = context.finish().as_ref().to_owned();
-            <span class="kw">if </span>block_size == <span class="number">0 </span>{
-                <span class="kw">break</span>;
-            }
-            <span class="macro">assert_eq!</span>(block_hash_expected, block_hash, <span class="string">&quot;Failed hash&quot;</span>);
-            buf.extend(block_data);
-        }
-        <span class="kw">let </span><span class="kw-2">mut </span>gz: Box&lt;<span class="kw">dyn </span>Read&gt; = <span class="kw">match </span>compress {
-            Compression::Gzip =&gt; Box::new(GzDecoder::new(Cursor::new(buf))),
-            Compression::None =&gt; Box::new(Cursor::new(buf)),
-        };
-        <span class="kw">let </span><span class="kw-2">mut </span>xml_file = File::create(<span class="string">&quot;data2.xml&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>contents = String::new();
-        gz.read_to_string(<span class="kw-2">&amp;mut </span>contents)<span class="question-mark">?</span>;
-        <span class="kw">let _ </span>= xml_file.write(<span class="kw-2">&amp;</span>contents.as_bytes());
-        <span class="comment">// println!(&quot;{:#?}&quot;, &amp;contents);
-        </span><span class="kw">if </span><span class="kw-2">&amp;</span>contents[<span class="number">0</span>..<span class="number">3</span>] == <span class="string">&quot;\u{feff}&quot; </span>{
-            contents = contents[<span class="number">3</span>..].to_string();
-        }
-        <span class="kw">let </span>package = parser::parse(<span class="kw-2">&amp;</span>contents).unwrap();
-        <span class="kw">let </span>document = package.as_document();
-        <span class="kw">let </span>header_hash = evaluate_xpath(<span class="kw-2">&amp;</span>document, <span class="string">&quot;/KeePassFile/Meta/HeaderHash/text()&quot;</span>)
-            .expect(<span class="string">&quot;Missing header hash&quot;</span>);
-        <span class="kw">if </span>header_hash.string() != <span class="string">&quot;&quot; </span>{
-            <span class="macro">println!</span>(<span class="string">&quot;Header Hash: &#39;{}&#39;&quot;</span>, header_hash.string());
-            <span class="kw">let </span>expected_hash = decode(<span class="kw-2">&amp;</span>header_hash.string()).expect(<span class="string">&quot;Valid base64&quot;</span>);
-            <span class="kw">if </span>expected_hash != digest.as_ref() {
-                <span class="macro">eprintln!</span>(<span class="string">&quot;Possible header corruption\n&quot;</span>);
-                process::exit(<span class="number">1</span>);
-            }
-        }
-        contents
-    };
-
-    <span class="kw">let </span>default = <span class="macro">vec!</span>[<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]];
-    <span class="kw">let </span>inner_stream_cipher = <span class="kw-2">&amp;</span>inner_tlvs.get(<span class="kw-2">&amp;</span><span class="number">1u8</span>).unwrap_or(<span class="kw-2">&amp;</span>default)[<span class="number">0</span>];  <span class="comment">// Defaults to ARC4
-    </span><span class="kw">if </span>inner_stream_cipher.len() != <span class="number">4 </span>{
-        <span class="macro">panic!</span>(<span class="string">&quot;Invalid inner cipher&quot;</span>);
-    }
-    <span class="kw">let </span>inner_cipher_type = u32::from_le_bytes(inner_stream_cipher[..].try_into().unwrap());
-    <span class="macro">println!</span>(<span class="string">&quot;Inner Cipher: {inner_cipher_type}&quot;</span>);
-    <span class="kw">let </span>p_key = <span class="kw-2">&amp;</span>inner_tlvs[<span class="kw-2">&amp;</span><span class="number">0x02u8</span>][<span class="number">0</span>];
-    <span class="macro">println!</span>(<span class="string">&quot;p_key: {p_key:02x?} ({})&quot;</span>, p_key.len());
-    <span class="kw">let </span><span class="kw-2">mut </span>inner_cipher = protected_stream::new_stream(inner_cipher_type, p_key).expect(<span class="string">&quot;Unknown inner cipher&quot;</span>);
-
-    <span class="kw">let </span><span class="kw-2">mut </span>xml_file = File::create(<span class="string">&quot;data.xml&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let _ </span>= xml_file.write(<span class="kw-2">&amp;</span>contents.as_bytes());
-    <span class="kw">const </span>KDBX4_TIME_OFFSET: i64 = <span class="number">62135596800</span>;
-    <span class="macro">println!</span>(<span class="string">&quot;XML Body len: {}&quot;</span>, contents.len());
-    <span class="kw">let </span>package = parser::parse(<span class="kw-2">&amp;</span>contents).unwrap();
-    <span class="kw">let </span>document = package.as_document();
-    <span class="macro">println!</span>(
-        <span class="string">&quot;Root element: {}&quot;</span>,
-        document.root().children()[<span class="number">0</span>]
-            .element()
-            .unwrap()
-            .name()
-            .local_part()
-    );
-    <span class="kw">let </span>database_name_node = evaluate_xpath(<span class="kw-2">&amp;</span>document, <span class="string">&quot;/KeePassFile/Meta/DatabaseName/text()&quot;</span>)
-        .expect(<span class="string">&quot;Missing database name&quot;</span>);
-    <span class="macro">println!</span>(<span class="string">&quot;Database Name: {}&quot;</span>, database_name_node.string());
-    <span class="kw">let </span>database_name_changed_node =
-        evaluate_xpath(<span class="kw-2">&amp;</span>document, <span class="string">&quot;/KeePassFile/Meta/DatabaseNameChanged/text()&quot;</span>)
-            .expect(<span class="string">&quot;Missing database name changed&quot;</span>);
-    <span class="kw">let </span>change_time = <span class="kw">if </span>database_name_changed_node.string() == <span class="string">&quot;&quot; </span>{
-        <span class="string">&quot;&lt;missing&gt;&quot;</span>.to_owned()
-    } <span class="kw">else </span>{
-        <span class="kw">let </span>datetime: DateTime&lt;Local&gt; = <span class="kw">if </span>major_version &lt;= <span class="number">3 </span>{
-            DateTime::parse_from_rfc3339(<span class="kw-2">&amp;</span>database_name_changed_node.string())
-                .expect(<span class="string">&quot;failed to parse timestamp&quot;</span>)
-                .with_timezone(<span class="kw-2">&amp;</span>Local)
-        } <span class="kw">else </span>{
-            <span class="kw">let </span>timestamp =
-                Cursor::new(decode(<span class="kw-2">&amp;</span>database_name_changed_node.string()).expect(<span class="string">&quot;Valid base64&quot;</span>))
-                    .read_i64::&lt;LittleEndian&gt;()<span class="question-mark">?
-                    </span>- KDBX4_TIME_OFFSET;
-            <span class="comment">//let naive = NaiveDateTime::from_timestamp(timestamp, 0);
-            //let datetime: DateTime&lt;Utc&gt; = DateTime::from_utc(naive, Utc);
-            </span>Local.timestamp_opt(timestamp, <span class="number">0</span>).unwrap()
-        };
-        datetime.format(<span class="string">&quot;%Y-%m-%d %l:%M:%S %p %Z&quot;</span>).to_string()
-    };
-    <span class="macro">println!</span>(<span class="string">&quot;Database Name Changed: {}&quot;</span>, change_time);
-
-    <span class="kw">let </span>xpath_context = XPathContext::new();
-    <span class="kw">let </span>protected_nodes = evaluate_xpath(<span class="kw-2">&amp;</span>document, <span class="string">&quot;//Value[@Protected = &#39;True&#39;]/text()&quot;</span>)
-        .expect(<span class="string">&quot;Missing database entries&quot;</span>);
-    <span class="kw">let </span>xpath_current = Factory::new()
-        .build(<span class="string">&quot;.&quot;</span>)
-        .expect(<span class="string">&quot;Failed to compile XPath&quot;</span>)
-        .expect(<span class="string">&quot;Empty XPath expression&quot;</span>);
-    <span class="kw">let </span><span class="kw-2">mut </span>protected_offset = <span class="number">0</span>;
-    <span class="kw">match </span>protected_nodes {
-        Value::Nodeset(nodes) =&gt; {
-            <span class="kw">for </span>entry <span class="kw">in </span>nodes.document_order() {
-                <span class="kw">let </span>p = xpath_current
-                    .evaluate(<span class="kw-2">&amp;</span>xpath_context, entry)
-                    .expect(<span class="string">&quot;Missing entry text&quot;</span>);
-                <span class="macro">println!</span>(<span class="string">&quot;P: {:?}, (&#39;{}&#39;)&quot;</span>, p, p.string());
-                <span class="kw">let </span><span class="kw-2">mut </span>p_ciphertext = decode(<span class="kw-2">&amp;</span>p.string()).expect(<span class="string">&quot;Valid base64&quot;</span>);
-                <span class="macro">println!</span>(<span class="string">&quot;Protected Value Ciphertext: {p_ciphertext:#04X?} (+{protected_offset})&quot;</span>);
-                protected_offset += p_ciphertext.len();
-                inner_cipher.apply_keystream(<span class="kw-2">&amp;mut </span>p_ciphertext);
-                <span class="macro">println!</span>(<span class="string">&quot;Protected Value Plaintext: {p_ciphertext:#04X?}&quot;</span>);
-                <span class="kw">let </span>value = String::from_utf8(p_ciphertext)
-                    .unwrap_or(<span class="string">&quot;«Failed to decrypt value»&quot;</span>.to_owned());
-                <span class="macro">println!</span>(<span class="string">&quot;Protected Value: {:?}&quot;</span>, <span class="kw-2">&amp;</span>value);
-                <span class="kw">match </span>entry {
-                    sxd_xpath::nodeset::Node::Text(t) =&gt; {
-                        t.set_text(<span class="kw-2">&amp;</span>value);
-                    }
-                    <span class="kw">_ </span>=&gt; {}
-                }
-            }
-        }
-        <span class="kw">_ </span>=&gt; {
-            <span class="macro">panic!</span>(<span class="string">&quot;XML corruption&quot;</span>);
-        }
-    }
-    <span class="kw">let </span>xpath_username = Factory::new()
-        .build(<span class="string">&quot;String[Key/text() = &#39;UserName&#39;]/Value/text()&quot;</span>)
-        .expect(<span class="string">&quot;Failed to compile XPath&quot;</span>)
-        .expect(<span class="string">&quot;Empty XPath expression&quot;</span>);
-    <span class="kw">let </span>xpath_last_mod_time = Factory::new()
-        .build(<span class="string">&quot;Times/LastModificationTime/text()&quot;</span>)
-        .expect(<span class="string">&quot;Failed to compile XPath&quot;</span>)
-        .expect(<span class="string">&quot;Empty XPath expression&quot;</span>);
-    <span class="kw">let </span>xpath_password = Factory::new()
-        .build(<span class="string">&quot;String[Key/text() = &#39;Password&#39;]/Value[@Protected = &#39;True&#39;]/text()&quot;</span>)
-        .expect(<span class="string">&quot;Failed to compile XPath&quot;</span>)
-        .expect(<span class="string">&quot;Empty XPath expression&quot;</span>);
-    <span class="comment">//let entry_nodes = evaluate_xpath(&amp;document, &quot;/KeePassFile/Root/Group/Entry&quot;).expect(&quot;Missing database entries&quot;);
-    </span><span class="kw">let </span>entry_nodes = evaluate_xpath(<span class="kw-2">&amp;</span>document, <span class="string">&quot;//Entry&quot;</span>).expect(<span class="string">&quot;Missing database entries&quot;</span>);
-    <span class="kw">match </span>entry_nodes {
-        Value::Nodeset(nodes) =&gt; {
-            <span class="kw">for </span>entry <span class="kw">in </span>nodes.document_order() {
-                <span class="comment">//let n = evaluate_xpath(&amp;document, &quot;/KeePassFile/Root/Group/Entry/String[Key/text() = &#39;UserName&#39;]/Value/text()&quot;).expect(&quot;Missing entry username&quot;);
-                </span><span class="kw">let </span>n = xpath_username
-                    .evaluate(<span class="kw-2">&amp;</span>xpath_context, entry)
-                    .expect(<span class="string">&quot;Missing entry username&quot;</span>);
-                <span class="kw">let </span>t = xpath_last_mod_time
-                    .evaluate(<span class="kw-2">&amp;</span>xpath_context, entry)
-                    .expect(<span class="string">&quot;Missing entry modification&quot;</span>);
-                <span class="kw">let </span>p = xpath_password
-                    .evaluate(<span class="kw-2">&amp;</span>xpath_context, entry)
-                    .expect(<span class="string">&quot;Missing entry password&quot;</span>);
-                <span class="macro">println!</span>(<span class="string">&quot;Name: {}&quot;</span>, n.string());
-                <span class="kw">let </span>change_time = <span class="kw">if </span>database_name_changed_node.string() == <span class="string">&quot;&quot; </span>{
-                    <span class="string">&quot;&lt;missing&gt;&quot;</span>.to_owned()
-                } <span class="kw">else </span>{
-                    <span class="kw">let </span>datetime: DateTime&lt;Local&gt; = <span class="kw">if </span>major_version &lt;= <span class="number">3 </span>{
-                        DateTime::parse_from_rfc3339(<span class="kw-2">&amp;</span>t.string())
-                            .expect(<span class="string">&quot;failed to parse timestamp&quot;</span>)
-                            .with_timezone(<span class="kw-2">&amp;</span>Local)
-                    } <span class="kw">else </span>{
-                        <span class="macro">println!</span>(<span class="string">&quot;Inner: {:?}&quot;</span>, <span class="kw-2">&amp;</span>t.string());
-                        <span class="kw">let </span>timestamp =
-                            Cursor::new(decode(<span class="kw-2">&amp;</span>t.string()).expect(<span class="string">&quot;Valid base64&quot;</span>))
-                                .read_i64::&lt;LittleEndian&gt;()<span class="question-mark">?
-                                </span>- KDBX4_TIME_OFFSET;
-                        <span class="comment">//let naive = NaiveDateTime::from_timestamp(timestamp, 0);
-                        //let datetime: DateTime&lt;Utc&gt; = DateTime::from_utc(naive, Utc);
-                        </span>Local.timestamp_opt(timestamp, <span class="number">0</span>).unwrap()
-                    };
-                    datetime.format(<span class="string">&quot;%Y-%m-%d %l:%M:%S %p %Z&quot;</span>).to_string()
-                };
-                <span class="macro">println!</span>(<span class="string">&quot;Changed: {}&quot;</span>, change_time);
-                <span class="macro">println!</span>(<span class="string">&quot;Password: {:?}&quot;</span>, p.string());
-            }
-        }
-        <span class="kw">_ </span>=&gt; {
-            <span class="macro">panic!</span>(<span class="string">&quot;XML corruption&quot;</span>);
-        }
-    };
-
-    <span class="kw">let </span>content_cursor = Cursor::new(<span class="kw-2">&amp;</span>contents);
-    <span class="kw">let </span><span class="kw-2">mut </span>reader = ParserConfig::new()
-        .cdata_to_characters(<span class="bool-val">true</span>)
-        .create_reader(content_cursor);
-    <span class="kw">let </span><span class="kw-2">mut </span>my_doc = <span class="prelude-val">None</span>;
-    <span class="kw">loop </span>{
-        <span class="kw">let </span>event = reader.next().unwrap();
-        <span class="kw">match </span>event {
-            XmlEvent::StartDocument { .. } =&gt; {
-                <span class="macro">println!</span>(<span class="string">&quot;Start&quot;</span>);
-            }
-            XmlEvent::StartElement {
-                name, attributes, ..
-            } =&gt; {
-                <span class="comment">// TODO Check top-level tag name
-                </span><span class="kw">let </span><span class="kw-2">mut </span>context = KdbxContext::default();
-                context.major_version = major_version;
-                context.binaries = inner_tlvs.remove(<span class="kw-2">&amp;</span><span class="number">3u8</span>).unwrap();
-                my_doc = <span class="prelude-val">Some</span>(KeePassFile::parse(<span class="kw-2">&amp;mut </span>reader, name, attributes, <span class="kw-2">&amp;mut </span>context)
-                    .map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))<span class="question-mark">?
-                    </span>.unwrap());
-            }
-            XmlEvent::EndDocument =&gt; {
-                <span class="macro">println!</span>(<span class="string">&quot;End&quot;</span>);
-                <span class="kw">break</span>;
-            }
-            <span class="kw">_ </span>=&gt; {}
-        }
-    }
-
-    <span class="prelude-val">Ok</span>(KeePassDoc {
-        file: my_doc.expect(<span class="string">&quot;Missing top-level element&quot;</span>),
-        cipher: inner_cipher,
-    })
 }
 </code></pre></div></section></main></body></html>
