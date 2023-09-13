@@ -2611,6 +2611,9 @@
 <a href="#2611" id="2611">2611</a>
 <a href="#2612" id="2612">2612</a>
 <a href="#2613" id="2613">2613</a>
+<a href="#2614" id="2614">2614</a>
+<a href="#2615" id="2615">2615</a>
+<a href="#2616" id="2616">2616</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Read, modify and write KeePass 2.x databases
 
 </span><span class="kw">use </span>std::collections::VecDeque;
@@ -2775,7 +2778,8 @@
     <span class="prelude-val">Ok</span>((tlvs, header_blob))
 }
 
-<span class="kw">fn </span>save_tlvs&lt;W: Write&gt;(
+<span class="attr">#[cfg(feature = <span class="string">&quot;write&quot;</span>)]
+</span><span class="kw">fn </span>save_tlvs&lt;W: Write&gt;(
     output: <span class="kw-2">&amp;mut </span>W,
     tlvs: <span class="kw-2">&amp;</span>BTreeMap&lt;u8, Vec&lt;Vec&lt;u8&gt;&gt;&gt;,
     major_version: u16,
@@ -2918,7 +2922,8 @@
     <span class="prelude-val">Ok</span>(custom_data)
 }
 
-<span class="kw">fn </span>save_map(map: <span class="kw-2">&amp;</span>HashMap&lt;String, MapValue&gt;) -&gt; Vec&lt;u8&gt; {
+<span class="attr">#[cfg(feature = <span class="string">&quot;write&quot;</span>)]
+</span><span class="kw">fn </span>save_map(map: <span class="kw-2">&amp;</span>HashMap&lt;String, MapValue&gt;) -&gt; Vec&lt;u8&gt; {
     <span class="kw">let </span>variant_major = <span class="number">1</span>;
     <span class="kw">let </span>variant_minor = <span class="number">0</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>output = Cursor::new(Vec::new());
@@ -4507,7 +4512,8 @@
 <span class="kw">const </span>KDBX2_BETA_MAGIC_TYPE: u32 = <span class="number">0xB54BFB66</span>;
 <span class="kw">const </span>KDBX2_MAGIC_TYPE: u32 = <span class="number">0xB54BFB67</span>;
 
-<span class="kw">pub fn </span>save_file(doc: <span class="kw-2">&amp;</span>KeePassFile, major_version: u16) -&gt; io::Result&lt;()&gt; {
+<span class="attr">#[cfg(feature = <span class="string">&quot;write&quot;</span>)]
+</span><span class="kw">pub fn </span>save_file(doc: <span class="kw-2">&amp;</span>KeePassFile, major_version: u16) -&gt; io::Result&lt;()&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>file = File::create(<span class="string">&quot;data-out.kdbx&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>minor_version = <span class="number">0</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>header = <span class="macro">vec!</span>[];
