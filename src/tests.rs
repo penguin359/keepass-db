@@ -2846,6 +2846,7 @@ fn test_crypto_writer() {
 }
 
 #[test]
+#[cfg(feature = "write")]
 fn test_save_tlvs_ver3() {
     let mut buf = Cursor::new(Vec::new());
     let mut map = BTreeMap::new();
@@ -2885,6 +2886,7 @@ fn test_load_tlvs_ver3() {
 }
 
 #[test]
+#[cfg(feature = "write")]
 fn test_save_tlvs_ver4() {
     let mut buf = Cursor::new(Vec::new());
     let mut map = BTreeMap::new();
@@ -3000,6 +3002,7 @@ fn test_load_variant_map() {
 }
 
 #[test]
+#[cfg(feature = "write")]
 fn test_save_variant_map() {
     let mut expected = HashMap::new();
     expected.insert("U32".to_string(), MapValue::UInt32(0x80000000));

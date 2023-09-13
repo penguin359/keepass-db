@@ -162,6 +162,7 @@ fn load_tlvs<R: Read>(
     Ok((tlvs, header_blob))
 }
 
+#[cfg(feature = "write")]
 fn save_tlvs<W: Write>(
     output: &mut W,
     tlvs: &BTreeMap<u8, Vec<Vec<u8>>>,
@@ -305,6 +306,7 @@ fn load_map(tlv_data: &[u8]) -> io::Result<HashMap<String, MapValue>> {
     Ok(custom_data)
 }
 
+#[cfg(feature = "write")]
 fn save_map(map: &HashMap<String, MapValue>) -> Vec<u8> {
     let variant_major = 1;
     let variant_minor = 0;
@@ -1894,6 +1896,7 @@ const KDBX1_MAGIC_TYPE: u32 = 0xB54BFB65;
 const KDBX2_BETA_MAGIC_TYPE: u32 = 0xB54BFB66;
 const KDBX2_MAGIC_TYPE: u32 = 0xB54BFB67;
 
+#[cfg(feature = "write")]
 pub fn save_file(doc: &KeePassFile, major_version: u16) -> io::Result<()> {
     let mut file = File::create("data-out.kdbx")?;
     let minor_version = 0;

@@ -5,7 +5,9 @@ use std::fs::File;
 use clap::{App, Arg};
 use rpassword::read_password;
 
-use keepass_db::{Key, lib_main, save_file};
+use keepass_db::{Key, lib_main};
+#[cfg(feature = "write")]
+use keepass_db::save_file;
 
 fn main() -> io::Result<()> {
     env_logger::init();
@@ -51,7 +53,12 @@ fn main() -> io::Result<()> {
 
     let doc = lib_main(filename, &key)?.file;
     println!("KeePassFile: {:#?}", &doc);
-    save_file(&doc, 4).unwrap();
+
+    #[cfg(feature = "write")]
+    {
+        save_file(&doc, 4).unwrap();
+    }
+
     println!("Done!");
 
     Ok(())
