@@ -1572,29 +1572,6 @@ impl KdbxParse<KdbxContext> for ProtectedValue {
         } else {
             decode_optional_string(reader, name, attributes).map(|o| o.map(|v| Self::Unprotected(v)))
         }
-//        loop {
-//            let event = reader.next().unwrap();
-//            match event {
-//                XmlEvent::StartDocument { .. } => {
-//                    println!("Start");
-//                }
-//                XmlEvent::StartElement {
-//                    name, attributes, ..
-//                } => {
-//                    // TODO Check top-level tag name
-//                    let mut context = KdbxContext::default();
-//                    context.major_version = major_version;
-//                    my_doc = Some(KeePassFile::parse(&mut reader, name, attributes, &mut context)
-//                        .map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?
-//                        .unwrap());
-//                }
-//                XmlEvent::EndDocument => {
-//                    println!("End");
-//                    break;
-//                }
-//                _ => {}
-//            }
-//        }
     }
 }
 
@@ -1671,14 +1648,18 @@ impl<C> KdbxSerialize<C> for BinaryRef {
 }
 
 
+/// Group of password entries and subgroups
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize, Getters)]
 pub struct Group {
     #[keepass_db(element = "UUID")]
     uuid: Uuid,
     name: String,
+    /// Additional notes about group
     notes: String,
+    /// Group Icon unless a custom icon is provided
     #[keepass_db(element = "IconID")]
     icon_id: u32,
+    /// Provides a custom icon for the group overiding icon_id
     #[keepass_db(element = "CustomIconUUID")]
     custom_icon_uuid: Option<Uuid>,
     times: Times,
@@ -1707,6 +1688,7 @@ impl Group {
 //        self.entry.iter()
 //    }
 
+    // Iterate over all groups in database
     pub fn all_groups(&self) -> GroupIter {
         return GroupIter {
             first: true,
@@ -1716,6 +1698,7 @@ impl Group {
         }
     }
 
+    // Iterate over all password entries in database
     pub fn all_entries(&self) -> EntryIter {
         let mut groups = self.all_groups();
         return EntryIter {
@@ -1800,6 +1783,7 @@ struct AutoType {
     association: Vec<Association>,
 }
 
+/// Password entry
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize, Getters)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Entry {
@@ -1875,6 +1859,11 @@ pub struct Root {
     deleted_objects: Vec<DeletedObject>,
 }
 
+/// Testing doc macros
+/// ```
+/// assert!(true);
+/// ```
+/// Does it work?
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
 pub struct KeePassFile {
     meta: Meta,
@@ -1882,9 +1871,6 @@ pub struct KeePassFile {
 }
 
 impl KeePassFile {
-//    pub fn groups(&self) -> Iter<'_, Group> {
-//        self.root.group.iter()
-//    }
     pub fn groups(&self) -> &Vec<Group> {
         &self.root.group
     }
@@ -1896,172 +1882,714 @@ const KDBX1_MAGIC_TYPE: u32 = 0xB54BFB65;
 const KDBX2_BETA_MAGIC_TYPE: u32 = 0xB54BFB66;
 const KDBX2_MAGIC_TYPE: u32 = 0xB54BFB67;
 
-#[cfg(feature = "write")]
-pub fn save_file(doc: &KeePassFile, major_version: u16) -> io::Result<()> {
-    let mut file = File::create("data-out.kdbx")?;
-    let minor_version = 0;
-    let mut header = vec![];
-    header.write_u32::<LittleEndian>(KDBX_MAGIC)?;
-    header.write_u32::<LittleEndian>(KDBX2_MAGIC_TYPE)?;
-    header.write_u16::<LittleEndian>(minor_version)?;
-    header.write_u16::<LittleEndian>(major_version)?;
-    let mut key = Key::new();
-    key.set_user_password("asdf");
-    let composite_key = key.composite_key();
-    let kdf = AesKdf::default();
-    let mut custom_data = HashMap::new();
-    custom_data.insert(
-        KDF_PARAM_UUID.to_string(),
-        MapValue::ByteArray(KDF_AES_KDBX3.into_bytes().to_vec()),
-    );
-    kdf.save(&mut custom_data);
-    let transform_key = kdf
-        .transform_key(&composite_key)
-        .expect("Failed to transform key");
-    let master_seed = [0u8; 32];
-    let iv = [0u8; 16];
-    let stream_cipher = 2u32;
-    let stream_key = [0u8; 32];
-    let mut tlvs = BTreeMap::new();
-    tlvs.insert(
-        TlvType::MasterSeed.to_u8().unwrap(),
-        vec![master_seed.to_vec()],
-    );
-    tlvs.insert(
-        TlvType::CipherId.to_u8().unwrap(),
-        vec![CIPHER_ID_AES256_CBC.into_bytes().to_vec()],
-    );
-    tlvs.insert(TlvType::EncryptionIv.to_u8().unwrap(), vec![iv.to_vec()]);
-    tlvs.insert(
-        TlvType::CompressionFlags.to_u8().unwrap(),
-        vec![Compression::None.to_u32().unwrap().to_le_bytes().to_vec()],
-    );
-    let start_stream = vec![0; 32]; // TODO Randomize this
-    if major_version < 4 {
-        tlvs.insert(
-            TlvType::TransformSeed.to_u8().unwrap(),
-            vec![master_seed.to_vec()],
-        );
-        tlvs.insert(
-            TlvType::TransformRounds.to_u8().unwrap(),
-            vec![match custom_data[KDF_PARAM_ROUNDS] {
-                MapValue::UInt64(x) => x.to_le_bytes().to_vec(),
-                _ => panic!("Wrong"),
-            }],
-        );
-        tlvs.insert(
-            TlvType::StreamStartBytes.to_u8().unwrap(),
-            vec![start_stream.to_vec()],
-        );
-        tlvs.insert(
-            TlvType::ProtectedStreamKey.to_u8().unwrap(),
-            vec![stream_key.to_vec()],
-        );
-        tlvs.insert(
-            TlvType::InnerRandomStreamId.to_u8().unwrap(),
-            vec![stream_cipher.to_le_bytes().to_vec()],
-        );
-    } else {
-        tlvs.insert(
-            TlvType::KdfParameters.to_u8().unwrap(),
-            vec![save_map(&custom_data)],
-        );
-    }
-    header.append(&mut save_tlvs(&mut io::sink(), &tlvs, major_version).unwrap());
-    file.write(&header)?;
-    let mut context = Context::new(&SHA256);
-    context.update(&header);
-    let digest = context.finish();
-    if major_version >= 4 {
-        file.write(digest.as_ref())?;
-        // header.append(&mut digest.as_ref().to_owned());
-    }
-
-    let mut master_key = master_seed.to_vec();
-    master_key.extend(transform_key);
-    let mut context = Context::new(&SHA256);
-    let mut hmac_context = Context::new(&SHA512);
-    context.update(&master_key);
-    hmac_context.update(&master_key);
-    hmac_context.update(&[1u8]);
-    master_key = context.finish().as_ref().to_owned();
-    let hmac_key_base = hmac_context.finish().as_ref().to_owned();
-
-    let mut hmac_context = Context::new(&SHA512);
-    hmac_context.update(&[0xff; 8]);
-    hmac_context.update(&hmac_key_base);
-    let hmac_key = hmac_context.finish().as_ref().to_owned();
-
-    let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
-    let hmac_tag = hmac::sign(&hmac_key, &header);
-    if major_version >= 4 {
-        file.write(hmac_tag.as_ref())?;
-    } else {
-        let output = Cursor::new(Vec::<u8>::new());
-        let mut context = KdbxContext::default();
-        context.major_version = major_version;
-        let mut writer = xml::writer::EventWriter::new(output);
-        writer
-            .write(xml::writer::XmlEvent::start_element("KeePassFile"))
-            .expect("Success!");
-        KeePassFile::serialize2(&mut writer, doc.clone(), &mut context).unwrap();
-        writer
-            .write(xml::writer::XmlEvent::end_element())
-            .expect("Success!");
-        let output = writer.into_inner().into_inner();
-        let mut buf = Cursor::new(Vec::<u8>::new());
-        buf.write_all(&start_stream).unwrap();
-        buf.write_all(&0u32.to_le_bytes()).unwrap();
-        let mut context = Context::new(&SHA256);
-        context.update(&output);
-        buf.write_all(&context.finish().as_ref().to_owned()).unwrap();
-        buf.write_all(&(output.len() as u32).to_le_bytes()).unwrap();
-        buf.write_all(&output).unwrap();
-        buf.write_all(&1u32.to_le_bytes()).unwrap();
-        let context = Context::new(&SHA256);
-        buf.write_all(&context.finish().as_ref().to_owned()).unwrap();
-        //buf.write_all(&[0u8; 32]).unwrap();
-        buf.write_all(&0u32.to_le_bytes()).unwrap();
-        let data = encrypt(
-            Cipher::aes_256_cbc(),
-            &master_key,
-            Some(&iv),
-            &buf.into_inner(),
-        ).unwrap();
-        file.write_all(&data).unwrap();
-        return Ok(());
-    }
-
-    let output = BlockWriter::new(&hmac_key_base, file);
-    let cipher = Cipher::aes_256_cbc();
-    let mut output = Crypto::new(cipher, &master_key, Some(&iv), output).unwrap();
-
-    if major_version >= 4 {
-        let mut inner_tlvs = BTreeMap::new();
-        inner_tlvs.insert(1, vec![stream_cipher.to_le_bytes().to_vec()]);
-        inner_tlvs.insert(2, vec![stream_key.to_vec()]);
-        save_tlvs(&mut output, &inner_tlvs, major_version).unwrap();
-    }
-    let mut writer = xml::writer::EventWriter::new(output);
-    writer
-        .write(xml::writer::XmlEvent::start_element("KeePassFile"))
-        .expect("Success!");
-    KeePassFile::serialize2(&mut writer, doc.clone(), &mut KdbxContext::default()).unwrap();
-    writer
-        .write(xml::writer::XmlEvent::end_element())
-        .expect("Success!");
-    let mut output = writer.into_inner();
-    output.flush()?;
-    // output.flush()?;
-    // drop(output);
-
-    Ok(())
-}
-
+/// A KeePass database
 #[derive(Default)]
 pub struct KeePassDoc {
     pub file: KeePassFile,
     pub cipher: CipherValue,
+}
+
+impl KeePassDoc {
+    /// Read in an existing KeePass database
+    pub fn load_file(filename: &str, key: &Key) -> io::Result<Self> {
+        let composite_key = key.composite_key();
+
+        let mut file = File::open(filename)?;
+        let magic = file.read_u32::<LittleEndian>()?;
+        let magic_type = file.read_u32::<LittleEndian>()?;
+
+        if magic != KDBX_MAGIC {
+            eprintln!("Invalid database file\n");
+            process::exit(1);
+        }
+
+        let mut custom_data = HashMap::<String, Vec<u8>>::new();
+        let mut custom_data2 = HashMap::<_, _>::new();
+
+        match magic_type {
+            KDBX1_MAGIC_TYPE => {
+                use kdb1::read_kdb1_header;
+                read_kdb1_header(&mut file, &key)?;
+                return Ok(KeePassDoc::default());
+            }
+            // KDBX2_BETA_MAGIC_TYPE => {
+            //     // XXX Untested
+            //     eprintln!("KeePass 2.x Beta files not supported\n");
+            //     process::exit(1);
+            // },
+            KDBX2_MAGIC_TYPE | KDBX2_BETA_MAGIC_TYPE => {
+                println!("Opening KeePass 2.x database");
+            }
+            _ => {
+                // XXX Untested
+                eprintln!("Unknown KeePass database format\n");
+                process::exit(1);
+            }
+        };
+
+        // Version field is defined as uint32_t, but it's broken up into
+        // major and minor 16-bit components. Due to the nature of little
+        // endian, this puts the minor part first.
+        let minor_version = file.read_u16::<LittleEndian>()?;
+        let major_version = file.read_u16::<LittleEndian>()?;
+        match major_version {
+            3 => {
+                unsafe {
+                    KDBX4 = false;
+                };
+                custom_data.insert(
+                    KDF_PARAM_UUID.to_string(),
+                    KDF_AES_KDBX3.as_bytes().to_vec(),
+                );
+            }
+            4 => {}
+            1 => {
+                custom_data.insert(
+                    KDF_PARAM_UUID.to_string(),
+                    KDF_AES_KDBX3.as_bytes().to_vec(),
+                );
+            }
+            _ => {
+                eprintln!(
+                    "Unsupported KeePass 2.x database version ({}.{})\n",
+                    major_version, minor_version
+                );
+                process::exit(1);
+            }
+        };
+        let mut tlvs = HashMap::new();
+        let mut inner_tlvs = BTreeMap::<u8, Vec<Vec<u8>>>::new();
+        inner_tlvs.insert(3u8, vec![]);
+        loop {
+            let tlv_type = file.read_u8()?;
+            let tlv_len = if major_version == 4 {
+                file.read_u32::<LittleEndian>()?
+            } else {
+                // XXX Untested
+                file.read_u16::<LittleEndian>()? as u32
+            };
+            let mut tlv_data = vec![0; tlv_len as usize];
+            file.read_exact(&mut tlv_data)?;
+            debug!("TLV({}, {}): {:?}", tlv_type, tlv_len, tlv_data);
+            match tlv_type {
+                0 => {
+                    break;
+                }
+                5 => {
+                    custom_data.insert(KDF_PARAM_SALT.to_string(), tlv_data.clone());
+                    custom_data2.insert(KDF_PARAM_SALT.to_string(), MapValue::ByteArray(tlv_data));
+                }
+                6 => {
+                    custom_data.insert(KDF_PARAM_ROUNDS.to_string(), tlv_data.clone());
+                    custom_data2.insert(
+                        KDF_PARAM_ROUNDS.to_string(),
+                        MapValue::UInt64(u64::from_le_bytes(tlv_data[0..8].try_into().unwrap())),
+                    );
+                }
+                8 => {
+                    inner_tlvs.insert(2u8, vec![tlv_data]);
+                }
+                10 => {
+                    inner_tlvs.insert(1u8, vec![tlv_data]);
+                }
+                11 => {
+                    custom_data2 = load_map(&tlv_data).unwrap();
+                    let kdf_parameters = &tlv_data;
+                    let mut c = Cursor::new(kdf_parameters);
+                    let variant_minor = c.read_u8()?;
+                    let variant_major = c.read_u8()?;
+                    if variant_major != 1 {
+                        eprintln!(
+                            "Unsupported variant dictionary version ({}.{})\n",
+                            variant_major, variant_minor
+                        );
+                        process::exit(1);
+                    };
+
+                    loop {
+                        let item_type = c.read_u8()?;
+                        if item_type == 0 {
+                            break;
+                        }
+                        let item_key_len = c.read_u32::<LittleEndian>()?;
+                        let mut item_key = vec![0; item_key_len as usize];
+                        c.read_exact(&mut item_key)?;
+                        let item_key_str = String::from_utf8_lossy(&item_key).to_owned();
+                        let item_value_len = c.read_u32::<LittleEndian>()?;
+                        let mut item_value = vec![0; item_value_len as usize];
+                        c.read_exact(&mut item_value)?;
+                        debug!("K: {}, V: {:0x?}", item_key_str, item_value);
+                        custom_data.insert(item_key_str.to_owned().to_string(), item_value);
+                    }
+                }
+                _ => {
+                    tlvs.insert(tlv_type, tlv_data);
+                }
+            }
+        }
+
+        //let src = &tlvs[&2u8];
+        //let mut uuid = [0; 16];
+        //let b = &src[..uuid.len()];
+        //uuid.copy_from_slice(b);
+        //let d = Builder::from_bytes(uuid).build();
+        let cipher_id = Uuid::from_slice(&tlvs[&2u8]).unwrap();
+        println!("D: {:?}", cipher_id);
+        if cipher_id != CIPHER_ID_AES256_CBC {
+            eprintln!("Unknown cipher\n");
+            process::exit(1);
+        }
+        println!("AES");
+        let mut c = Cursor::new(&tlvs[&3u8]);
+        let compression_flags = c.read_u32::<LittleEndian>()?;
+        enum Compression {
+            None,
+            Gzip,
+        }
+        let compress = match compression_flags {
+            0 => {
+                // XX Untested
+                // eprintln!("Unsupported no compressed file\n");
+                //process::exit(1);
+                Compression::None
+            }
+            1 => {
+                println!("Gzip compression");
+                Compression::Gzip
+            }
+            _ => {
+                // XX Untested
+                eprintln!("Unsupported compression method\n");
+                process::exit(1);
+            }
+        };
+
+        let master_seed = &tlvs[&4u8];
+        let encryption_iv = &tlvs[&7u8];
+
+        //let mut header = vec![];
+        let mut context = Context::new(&SHA256);
+        let pos = file.seek(SeekFrom::Current(0))?;
+        file.seek(SeekFrom::Start(0))?;
+        let mut header = vec![0; (pos) as usize];
+        file.read_exact(&mut header)?;
+        file.seek(SeekFrom::Start(pos))?;
+        context.update(&header);
+        let digest = context.finish();
+        if major_version == 4 {
+            let mut expected_hash = [0; 32];
+            file.read_exact(&mut expected_hash)?;
+            if digest.as_ref() != expected_hash {
+                eprintln!("Possible header corruption\n");
+                process::exit(1);
+            }
+        }
+
+        let kdf_id = Uuid::from_slice(&custom_data[KDF_PARAM_UUID]).unwrap();
+        println!("KDF: {:?}", kdf_id);
+
+        let transform_key = match kdf_id {
+            x if x == KDF_AES_KDBX3 => {
+                //unimplemented!("KDBX 3 AES-KDF not supported!");
+                AesKdf::load(&custom_data2)?.transform_key(&composite_key)?
+                // transform_aes_kdf(&composite_key, &custom_data)?
+            }
+            x if x == KDF_AES_KDBX4 => {
+                unimplemented!("KDBX 4 AES-KDF not supported!");
+            }
+            x if x == KDF_ARGON2_D => {
+                transform_argon2(&composite_key, &custom_data)?
+                //unimplemented!("Argon2 KDF not supported!");
+            }
+            _ => {
+                unimplemented!("Unknown");
+            }
+        };
+
+        println!("Key OUT: {:0x?}", transform_key);
+
+        println!("Calculating master key");
+        let mut hmac_context = Context::new(&SHA512);
+
+        let mut master_key = master_seed.to_owned();
+        master_key.extend(transform_key);
+        let mut context = Context::new(&SHA256);
+        context.update(&master_key);
+        hmac_context.update(&master_key);
+        hmac_context.update(&[1u8]);
+        master_key = context.finish().as_ref().to_owned();
+        let hmac_key_base = hmac_context.finish().as_ref().to_owned();
+        println!("Master OUT: {:0x?}", master_key);
+        println!("HMAC OUT: {:0x?}", hmac_key_base);
+
+        let mut hmac_context = Context::new(&SHA512);
+        hmac_context.update(&[0xff; 8]);
+        hmac_context.update(&hmac_key_base);
+        let hmac_key = hmac_context.finish().as_ref().to_owned();
+
+        let mut hmac_tag = [0; 32];
+        //println!("HMAC Tag: {:0x?}", hmac_tag);
+        let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
+        if major_version == 4 {
+            file.read_exact(&mut hmac_tag)?;
+            println!("Verifying HMAC");
+            hmac::verify(&hmac_key, &header, &hmac_tag).unwrap();
+            println!("Complete");
+        }
+
+        let contents = if major_version == 4 {
+            let mut ciphertext = vec![];
+            for idx in 0.. {
+                println!("Block {}", idx);
+                file.read_exact(&mut hmac_tag)?;
+                let block_size = file.read_u32::<LittleEndian>()?;
+                if block_size == 0 {
+                    break;
+                }
+                let mut block = vec![0; block_size as usize];
+                file.read_exact(&mut block)?;
+
+                let mut hmac_context = Context::new(&SHA512);
+                let mut buf = Cursor::new(Vec::new());
+                buf.write_u64::<LittleEndian>(idx)?;
+                hmac_context.update(buf.get_ref());
+                hmac_context.update(&hmac_key_base);
+                let hmac_key = hmac_context.finish().as_ref().to_owned();
+                buf.write_u32::<LittleEndian>(block_size)?;
+                buf.write(&block)?;
+                let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
+                println!("Verifying HMAC");
+                hmac::verify(&hmac_key, buf.get_ref(), &hmac_tag).unwrap();
+                println!("Complete");
+                ciphertext.extend(block);
+            }
+
+            let data = decrypt(
+                Cipher::aes_256_cbc(),
+                &master_key,
+                Some(encryption_iv),
+                &ciphertext,
+            )
+            .unwrap();
+            // let mut gz = if let compress = Compression::None {
+            //     GzDecoder::new(Cursor::new(data))
+            // } else{
+            //     GzDecoder::new(Cursor::new(data))
+            // };
+            let mut gz: Box<dyn Read> = match compress {
+                Compression::Gzip => Box::new(GzDecoder::new(Cursor::new(data))),
+                Compression::None => Box::new(Cursor::new(data)),
+            };
+
+            inner_tlvs = load_tlvs(&mut gz, major_version)?.0;
+            let mut contents = String::new();
+            gz.read_to_string(&mut contents)?;
+            contents
+        } else {
+            /* KDBX 3.x format encrypts the database after breaking
+             * the stream into blocks */
+            let mut ciphertext = vec![];
+            file.read_to_end(&mut ciphertext)?;
+            let data = decrypt(
+                Cipher::aes_256_cbc(),
+                &master_key,
+                Some(encryption_iv),
+                &ciphertext,
+            )
+            .unwrap();
+            let mut c = Cursor::new(data);
+
+            /* Start stream header is used to verify successful decrypt */
+            let mut start_stream = vec![0; 32];
+            c.read_exact(&mut start_stream)?;
+            assert_eq!(&start_stream, &tlvs[&9u8]);
+            println!("Master Key appears valid");
+
+            let mut buf = vec![];
+            for idx in 0.. {
+                println!("Block {}", idx);
+                let block_id = c.read_u32::<LittleEndian>()?;
+                assert_eq!(idx as u32, block_id);
+                let mut block_hash_expected = vec![0; 32];
+                c.read_exact(&mut block_hash_expected)?;
+                let block_size = c.read_u32::<LittleEndian>()?;
+                let mut block_data = vec![0; block_size as usize];
+                c.read_exact(&mut block_data)?;
+                let mut context = Context::new(&SHA256);
+                context.update(&block_data);
+                let block_hash = context.finish().as_ref().to_owned();
+                if block_size == 0 {
+                    break;
+                }
+                assert_eq!(block_hash_expected, block_hash, "Failed hash");
+                buf.extend(block_data);
+            }
+            let mut gz: Box<dyn Read> = match compress {
+                Compression::Gzip => Box::new(GzDecoder::new(Cursor::new(buf))),
+                Compression::None => Box::new(Cursor::new(buf)),
+            };
+            let mut xml_file = File::create("data2.xml")?;
+            let mut contents = String::new();
+            gz.read_to_string(&mut contents)?;
+            let _ = xml_file.write(&contents.as_bytes());
+            // println!("{:#?}", &contents);
+            if &contents[0..3] == "\u{feff}" {
+                contents = contents[3..].to_string();
+            }
+            let package = parser::parse(&contents).unwrap();
+            let document = package.as_document();
+            let header_hash = evaluate_xpath(&document, "/KeePassFile/Meta/HeaderHash/text()")
+                .expect("Missing header hash");
+            if header_hash.string() != "" {
+                println!("Header Hash: '{}'", header_hash.string());
+                let expected_hash = decode(&header_hash.string()).expect("Valid base64");
+                if expected_hash != digest.as_ref() {
+                    eprintln!("Possible header corruption\n");
+                    process::exit(1);
+                }
+            }
+            contents
+        };
+
+        let default = vec![vec![1, 0, 0, 0]];
+        let inner_stream_cipher = &inner_tlvs.get(&1u8).unwrap_or(&default)[0];  // Defaults to ARC4
+        if inner_stream_cipher.len() != 4 {
+            panic!("Invalid inner cipher");
+        }
+        let inner_cipher_type = u32::from_le_bytes(inner_stream_cipher[..].try_into().unwrap());
+        println!("Inner Cipher: {inner_cipher_type}");
+        let p_key = &inner_tlvs[&0x02u8][0];
+        println!("p_key: {p_key:02x?} ({})", p_key.len());
+        let mut inner_cipher = protected_stream::new_stream(inner_cipher_type, p_key).expect("Unknown inner cipher");
+
+        let mut xml_file = File::create("data.xml")?;
+        let _ = xml_file.write(&contents.as_bytes());
+        const KDBX4_TIME_OFFSET: i64 = 62135596800;
+        println!("XML Body len: {}", contents.len());
+        let package = parser::parse(&contents).unwrap();
+        let document = package.as_document();
+        println!(
+            "Root element: {}",
+            document.root().children()[0]
+                .element()
+                .unwrap()
+                .name()
+                .local_part()
+        );
+        let database_name_node = evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseName/text()")
+            .expect("Missing database name");
+        println!("Database Name: {}", database_name_node.string());
+        let database_name_changed_node =
+            evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseNameChanged/text()")
+                .expect("Missing database name changed");
+        let change_time = if database_name_changed_node.string() == "" {
+            "<missing>".to_owned()
+        } else {
+            let datetime: DateTime<Local> = if major_version <= 3 {
+                DateTime::parse_from_rfc3339(&database_name_changed_node.string())
+                    .expect("failed to parse timestamp")
+                    .with_timezone(&Local)
+            } else {
+                let timestamp =
+                    Cursor::new(decode(&database_name_changed_node.string()).expect("Valid base64"))
+                        .read_i64::<LittleEndian>()?
+                        - KDBX4_TIME_OFFSET;
+                //let naive = NaiveDateTime::from_timestamp(timestamp, 0);
+                //let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+                Local.timestamp_opt(timestamp, 0).unwrap()
+            };
+            datetime.format("%Y-%m-%d %l:%M:%S %p %Z").to_string()
+        };
+        println!("Database Name Changed: {}", change_time);
+
+        let xpath_context = XPathContext::new();
+        let protected_nodes = evaluate_xpath(&document, "//Value[@Protected = 'True']/text()")
+            .expect("Missing database entries");
+        let xpath_current = Factory::new()
+            .build(".")
+            .expect("Failed to compile XPath")
+            .expect("Empty XPath expression");
+        let mut protected_offset = 0;
+        match protected_nodes {
+            Value::Nodeset(nodes) => {
+                for entry in nodes.document_order() {
+                    let p = xpath_current
+                        .evaluate(&xpath_context, entry)
+                        .expect("Missing entry text");
+                    println!("P: {:?}, ('{}')", p, p.string());
+                    let mut p_ciphertext = decode(&p.string()).expect("Valid base64");
+                    println!("Protected Value Ciphertext: {p_ciphertext:#04X?} (+{protected_offset})");
+                    protected_offset += p_ciphertext.len();
+                    inner_cipher.apply_keystream(&mut p_ciphertext);
+                    println!("Protected Value Plaintext: {p_ciphertext:#04X?}");
+                    let value = String::from_utf8(p_ciphertext)
+                        .unwrap_or("«Failed to decrypt value»".to_owned());
+                    println!("Protected Value: {:?}", &value);
+                    match entry {
+                        sxd_xpath::nodeset::Node::Text(t) => {
+                            t.set_text(&value);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            _ => {
+                panic!("XML corruption");
+            }
+        }
+        let xpath_username = Factory::new()
+            .build("String[Key/text() = 'UserName']/Value/text()")
+            .expect("Failed to compile XPath")
+            .expect("Empty XPath expression");
+        let xpath_last_mod_time = Factory::new()
+            .build("Times/LastModificationTime/text()")
+            .expect("Failed to compile XPath")
+            .expect("Empty XPath expression");
+        let xpath_password = Factory::new()
+            .build("String[Key/text() = 'Password']/Value[@Protected = 'True']/text()")
+            .expect("Failed to compile XPath")
+            .expect("Empty XPath expression");
+        //let entry_nodes = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry").expect("Missing database entries");
+        let entry_nodes = evaluate_xpath(&document, "//Entry").expect("Missing database entries");
+        match entry_nodes {
+            Value::Nodeset(nodes) => {
+                for entry in nodes.document_order() {
+                    //let n = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry/String[Key/text() = 'UserName']/Value/text()").expect("Missing entry username");
+                    let n = xpath_username
+                        .evaluate(&xpath_context, entry)
+                        .expect("Missing entry username");
+                    let t = xpath_last_mod_time
+                        .evaluate(&xpath_context, entry)
+                        .expect("Missing entry modification");
+                    let p = xpath_password
+                        .evaluate(&xpath_context, entry)
+                        .expect("Missing entry password");
+                    println!("Name: {}", n.string());
+                    let change_time = if database_name_changed_node.string() == "" {
+                        "<missing>".to_owned()
+                    } else {
+                        let datetime: DateTime<Local> = if major_version <= 3 {
+                            DateTime::parse_from_rfc3339(&t.string())
+                                .expect("failed to parse timestamp")
+                                .with_timezone(&Local)
+                        } else {
+                            println!("Inner: {:?}", &t.string());
+                            let timestamp =
+                                Cursor::new(decode(&t.string()).expect("Valid base64"))
+                                    .read_i64::<LittleEndian>()?
+                                    - KDBX4_TIME_OFFSET;
+                            //let naive = NaiveDateTime::from_timestamp(timestamp, 0);
+                            //let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+                            Local.timestamp_opt(timestamp, 0).unwrap()
+                        };
+                        datetime.format("%Y-%m-%d %l:%M:%S %p %Z").to_string()
+                    };
+                    println!("Changed: {}", change_time);
+                    println!("Password: {:?}", p.string());
+                }
+            }
+            _ => {
+                panic!("XML corruption");
+            }
+        };
+
+        let content_cursor = Cursor::new(&contents);
+        let mut reader = ParserConfig::new()
+            .cdata_to_characters(true)
+            .create_reader(content_cursor);
+        let mut my_doc = None;
+        loop {
+            let event = reader.next().unwrap();
+            match event {
+                XmlEvent::StartDocument { .. } => {
+                    println!("Start");
+                }
+                XmlEvent::StartElement {
+                    name, attributes, ..
+                } => {
+                    // TODO Check top-level tag name
+                    let mut context = KdbxContext::default();
+                    context.major_version = major_version;
+                    context.binaries = inner_tlvs.remove(&3u8).unwrap();
+                    my_doc = Some(KeePassFile::parse(&mut reader, name, attributes, &mut context)
+                        .map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?
+                        .unwrap());
+                }
+                XmlEvent::EndDocument => {
+                    println!("End");
+                    break;
+                }
+                _ => {}
+            }
+        }
+
+        Ok(KeePassDoc {
+            file: my_doc.expect("Missing top-level element"),
+            cipher: inner_cipher,
+        })
+    }
+
+    #[cfg(feature = "write")]
+    pub fn save_file(&self, major_version: u16) -> io::Result<()> {
+        let mut file = File::create("data-out.kdbx")?;
+        let minor_version = 0;
+        let mut header = vec![];
+        header.write_u32::<LittleEndian>(KDBX_MAGIC)?;
+        header.write_u32::<LittleEndian>(KDBX2_MAGIC_TYPE)?;
+        header.write_u16::<LittleEndian>(minor_version)?;
+        header.write_u16::<LittleEndian>(major_version)?;
+        let mut key = Key::new();
+        key.set_user_password("asdf");
+        let composite_key = key.composite_key();
+        let kdf = AesKdf::default();
+        let mut custom_data = HashMap::new();
+        custom_data.insert(
+            KDF_PARAM_UUID.to_string(),
+            MapValue::ByteArray(KDF_AES_KDBX3.into_bytes().to_vec()),
+        );
+        kdf.save(&mut custom_data);
+        let transform_key = kdf
+            .transform_key(&composite_key)
+            .expect("Failed to transform key");
+        let master_seed = [0u8; 32];
+        let iv = [0u8; 16];
+        let stream_cipher = 2u32;
+        let stream_key = [0u8; 32];
+        let mut tlvs = BTreeMap::new();
+        tlvs.insert(
+            TlvType::MasterSeed.to_u8().unwrap(),
+            vec![master_seed.to_vec()],
+        );
+        tlvs.insert(
+            TlvType::CipherId.to_u8().unwrap(),
+            vec![CIPHER_ID_AES256_CBC.into_bytes().to_vec()],
+        );
+        tlvs.insert(TlvType::EncryptionIv.to_u8().unwrap(), vec![iv.to_vec()]);
+        tlvs.insert(
+            TlvType::CompressionFlags.to_u8().unwrap(),
+            vec![Compression::None.to_u32().unwrap().to_le_bytes().to_vec()],
+        );
+        let start_stream = vec![0; 32]; // TODO Randomize this
+        if major_version < 4 {
+            tlvs.insert(
+                TlvType::TransformSeed.to_u8().unwrap(),
+                vec![master_seed.to_vec()],
+            );
+            tlvs.insert(
+                TlvType::TransformRounds.to_u8().unwrap(),
+                vec![match custom_data[KDF_PARAM_ROUNDS] {
+                    MapValue::UInt64(x) => x.to_le_bytes().to_vec(),
+                    _ => panic!("Wrong"),
+                }],
+            );
+            tlvs.insert(
+                TlvType::StreamStartBytes.to_u8().unwrap(),
+                vec![start_stream.to_vec()],
+            );
+            tlvs.insert(
+                TlvType::ProtectedStreamKey.to_u8().unwrap(),
+                vec![stream_key.to_vec()],
+            );
+            tlvs.insert(
+                TlvType::InnerRandomStreamId.to_u8().unwrap(),
+                vec![stream_cipher.to_le_bytes().to_vec()],
+            );
+        } else {
+            tlvs.insert(
+                TlvType::KdfParameters.to_u8().unwrap(),
+                vec![save_map(&custom_data)],
+            );
+        }
+        header.append(&mut save_tlvs(&mut io::sink(), &tlvs, major_version).unwrap());
+        file.write(&header)?;
+        let mut context = Context::new(&SHA256);
+        context.update(&header);
+        let digest = context.finish();
+        if major_version >= 4 {
+            file.write(digest.as_ref())?;
+            // header.append(&mut digest.as_ref().to_owned());
+        }
+
+        let mut master_key = master_seed.to_vec();
+        master_key.extend(transform_key);
+        let mut context = Context::new(&SHA256);
+        let mut hmac_context = Context::new(&SHA512);
+        context.update(&master_key);
+        hmac_context.update(&master_key);
+        hmac_context.update(&[1u8]);
+        master_key = context.finish().as_ref().to_owned();
+        let hmac_key_base = hmac_context.finish().as_ref().to_owned();
+
+        let mut hmac_context = Context::new(&SHA512);
+        hmac_context.update(&[0xff; 8]);
+        hmac_context.update(&hmac_key_base);
+        let hmac_key = hmac_context.finish().as_ref().to_owned();
+
+        let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
+        let hmac_tag = hmac::sign(&hmac_key, &header);
+        if major_version >= 4 {
+            file.write(hmac_tag.as_ref())?;
+        } else {
+            let output = Cursor::new(Vec::<u8>::new());
+            let mut context = KdbxContext::default();
+            context.major_version = major_version;
+            let mut writer = xml::writer::EventWriter::new(output);
+            writer
+                .write(xml::writer::XmlEvent::start_element("KeePassFile"))
+                .expect("Success!");
+            KeePassFile::serialize2(&mut writer, doc.clone(), &mut context).unwrap();
+            writer
+                .write(xml::writer::XmlEvent::end_element())
+                .expect("Success!");
+            let output = writer.into_inner().into_inner();
+            let mut buf = Cursor::new(Vec::<u8>::new());
+            buf.write_all(&start_stream).unwrap();
+            buf.write_all(&0u32.to_le_bytes()).unwrap();
+            let mut context = Context::new(&SHA256);
+            context.update(&output);
+            buf.write_all(&context.finish().as_ref().to_owned()).unwrap();
+            buf.write_all(&(output.len() as u32).to_le_bytes()).unwrap();
+            buf.write_all(&output).unwrap();
+            buf.write_all(&1u32.to_le_bytes()).unwrap();
+            let context = Context::new(&SHA256);
+            buf.write_all(&context.finish().as_ref().to_owned()).unwrap();
+            //buf.write_all(&[0u8; 32]).unwrap();
+            buf.write_all(&0u32.to_le_bytes()).unwrap();
+            let data = encrypt(
+                Cipher::aes_256_cbc(),
+                &master_key,
+                Some(&iv),
+                &buf.into_inner(),
+            ).unwrap();
+            file.write_all(&data).unwrap();
+            return Ok(());
+        }
+
+        let output = BlockWriter::new(&hmac_key_base, file);
+        let cipher = Cipher::aes_256_cbc();
+        let mut output = Crypto::new(cipher, &master_key, Some(&iv), output).unwrap();
+
+        if major_version >= 4 {
+            let mut inner_tlvs = BTreeMap::new();
+            inner_tlvs.insert(1, vec![stream_cipher.to_le_bytes().to_vec()]);
+            inner_tlvs.insert(2, vec![stream_key.to_vec()]);
+            save_tlvs(&mut output, &inner_tlvs, major_version).unwrap();
+        }
+        let mut writer = xml::writer::EventWriter::new(output);
+        writer
+            .write(xml::writer::XmlEvent::start_element("KeePassFile"))
+            .expect("Success!");
+        KeePassFile::serialize2(&mut writer, doc.clone(), &mut KdbxContext::default()).unwrap();
+        writer
+            .write(xml::writer::XmlEvent::end_element())
+            .expect("Success!");
+        let mut output = writer.into_inner();
+        output.flush()?;
+        // output.flush()?;
+        // drop(output);
+
+        Ok(())
+    }
 }
 
 impl std::fmt::Debug for KeePassDoc {
@@ -2070,547 +2598,4 @@ impl std::fmt::Debug for KeePassDoc {
             .field("file", &self.file)
             .finish()
     }
-}
-
-/// This is a temporary solution until a proper API is ready
-/// ```
-/// assert!(true);
-/// ```
-/// Does it work?
-pub fn lib_main(filename: &str, key: &Key) -> io::Result<KeePassDoc> {
-    let composite_key = key.composite_key();
-
-    let mut file = File::open(filename)?;
-    let magic = file.read_u32::<LittleEndian>()?;
-    let magic_type = file.read_u32::<LittleEndian>()?;
-
-    if magic != KDBX_MAGIC {
-        eprintln!("Invalid database file\n");
-        process::exit(1);
-    }
-
-    let mut custom_data = HashMap::<String, Vec<u8>>::new();
-    let mut custom_data2 = HashMap::<_, _>::new();
-
-    match magic_type {
-        KDBX1_MAGIC_TYPE => {
-            use kdb1::read_kdb1_header;
-            read_kdb1_header(&mut file, &key)?;
-            return Ok(KeePassDoc::default());
-        }
-        // KDBX2_BETA_MAGIC_TYPE => {
-        //     // XXX Untested
-        //     eprintln!("KeePass 2.x Beta files not supported\n");
-        //     process::exit(1);
-        // },
-        KDBX2_MAGIC_TYPE | KDBX2_BETA_MAGIC_TYPE => {
-            println!("Opening KeePass 2.x database");
-        }
-        _ => {
-            // XXX Untested
-            eprintln!("Unknown KeePass database format\n");
-            process::exit(1);
-        }
-    };
-
-    // Version field is defined as uint32_t, but it's broken up into
-    // major and minor 16-bit components. Due to the nature of little
-    // endian, this puts the minor part first.
-    let minor_version = file.read_u16::<LittleEndian>()?;
-    let major_version = file.read_u16::<LittleEndian>()?;
-    match major_version {
-        3 => {
-            unsafe {
-                KDBX4 = false;
-            };
-            custom_data.insert(
-                KDF_PARAM_UUID.to_string(),
-                KDF_AES_KDBX3.as_bytes().to_vec(),
-            );
-        }
-        4 => {}
-        1 => {
-            custom_data.insert(
-                KDF_PARAM_UUID.to_string(),
-                KDF_AES_KDBX3.as_bytes().to_vec(),
-            );
-        }
-        _ => {
-            eprintln!(
-                "Unsupported KeePass 2.x database version ({}.{})\n",
-                major_version, minor_version
-            );
-            process::exit(1);
-        }
-    };
-    let mut tlvs = HashMap::new();
-    let mut inner_tlvs = BTreeMap::<u8, Vec<Vec<u8>>>::new();
-    inner_tlvs.insert(3u8, vec![]);
-    loop {
-        let tlv_type = file.read_u8()?;
-        let tlv_len = if major_version == 4 {
-            file.read_u32::<LittleEndian>()?
-        } else {
-            // XXX Untested
-            file.read_u16::<LittleEndian>()? as u32
-        };
-        let mut tlv_data = vec![0; tlv_len as usize];
-        file.read_exact(&mut tlv_data)?;
-        debug!("TLV({}, {}): {:?}", tlv_type, tlv_len, tlv_data);
-        match tlv_type {
-            0 => {
-                break;
-            }
-            5 => {
-                custom_data.insert(KDF_PARAM_SALT.to_string(), tlv_data.clone());
-                custom_data2.insert(KDF_PARAM_SALT.to_string(), MapValue::ByteArray(tlv_data));
-            }
-            6 => {
-                custom_data.insert(KDF_PARAM_ROUNDS.to_string(), tlv_data.clone());
-                custom_data2.insert(
-                    KDF_PARAM_ROUNDS.to_string(),
-                    MapValue::UInt64(u64::from_le_bytes(tlv_data[0..8].try_into().unwrap())),
-                );
-            }
-            8 => {
-                inner_tlvs.insert(2u8, vec![tlv_data]);
-            }
-            10 => {
-                inner_tlvs.insert(1u8, vec![tlv_data]);
-            }
-            11 => {
-                custom_data2 = load_map(&tlv_data).unwrap();
-                let kdf_parameters = &tlv_data;
-                let mut c = Cursor::new(kdf_parameters);
-                let variant_minor = c.read_u8()?;
-                let variant_major = c.read_u8()?;
-                if variant_major != 1 {
-                    eprintln!(
-                        "Unsupported variant dictionary version ({}.{})\n",
-                        variant_major, variant_minor
-                    );
-                    process::exit(1);
-                };
-
-                loop {
-                    let item_type = c.read_u8()?;
-                    if item_type == 0 {
-                        break;
-                    }
-                    let item_key_len = c.read_u32::<LittleEndian>()?;
-                    let mut item_key = vec![0; item_key_len as usize];
-                    c.read_exact(&mut item_key)?;
-                    let item_key_str = String::from_utf8_lossy(&item_key).to_owned();
-                    let item_value_len = c.read_u32::<LittleEndian>()?;
-                    let mut item_value = vec![0; item_value_len as usize];
-                    c.read_exact(&mut item_value)?;
-                    debug!("K: {}, V: {:0x?}", item_key_str, item_value);
-                    custom_data.insert(item_key_str.to_owned().to_string(), item_value);
-                }
-            }
-            _ => {
-                tlvs.insert(tlv_type, tlv_data);
-            }
-        }
-    }
-
-    //let src = &tlvs[&2u8];
-    //let mut uuid = [0; 16];
-    //let b = &src[..uuid.len()];
-    //uuid.copy_from_slice(b);
-    //let d = Builder::from_bytes(uuid).build();
-    let cipher_id = Uuid::from_slice(&tlvs[&2u8]).unwrap();
-    println!("D: {:?}", cipher_id);
-    if cipher_id != CIPHER_ID_AES256_CBC {
-        eprintln!("Unknown cipher\n");
-        process::exit(1);
-    }
-    println!("AES");
-    let mut c = Cursor::new(&tlvs[&3u8]);
-    let compression_flags = c.read_u32::<LittleEndian>()?;
-    enum Compression {
-        None,
-        Gzip,
-    }
-    let compress = match compression_flags {
-        0 => {
-            // XX Untested
-            // eprintln!("Unsupported no compressed file\n");
-            //process::exit(1);
-            Compression::None
-        }
-        1 => {
-            println!("Gzip compression");
-            Compression::Gzip
-        }
-        _ => {
-            // XX Untested
-            eprintln!("Unsupported compression method\n");
-            process::exit(1);
-        }
-    };
-
-    let master_seed = &tlvs[&4u8];
-    let encryption_iv = &tlvs[&7u8];
-
-    //let mut header = vec![];
-    let mut context = Context::new(&SHA256);
-    let pos = file.seek(SeekFrom::Current(0))?;
-    file.seek(SeekFrom::Start(0))?;
-    let mut header = vec![0; (pos) as usize];
-    file.read_exact(&mut header)?;
-    file.seek(SeekFrom::Start(pos))?;
-    context.update(&header);
-    let digest = context.finish();
-    if major_version == 4 {
-        let mut expected_hash = [0; 32];
-        file.read_exact(&mut expected_hash)?;
-        if digest.as_ref() != expected_hash {
-            eprintln!("Possible header corruption\n");
-            process::exit(1);
-        }
-    }
-
-    let kdf_id = Uuid::from_slice(&custom_data[KDF_PARAM_UUID]).unwrap();
-    println!("KDF: {:?}", kdf_id);
-
-    let transform_key = match kdf_id {
-        x if x == KDF_AES_KDBX3 => {
-            //unimplemented!("KDBX 3 AES-KDF not supported!");
-            AesKdf::load(&custom_data2)?.transform_key(&composite_key)?
-            // transform_aes_kdf(&composite_key, &custom_data)?
-        }
-        x if x == KDF_AES_KDBX4 => {
-            unimplemented!("KDBX 4 AES-KDF not supported!");
-        }
-        x if x == KDF_ARGON2_D => {
-            transform_argon2(&composite_key, &custom_data)?
-            //unimplemented!("Argon2 KDF not supported!");
-        }
-        _ => {
-            unimplemented!("Unknown");
-        }
-    };
-
-    println!("Key OUT: {:0x?}", transform_key);
-
-    println!("Calculating master key");
-    let mut hmac_context = Context::new(&SHA512);
-
-    let mut master_key = master_seed.to_owned();
-    master_key.extend(transform_key);
-    let mut context = Context::new(&SHA256);
-    context.update(&master_key);
-    hmac_context.update(&master_key);
-    hmac_context.update(&[1u8]);
-    master_key = context.finish().as_ref().to_owned();
-    let hmac_key_base = hmac_context.finish().as_ref().to_owned();
-    println!("Master OUT: {:0x?}", master_key);
-    println!("HMAC OUT: {:0x?}", hmac_key_base);
-
-    let mut hmac_context = Context::new(&SHA512);
-    hmac_context.update(&[0xff; 8]);
-    hmac_context.update(&hmac_key_base);
-    let hmac_key = hmac_context.finish().as_ref().to_owned();
-
-    let mut hmac_tag = [0; 32];
-    //println!("HMAC Tag: {:0x?}", hmac_tag);
-    let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
-    if major_version == 4 {
-        file.read_exact(&mut hmac_tag)?;
-        println!("Verifying HMAC");
-        hmac::verify(&hmac_key, &header, &hmac_tag).unwrap();
-        println!("Complete");
-    }
-
-    let contents = if major_version == 4 {
-        let mut ciphertext = vec![];
-        for idx in 0.. {
-            println!("Block {}", idx);
-            file.read_exact(&mut hmac_tag)?;
-            let block_size = file.read_u32::<LittleEndian>()?;
-            if block_size == 0 {
-                break;
-            }
-            let mut block = vec![0; block_size as usize];
-            file.read_exact(&mut block)?;
-
-            let mut hmac_context = Context::new(&SHA512);
-            let mut buf = Cursor::new(Vec::new());
-            buf.write_u64::<LittleEndian>(idx)?;
-            hmac_context.update(buf.get_ref());
-            hmac_context.update(&hmac_key_base);
-            let hmac_key = hmac_context.finish().as_ref().to_owned();
-            buf.write_u32::<LittleEndian>(block_size)?;
-            buf.write(&block)?;
-            let hmac_key = hmac::Key::new(hmac::HMAC_SHA256, &hmac_key);
-            println!("Verifying HMAC");
-            hmac::verify(&hmac_key, buf.get_ref(), &hmac_tag).unwrap();
-            println!("Complete");
-            ciphertext.extend(block);
-        }
-
-        let data = decrypt(
-            Cipher::aes_256_cbc(),
-            &master_key,
-            Some(encryption_iv),
-            &ciphertext,
-        )
-        .unwrap();
-        // let mut gz = if let compress = Compression::None {
-        //     GzDecoder::new(Cursor::new(data))
-        // } else{
-        //     GzDecoder::new(Cursor::new(data))
-        // };
-        let mut gz: Box<dyn Read> = match compress {
-            Compression::Gzip => Box::new(GzDecoder::new(Cursor::new(data))),
-            Compression::None => Box::new(Cursor::new(data)),
-        };
-
-        inner_tlvs = load_tlvs(&mut gz, major_version)?.0;
-        let mut contents = String::new();
-        gz.read_to_string(&mut contents)?;
-        contents
-    } else {
-        /* KDBX 3.x format encrypts the database after breaking
-         * the stream into blocks */
-        let mut ciphertext = vec![];
-        file.read_to_end(&mut ciphertext)?;
-        let data = decrypt(
-            Cipher::aes_256_cbc(),
-            &master_key,
-            Some(encryption_iv),
-            &ciphertext,
-        )
-        .unwrap();
-        let mut c = Cursor::new(data);
-
-        /* Start stream header is used to verify successful decrypt */
-        let mut start_stream = vec![0; 32];
-        c.read_exact(&mut start_stream)?;
-        assert_eq!(&start_stream, &tlvs[&9u8]);
-        println!("Master Key appears valid");
-
-        let mut buf = vec![];
-        for idx in 0.. {
-            println!("Block {}", idx);
-            let block_id = c.read_u32::<LittleEndian>()?;
-            assert_eq!(idx as u32, block_id);
-            let mut block_hash_expected = vec![0; 32];
-            c.read_exact(&mut block_hash_expected)?;
-            let block_size = c.read_u32::<LittleEndian>()?;
-            let mut block_data = vec![0; block_size as usize];
-            c.read_exact(&mut block_data)?;
-            let mut context = Context::new(&SHA256);
-            context.update(&block_data);
-            let block_hash = context.finish().as_ref().to_owned();
-            if block_size == 0 {
-                break;
-            }
-            assert_eq!(block_hash_expected, block_hash, "Failed hash");
-            buf.extend(block_data);
-        }
-        let mut gz: Box<dyn Read> = match compress {
-            Compression::Gzip => Box::new(GzDecoder::new(Cursor::new(buf))),
-            Compression::None => Box::new(Cursor::new(buf)),
-        };
-        let mut xml_file = File::create("data2.xml")?;
-        let mut contents = String::new();
-        gz.read_to_string(&mut contents)?;
-        let _ = xml_file.write(&contents.as_bytes());
-        // println!("{:#?}", &contents);
-        if &contents[0..3] == "\u{feff}" {
-            contents = contents[3..].to_string();
-        }
-        let package = parser::parse(&contents).unwrap();
-        let document = package.as_document();
-        let header_hash = evaluate_xpath(&document, "/KeePassFile/Meta/HeaderHash/text()")
-            .expect("Missing header hash");
-        if header_hash.string() != "" {
-            println!("Header Hash: '{}'", header_hash.string());
-            let expected_hash = decode(&header_hash.string()).expect("Valid base64");
-            if expected_hash != digest.as_ref() {
-                eprintln!("Possible header corruption\n");
-                process::exit(1);
-            }
-        }
-        contents
-    };
-
-    let default = vec![vec![1, 0, 0, 0]];
-    let inner_stream_cipher = &inner_tlvs.get(&1u8).unwrap_or(&default)[0];  // Defaults to ARC4
-    if inner_stream_cipher.len() != 4 {
-        panic!("Invalid inner cipher");
-    }
-    let inner_cipher_type = u32::from_le_bytes(inner_stream_cipher[..].try_into().unwrap());
-    println!("Inner Cipher: {inner_cipher_type}");
-    let p_key = &inner_tlvs[&0x02u8][0];
-    println!("p_key: {p_key:02x?} ({})", p_key.len());
-    let mut inner_cipher = protected_stream::new_stream(inner_cipher_type, p_key).expect("Unknown inner cipher");
-
-    let mut xml_file = File::create("data.xml")?;
-    let _ = xml_file.write(&contents.as_bytes());
-    const KDBX4_TIME_OFFSET: i64 = 62135596800;
-    println!("XML Body len: {}", contents.len());
-    let package = parser::parse(&contents).unwrap();
-    let document = package.as_document();
-    println!(
-        "Root element: {}",
-        document.root().children()[0]
-            .element()
-            .unwrap()
-            .name()
-            .local_part()
-    );
-    let database_name_node = evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseName/text()")
-        .expect("Missing database name");
-    println!("Database Name: {}", database_name_node.string());
-    let database_name_changed_node =
-        evaluate_xpath(&document, "/KeePassFile/Meta/DatabaseNameChanged/text()")
-            .expect("Missing database name changed");
-    let change_time = if database_name_changed_node.string() == "" {
-        "<missing>".to_owned()
-    } else {
-        let datetime: DateTime<Local> = if major_version <= 3 {
-            DateTime::parse_from_rfc3339(&database_name_changed_node.string())
-                .expect("failed to parse timestamp")
-                .with_timezone(&Local)
-        } else {
-            let timestamp =
-                Cursor::new(decode(&database_name_changed_node.string()).expect("Valid base64"))
-                    .read_i64::<LittleEndian>()?
-                    - KDBX4_TIME_OFFSET;
-            //let naive = NaiveDateTime::from_timestamp(timestamp, 0);
-            //let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
-            Local.timestamp_opt(timestamp, 0).unwrap()
-        };
-        datetime.format("%Y-%m-%d %l:%M:%S %p %Z").to_string()
-    };
-    println!("Database Name Changed: {}", change_time);
-
-    let xpath_context = XPathContext::new();
-    let protected_nodes = evaluate_xpath(&document, "//Value[@Protected = 'True']/text()")
-        .expect("Missing database entries");
-    let xpath_current = Factory::new()
-        .build(".")
-        .expect("Failed to compile XPath")
-        .expect("Empty XPath expression");
-    let mut protected_offset = 0;
-    match protected_nodes {
-        Value::Nodeset(nodes) => {
-            for entry in nodes.document_order() {
-                let p = xpath_current
-                    .evaluate(&xpath_context, entry)
-                    .expect("Missing entry text");
-                println!("P: {:?}, ('{}')", p, p.string());
-                let mut p_ciphertext = decode(&p.string()).expect("Valid base64");
-                println!("Protected Value Ciphertext: {p_ciphertext:#04X?} (+{protected_offset})");
-                protected_offset += p_ciphertext.len();
-                inner_cipher.apply_keystream(&mut p_ciphertext);
-                println!("Protected Value Plaintext: {p_ciphertext:#04X?}");
-                let value = String::from_utf8(p_ciphertext)
-                    .unwrap_or("«Failed to decrypt value»".to_owned());
-                println!("Protected Value: {:?}", &value);
-                match entry {
-                    sxd_xpath::nodeset::Node::Text(t) => {
-                        t.set_text(&value);
-                    }
-                    _ => {}
-                }
-            }
-        }
-        _ => {
-            panic!("XML corruption");
-        }
-    }
-    let xpath_username = Factory::new()
-        .build("String[Key/text() = 'UserName']/Value/text()")
-        .expect("Failed to compile XPath")
-        .expect("Empty XPath expression");
-    let xpath_last_mod_time = Factory::new()
-        .build("Times/LastModificationTime/text()")
-        .expect("Failed to compile XPath")
-        .expect("Empty XPath expression");
-    let xpath_password = Factory::new()
-        .build("String[Key/text() = 'Password']/Value[@Protected = 'True']/text()")
-        .expect("Failed to compile XPath")
-        .expect("Empty XPath expression");
-    //let entry_nodes = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry").expect("Missing database entries");
-    let entry_nodes = evaluate_xpath(&document, "//Entry").expect("Missing database entries");
-    match entry_nodes {
-        Value::Nodeset(nodes) => {
-            for entry in nodes.document_order() {
-                //let n = evaluate_xpath(&document, "/KeePassFile/Root/Group/Entry/String[Key/text() = 'UserName']/Value/text()").expect("Missing entry username");
-                let n = xpath_username
-                    .evaluate(&xpath_context, entry)
-                    .expect("Missing entry username");
-                let t = xpath_last_mod_time
-                    .evaluate(&xpath_context, entry)
-                    .expect("Missing entry modification");
-                let p = xpath_password
-                    .evaluate(&xpath_context, entry)
-                    .expect("Missing entry password");
-                println!("Name: {}", n.string());
-                let change_time = if database_name_changed_node.string() == "" {
-                    "<missing>".to_owned()
-                } else {
-                    let datetime: DateTime<Local> = if major_version <= 3 {
-                        DateTime::parse_from_rfc3339(&t.string())
-                            .expect("failed to parse timestamp")
-                            .with_timezone(&Local)
-                    } else {
-                        println!("Inner: {:?}", &t.string());
-                        let timestamp =
-                            Cursor::new(decode(&t.string()).expect("Valid base64"))
-                                .read_i64::<LittleEndian>()?
-                                - KDBX4_TIME_OFFSET;
-                        //let naive = NaiveDateTime::from_timestamp(timestamp, 0);
-                        //let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
-                        Local.timestamp_opt(timestamp, 0).unwrap()
-                    };
-                    datetime.format("%Y-%m-%d %l:%M:%S %p %Z").to_string()
-                };
-                println!("Changed: {}", change_time);
-                println!("Password: {:?}", p.string());
-            }
-        }
-        _ => {
-            panic!("XML corruption");
-        }
-    };
-
-    let content_cursor = Cursor::new(&contents);
-    let mut reader = ParserConfig::new()
-        .cdata_to_characters(true)
-        .create_reader(content_cursor);
-    let mut my_doc = None;
-    loop {
-        let event = reader.next().unwrap();
-        match event {
-            XmlEvent::StartDocument { .. } => {
-                println!("Start");
-            }
-            XmlEvent::StartElement {
-                name, attributes, ..
-            } => {
-                // TODO Check top-level tag name
-                let mut context = KdbxContext::default();
-                context.major_version = major_version;
-                context.binaries = inner_tlvs.remove(&3u8).unwrap();
-                my_doc = Some(KeePassFile::parse(&mut reader, name, attributes, &mut context)
-                    .map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?
-                    .unwrap());
-            }
-            XmlEvent::EndDocument => {
-                println!("End");
-                break;
-            }
-            _ => {}
-        }
-    }
-
-    Ok(KeePassDoc {
-        file: my_doc.expect("Missing top-level element"),
-        cipher: inner_cipher,
-    })
 }

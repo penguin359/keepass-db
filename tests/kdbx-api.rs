@@ -1,7 +1,7 @@
 use std::convert::Into;
 use std::{io::Result, path::PathBuf};
 
-use keepass_db::{lib_main, protected_stream::CipherValue, Key};
+use keepass_db::{KeePassDoc, protected_stream::CipherValue, Key};
 
 #[test]
 fn main() -> Result<()> {
@@ -9,7 +9,7 @@ fn main() -> Result<()> {
     key.set_user_password("asdf");
     //let mut stream = keepass_db::protected_stream::new_stream(0, &[]).unwrap();
     let file = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("testdata").join("dummy-kdbx41.kdbx");
-    let mut doc = lib_main(file.to_str().unwrap(), &key)?;
+    let mut doc = KeePassDoc::load_file(file.to_str().unwrap(), &key)?;
     let database = doc.file;
     let stream = &mut doc.cipher;
     assert_eq!(database.groups().len(), 1);

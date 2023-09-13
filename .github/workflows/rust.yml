@@ -61,3 +61,14 @@ jobs:
         uses: codecov/codecov-action@v3
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Send a stream message
+        uses: zulip/github-actions-zulip/send-message@v1
+        if: always()
+        with:
+          api-key: ${{ secrets.ZULIP_API_KEY }}
+          email: "keepass-db-bot@penguin359.zulipchat.com"
+          organization-url: "https://penguin359.zulipchat.com"
+          to: "keepass-db"
+          type: "stream"
+          topic: "status"
+          content: "Build complete: ${{ github.action_status }}"
