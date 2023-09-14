@@ -49,8 +49,8 @@ fn main() -> io::Result<()> {
         key.set_keyfile(contents);
     }
 
-    let doc = KeePassDoc::load_file(filename, &key)?.file;
-    println!("KeePassFile: {:#?}", &doc);
+    let doc = KeePassDoc::load_file(filename, &key)?;
+    println!("KeePassFile: {:#?}", &doc.file);
 
     #[cfg(feature = "write")]
     {

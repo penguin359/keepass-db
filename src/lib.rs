@@ -646,86 +646,10 @@ impl<R: Read> CryptoReader<R> {
 //     }
 // }
 
-pub struct Key {
-    user_password: Option<Vec<u8>>,
-    keyfile: Option<Vec<u8>>,
-    windows_credentials: Option<Vec<u8>>,
-}
-
-impl Key {
-    pub fn new() -> Key {
-        Key {
-            user_password: None,
-            keyfile: None,
-            windows_credentials: None,
-        }
-    }
-
-    pub fn set_user_password<T>(&mut self, user_password: T)
-    where
-        T: AsRef<[u8]>,
-    {
-        let mut context = Context::new(&SHA256);
-        context.update(user_password.as_ref());
-        self.user_password = Some(context.finish().as_ref().to_owned());
-    }
-
-    /* TODO Use this function */
-    pub fn set_keyfile<T>(&mut self, keyfile: T)
-    where
-        T: AsRef<[u8]>,
-    {
-        let mut context = Context::new(&SHA256);
-        context.update(keyfile.as_ref());
-        self.keyfile = Some(context.finish().as_ref().to_owned());
-    }
-
-    /* TODO Use this function */
-    fn _set_windows_credentials<T>(&mut self, windows_credentials: T)
-    where
-        T: AsRef<[u8]>,
-    {
-        let mut context = Context::new(&SHA256);
-        context.update(windows_credentials.as_ref());
-        self.windows_credentials = Some(context.finish().as_ref().to_owned());
-    }
-
-    pub fn composite_key(&self) -> Vec<u8> {
-        let mut context = Context::new(&SHA256);
-
-        if let Some(key) = &self.user_password {
-            context.update(&key);
-        }
-
-        if let Some(key) = &self.keyfile {
-            context.update(&key);
-        }
-
-        if let Some(key) = &self.windows_credentials {
-            context.update(&key);
-        }
-
-        context.finish().as_ref().to_owned()
-    }
-
-    fn composite_key_kdb1(&self) -> Vec<u8> {
-        if self.user_password == None {
-            return self.keyfile.clone().unwrap();
-        }
-
-        if self.keyfile == None {
-            return self.user_password.clone().unwrap();
-        }
-
-        let mut context = Context::new(&SHA256);
-        context.update(&self.user_password.clone().unwrap());
-        context.update(&self.keyfile.clone().unwrap());
-        context.finish().as_ref().to_owned()
-    }
-}
-
+mod key;
 mod kdf;
 pub use kdf::*;
+pub use key::Key;
 
 pub const KDF_AES_KDBX3: Uuid = uuid!("c9d9f39a-628a-4460-bf74-0d08c18a4fea");
 const KDF_AES_KDBX4: Uuid = uuid!("7c02bb82-79a7-4ac0-927d-114a00648238");
@@ -1855,7 +1779,7 @@ pub struct DeletedObject {
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize, Getters)]
 pub struct Root {
     #[keepass_db(flatten)]
-    group: Vec<Group>,
+    group: Group,
     deleted_objects: Vec<DeletedObject>,
 }
 
@@ -1871,7 +1795,7 @@ pub struct KeePassFile {
 }
 
 impl KeePassFile {
-    pub fn groups(&self) -> &Vec<Group> {
+    pub fn root_group(&self) -> &Group {
         &self.root.group
     }
 }
@@ -2537,7 +2461,7 @@ impl KeePassDoc {
             writer
                 .write(xml::writer::XmlEvent::start_element("KeePassFile"))
                 .expect("Success!");
-            KeePassFile::serialize2(&mut writer, doc.clone(), &mut context).unwrap();
+            KeePassFile::serialize2(&mut writer, self.file.clone(), &mut context).unwrap();
             writer
                 .write(xml::writer::XmlEvent::end_element())
                 .expect("Success!");
@@ -2579,7 +2503,7 @@ impl KeePassDoc {
         writer
             .write(xml::writer::XmlEvent::start_element("KeePassFile"))
             .expect("Success!");
-        KeePassFile::serialize2(&mut writer, doc.clone(), &mut KdbxContext::default()).unwrap();
+        KeePassFile::serialize2(&mut writer, self.file.clone(), &mut KdbxContext::default()).unwrap();
         writer
             .write(xml::writer::XmlEvent::end_element())
             .expect("Success!");

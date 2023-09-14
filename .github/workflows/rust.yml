@@ -71,4 +71,4 @@ jobs:
           to: "keepass-db"
           type: "stream"
           topic: "status"
-          content: "Build complete: ${{ github.action_status }}"
+          content: "Build complete: ${{ job.status }}"

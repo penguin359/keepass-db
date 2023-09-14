@@ -5,24 +5,6 @@ use rand::Rng;
 
 use super::*;
 
-// Simple password is asdf
-const PASSWORD_SIMPLE: &str = "61736466";
-
-// Composite key generated from simple, password-only lock
-const COMPOSITE_KEY_PASSWORD: &str =
-    "fe9a32f5b565da46af951e4aab23c24b8c1565eb0b6603a03118b7d225a21e8c";
-
-#[test]
-fn test_user_password() {
-    let data = Vec::from_hex(PASSWORD_SIMPLE).unwrap();
-    let mut key = Key::new();
-    key.set_user_password(data);
-    assert_eq!(
-        key.composite_key(),
-        Vec::from_hex(COMPOSITE_KEY_PASSWORD).unwrap()
-    );
-}
-
 #[test]
 fn test_decode_empty_document() {
     let content = "";
@@ -2684,43 +2666,42 @@ fn test_decode_document_filled_contents() {
     //assert_eq!(document.meta.custom_data.len(), 3, "Correct number of custom data fields");
     //assert!(document.meta.custom_data.contains_key("KPXC_DECRYPTION_TIME_PREFERENCE"), "Missing a custom data field");
     //assert_eq!(document.meta.custom_data["KPXC_DECRYPTION_TIME_PREFERENCE"], "100", "Custom data field has wrong value");
-    assert_eq!(document.root.group.len(), 1);
-    assert_eq!(document.root.group[0].entry.len(), 0);
-    assert_eq!(document.root.group[0].group.len(), 1);
-    assert_eq!(document.root.group[0].group[0].entry.len(), 1);
+    assert_eq!(document.root.group.entry.len(), 0);
+    assert_eq!(document.root.group.group.len(), 1);
+    assert_eq!(document.root.group.group[0].entry.len(), 1);
     assert_eq!(
-        document.root.group[0].group[0].entry[0]
+        document.root.group.group[0].entry[0]
             .history
             .as_ref()
             .unwrap()
             .len(),
         2,
         "{:#?}",
-        document.root.group[0].group[0].entry[0].history
+        document.root.group.group[0].entry[0].history
     );
-    assert_eq!(document.root.group[0].group[0].group.len(), 2);
-    assert_eq!(document.root.group[0].group[0].group[0].entry.len(), 1);
+    assert_eq!(document.root.group.group[0].group.len(), 2);
+    assert_eq!(document.root.group.group[0].group[0].entry.len(), 1);
     assert_eq!(
-        document.root.group[0].group[0].group[0].entry[0]
+        document.root.group.group[0].group[0].entry[0]
             .history
             .as_ref()
             .unwrap()
             .len(),
         2
     );
-    assert_eq!(document.root.group[0].group[0].group[0].group.len(), 1);
-    assert_eq!(document.root.group[0].group[0].group[0].group[0].entry.len(), 1);
+    assert_eq!(document.root.group.group[0].group[0].group.len(), 1);
+    assert_eq!(document.root.group.group[0].group[0].group[0].entry.len(), 1);
     assert_eq!(
-        document.root.group[0].group[0].group[0].group[0].entry[0]
+        document.root.group.group[0].group[0].group[0].entry[0]
             .history
             .as_ref()
             .unwrap()
             .len(),
         0
     );
-    assert_eq!(document.root.group[0].group[0].group[0].group[0].group.len(), 0);
-    assert_eq!(document.root.group[0].group[0].group[1].entry.len(), 0);
-    assert_eq!(document.root.group[0].group[0].group[1].group.len(), 0);
+    assert_eq!(document.root.group.group[0].group[0].group[0].group.len(), 0);
+    assert_eq!(document.root.group.group[0].group[1].entry.len(), 0);
+    assert_eq!(document.root.group.group[0].group[1].group.len(), 0);
 }
 
 #[test]
@@ -2736,9 +2717,8 @@ fn test_decode_document_filled_group() {
     .expect("Failed parsing")
     .unwrap();
     end_document(reader);
-    assert_eq!(document.root.group.len(), 1);
-    assert_eq!(document.root.group[0].entry.len(), 0);
-    let group = &document.root.group[0];
+    assert_eq!(document.root.group.entry.len(), 0);
+    let group = &document.root.group;
     let expected_uuid = Uuid::parse_str("5a1c21b4-b663-4efb-ba79-9dea57a393eb").unwrap();
     assert_eq!(group.uuid, expected_uuid);
     assert_eq!(group.name, "Root");
