@@ -39,7 +39,7 @@ var sourcesIndex = JSON.parse('{\
 "iana_time_zone":["",[],["ffi_utils.rs","lib.rs","tz_linux.rs"]],\
 "inout":["",[],["errors.rs","inout.rs","inout_buf.rs","lib.rs","reserved.rs"]],\
 "kdbx_derive":["",[],["lib.rs"]],\
-"keepass_db":["",[["kdf",[],["argon2.rs","mod.rs"]],["protected_stream",[],["arc4variant.rs","mod.rs"]]],["kdb1.rs","lib.rs","utils.rs"]],\
+"keepass_db":["",[["kdf",[],["argon2.rs","mod.rs"]],["protected_stream",[],["arc4variant.rs","mod.rs"]]],["kdb1.rs","key.rs","lib.rs","utils.rs"]],\
 "keepass_db_derive":["",[],["lib.rs"]],\
 "lazy_static":["",[],["inline_lazy.rs","lib.rs"]],\
 "libc":["",[["unix",[["linux_like",[["linux",[["arch",[["generic",[],["mod.rs"]]],["mod.rs"]],["gnu",[["b64",[["x86_64",[],["align.rs","mod.rs","not_x32.rs"]]],["mod.rs"]]],["align.rs","mod.rs"]]],["align.rs","mod.rs","non_exhaustive.rs"]]],["mod.rs"]]],["align.rs","mod.rs"]]],["fixed_width_ints.rs","lib.rs","macros.rs"]],\
