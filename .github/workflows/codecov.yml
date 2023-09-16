@@ -1,4 +1,4 @@
-name: codecov
+name: Code Coverage
 on:
   push:
     branches: [main]
@@ -11,16 +11,19 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           lfs: true
       # nightly is required for --doctests, see cargo-llvm-cov#2
-      - name: Install Rust (nightly)
-        run: rustup update nightly
+      - name: Set-up Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
-        run: cargo +nightly llvm-cov --features write --workspace --lcov --doctests --output-path lcov.info
+        run: cargo llvm-cov --features write --workspace --lcov --doctests --output-path lcov.info
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         env:
