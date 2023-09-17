@@ -18,27 +18,27 @@ default = ["argonautica"]
 write = []
 
 [dependencies]
-byteorder = "1.3.2"
-uuid = "1.4.0"
-ring = "0.16.9"
-rpassword = "4.0.3"
+byteorder = "1.4.3"
+uuid = "1.4.1"
+ring = "0.16.20"
+rpassword = "7.2.0"
 openssl = "0.10.57"
-flate2 = "1.0.13"
+flate2 = "1.0.27"
 sxd-document = "0.3.2"
 sxd-xpath = "0.4.2"
-base64 = "0.11.0"
+base64 = "0.21.4"
 # old_time feature pulls in vulnerable time 0.1 crate
-chrono = { version = "0.4.*", default-features = false, features = ["alloc", "std", "clock"] }
-hex = "0.4.0"
-rust-argon2 = { version = "0.6.0", optional = true }
+chrono = { version = "0.4.30", default-features = false, features = ["alloc", "std", "clock"] }
+hex = "0.4.3"
+rust-argon2 = { version = "2.0.0", optional = true }
 argonautica = { version = "0.1.0", optional = true }
 argon2-kdf = { version = "1.3.0", optional = true }
 chacha20 = "0.9.1"
-log = "0.4.8"
-env_logger = "0.7.1"
-rand = "0.7.2"
-clap = "2.33.0"
-xml-rs = "0.8.0"
+log = "0.4.20"
+env_logger = "0.10.0"
+rand = "0.8.5"
+clap = "3.0.0"
+xml-rs = "0.8.18"
 keepass-db-derive = { version = "0.0.1", path = "keepass-db-derive/" }
 num-derive = "0.4.0"
 num-traits = "0.2.16"

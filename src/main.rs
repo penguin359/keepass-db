@@ -18,7 +18,7 @@ fn main() -> io::Result<()> {
         .about("Dumping KDBX Password files")
         .arg(
             Arg::with_name("key")
-                .short("k")
+                .short('k')
                 .long("key-file")
                 .takes_value(true)
                 .help("Key file for unlocking database"),
