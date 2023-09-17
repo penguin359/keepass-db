@@ -122,6 +122,11 @@
 <a href="#122" id="122">122</a>
 <a href="#123" id="123">123</a>
 <a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>ring::digest::{Context, SHA256};
 
 <span class="doccomment">/// Composite key protecting the password database
@@ -141,7 +146,8 @@
 
 <span class="kw">impl </span>Key {
     <span class="doccomment">/// Create a new composite key
-    /// ```ignore
+    /// ```
+    /// # use keepass_db::Key;
     /// let mut key = Key::new();
     /// ```
     </span><span class="kw">pub fn </span>new() -&gt; Key {
@@ -153,8 +159,10 @@
     }
 
     <span class="doccomment">/// Set the password for the compsite key
-    /// ```ignore
-    /// key.set_userpassword(&quot;secret&quot;);
+    /// ```
+    /// # use keepass_db::Key;
+    /// # let mut key = Key::new();
+    /// key.set_user_password(&quot;secret&quot;);
     /// ```
     </span><span class="kw">pub fn </span>set_user_password&lt;T&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, user_password: T)
     <span class="kw">where
@@ -166,7 +174,9 @@
     }
 
     <span class="doccomment">/// Load a key file for the composite key
-    /// ```ignore
+    /// ```
+    /// # use keepass_db::Key;
+    /// # let mut key = Key::new();
     /// key.set_keyfile(&quot;secret&quot;);
     /// ```
     </span><span class="kw">pub fn </span>set_keyfile&lt;T&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, keyfile: T)

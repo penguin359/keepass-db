@@ -2523,7 +2523,61 @@
 <a href="#2523" id="2523">2523</a>
 <a href="#2524" id="2524">2524</a>
 <a href="#2525" id="2525">2525</a>
+<a href="#2526" id="2526">2526</a>
+<a href="#2527" id="2527">2527</a>
+<a href="#2528" id="2528">2528</a>
+<a href="#2529" id="2529">2529</a>
+<a href="#2530" id="2530">2530</a>
+<a href="#2531" id="2531">2531</a>
+<a href="#2532" id="2532">2532</a>
+<a href="#2533" id="2533">2533</a>
+<a href="#2534" id="2534">2534</a>
+<a href="#2535" id="2535">2535</a>
+<a href="#2536" id="2536">2536</a>
+<a href="#2537" id="2537">2537</a>
+<a href="#2538" id="2538">2538</a>
+<a href="#2539" id="2539">2539</a>
+<a href="#2540" id="2540">2540</a>
+<a href="#2541" id="2541">2541</a>
+<a href="#2542" id="2542">2542</a>
+<a href="#2543" id="2543">2543</a>
+<a href="#2544" id="2544">2544</a>
+<a href="#2545" id="2545">2545</a>
+<a href="#2546" id="2546">2546</a>
+<a href="#2547" id="2547">2547</a>
+<a href="#2548" id="2548">2548</a>
+<a href="#2549" id="2549">2549</a>
+<a href="#2550" id="2550">2550</a>
+<a href="#2551" id="2551">2551</a>
+<a href="#2552" id="2552">2552</a>
+<a href="#2553" id="2553">2553</a>
+<a href="#2554" id="2554">2554</a>
+<a href="#2555" id="2555">2555</a>
+<a href="#2556" id="2556">2556</a>
+<a href="#2557" id="2557">2557</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Read, modify and write KeePass 2.x databases
+//!
+//! The main types used in this crate are:
+//!
+//! * [`Key`] which represents the composite key used to lock a database
+//! * [`KeePassDoc`] which represents the contents of an unlocked KeePass database
+//!
+//! # Opening a database:
+//!
+//! ```
+//! use std::io::Error;
+//! use keepass_db::{KeePassDoc, protected_stream::CipherValue, Key};
+//! fn main() -&gt; Result&lt;(), Error&gt; {
+//!     let mut key = Key::new();
+//!     key.set_user_password(&quot;asdf&quot;);
+//!     let mut doc = KeePassDoc::load_file(&quot;testdata/dummy-kdbx41.kdbx&quot;, &amp;key)?;
+//!     let database = doc.file;
+//!     let stream = &amp;mut doc.cipher;
+//!     let basic_entry = database.root_group().all_entries().filter(|e| e.url().unprotect(stream).unwrap() == &quot;https://keepass.info/&quot;).last().unwrap();
+//!     println!(&quot;Password: {}&quot;, basic_entry.password().unprotect(stream).unwrap());
+//!     Ok(())
+//! }
+//! ```
 
 </span><span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::collections::{BTreeMap, HashMap};
@@ -3960,17 +4014,25 @@
     }
 }
 
-<span class="attr">#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
+<span class="doccomment">/// Various times about password or group item
+</span><span class="attr">#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
 </span><span class="comment">//#[derive(Debug, Default, KdbxParse)]
 </span><span class="attr">#[cfg_attr(test, derive(PartialEq))]
 </span><span class="kw">pub struct </span>Times {
-    creation_time: DateTime&lt;Utc&gt;,
-    last_modification_time: DateTime&lt;Utc&gt;,
-    last_access_time: DateTime&lt;Utc&gt;,
-    expiry_time: DateTime&lt;Utc&gt;,
-    expires: bool,
-    usage_count: i32,
-    location_changed: DateTime&lt;Utc&gt;,
+    <span class="doccomment">/// Time item was first created
+    </span>creation_time: DateTime&lt;Utc&gt;,
+    <span class="doccomment">/// Time item was last modified
+    </span>last_modification_time: DateTime&lt;Utc&gt;,
+    <span class="doccomment">/// Time item was last accessed
+    </span>last_access_time: DateTime&lt;Utc&gt;,
+    <span class="doccomment">/// Time item should expire or has expired
+    </span>expiry_time: DateTime&lt;Utc&gt;,
+    <span class="doccomment">/// Should item expire?
+    </span>expires: bool,
+    <span class="doccomment">/// Number of times item has been used
+    </span>usage_count: i32,
+    <span class="doccomment">/// Last time item has been moved in database
+    </span>location_changed: DateTime&lt;Utc&gt;,
 }
 
 <span class="attr">#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
@@ -4195,7 +4257,8 @@
     }
 }
 
-<span class="kw">pub struct </span>EntryIter&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="doccomment">/// Iterator over password [`Entry`]
+</span><span class="kw">pub struct </span>EntryIter&lt;<span class="lifetime">&#39;a</span>&gt; {
     entries: <span class="prelude-ty">Option</span>&lt;Iter&lt;<span class="lifetime">&#39;a</span>, Entry&gt;&gt;,
     groups: GroupIter&lt;<span class="lifetime">&#39;a</span>&gt;,
 }
@@ -4236,18 +4299,24 @@
 </span><span class="attr">#[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize, Getters)]
 #[cfg_attr(test, derive(PartialEq))]
 </span><span class="kw">pub struct </span>Entry {
-    <span class="attr">#[keepass_db(element = <span class="string">&quot;UUID&quot;</span>)]
+    <span class="doccomment">/// UUID for password entry
+    </span><span class="attr">#[keepass_db(element = <span class="string">&quot;UUID&quot;</span>)]
     </span>uuid: Uuid,
-    <span class="attr">#[keepass_db(element = <span class="string">&quot;IconID&quot;</span>)]
+    <span class="doccomment">/// Entry Icon unless a custom icon is provided
+    </span><span class="attr">#[keepass_db(element = <span class="string">&quot;IconID&quot;</span>)]
     </span>icon_id: u32,
-    <span class="attr">#[keepass_db(element = <span class="string">&quot;CustomIconUUID&quot;</span>)]
+    <span class="doccomment">/// Provides a custom icon for the group overiding icon_id
+    </span><span class="attr">#[keepass_db(element = <span class="string">&quot;CustomIconUUID&quot;</span>)]
     </span>custom_icon_uuid: <span class="prelude-ty">Option</span>&lt;Uuid&gt;,
-    foreground_color: String,
-    background_color: String,
+    <span class="doccomment">/// Foreground text color of entry
+    </span>foreground_color: String,
+    <span class="doccomment">/// Background text color of entry
+    </span>background_color: String,
     <span class="attr">#[keepass_db(element = <span class="string">&quot;OverrideURL&quot;</span>)]
     </span>override_url: String,
     quality_check: <span class="prelude-ty">Option</span>&lt;bool&gt;,
-    tags: String,
+    <span class="doccomment">/// Tags for password entry
+    </span>tags: String,
     previous_parent_group: <span class="prelude-ty">Option</span>&lt;Uuid&gt;,
     times: Times,
     custom_data: Vec&lt;Item&gt;,
@@ -4582,7 +4651,7 @@
         <span class="kw">if </span>major_version == <span class="number">4 </span>{
             file.read_exact(<span class="kw-2">&amp;mut </span>hmac_tag)<span class="question-mark">?</span>;
             <span class="macro">println!</span>(<span class="string">&quot;Verifying HMAC&quot;</span>);
-            hmac::verify(<span class="kw-2">&amp;</span>hmac_key, <span class="kw-2">&amp;</span>header, <span class="kw-2">&amp;</span>hmac_tag).unwrap();
+            hmac::verify(<span class="kw-2">&amp;</span>hmac_key, <span class="kw-2">&amp;</span>header, <span class="kw-2">&amp;</span>hmac_tag).map_err(|<span class="kw">_</span>| io::Error::new(io::ErrorKind::Other, <span class="string">&quot;Bad password or key file&quot;</span>))<span class="question-mark">?</span>;
             <span class="macro">println!</span>(<span class="string">&quot;Complete&quot;</span>);
         }
 
@@ -4620,12 +4689,7 @@
                 <span class="kw-2">&amp;</span>ciphertext,
             )
             .unwrap();
-            <span class="comment">// let mut gz = if let compress = Compression::None {
-            //     GzDecoder::new(Cursor::new(data))
-            // } else{
-            //     GzDecoder::new(Cursor::new(data))
-            // };
-            </span><span class="kw">let </span><span class="kw-2">mut </span>gz: Box&lt;<span class="kw">dyn </span>Read&gt; = <span class="kw">match </span>compress {
+            <span class="kw">let </span><span class="kw-2">mut </span>gz: Box&lt;<span class="kw">dyn </span>Read&gt; = <span class="kw">match </span>compress {
                 Compression::Gzip =&gt; Box::new(GzDecoder::new(Cursor::new(data))),
                 Compression::None =&gt; Box::new(Cursor::new(data)),
             };
