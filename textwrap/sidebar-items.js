@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["dedent","fill","indent","wrap","wrap_iter"],"struct":["HyphenSplitter","IntoWrapIter","NoHyphenation","WrapIter","Wrapper"],"trait":["WordSplitter"]};
+window.SIDEBAR_ITEMS = {"enum":["LineEnding","WordSeparator"],"fn":["dedent","fill","fill_inplace","indent","refill","unfill","wrap","wrap_columns"],"mod":["core","word_splitters","wrap_algorithms"],"struct":["Options"]};

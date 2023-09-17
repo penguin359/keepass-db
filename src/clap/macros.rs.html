@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/lorenl/.cargo/registry/src/index.crates.io-6f17d22bba15001f/clap-2.34.0/src/macros.rs`."><title>macros.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-f3501f0f5ae15dfb.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="clap" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.0 (8ede3aae2 2023-07-12)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-f0540c1d82cde29b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../clap/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/lorenl/.cargo/registry/src/index.crates.io-6f17d22bba15001f/clap-3.2.25/src/macros.rs`."><title>macros.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-f3501f0f5ae15dfb.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="clap" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.0 (8ede3aae2 2023-07-12)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-f0540c1d82cde29b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../clap/index.html"><img src="https://raw.githubusercontent.com/clap-rs/clap/master/assets/clap.png" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1056,399 +1056,112 @@
 <a href="#1056" id="1056">1056</a>
 <a href="#1057" id="1057">1057</a>
 <a href="#1058" id="1058">1058</a>
-<a href="#1059" id="1059">1059</a>
-<a href="#1060" id="1060">1060</a>
-<a href="#1061" id="1061">1061</a>
-<a href="#1062" id="1062">1062</a>
-<a href="#1063" id="1063">1063</a>
-<a href="#1064" id="1064">1064</a>
-<a href="#1065" id="1065">1065</a>
-<a href="#1066" id="1066">1066</a>
-<a href="#1067" id="1067">1067</a>
-<a href="#1068" id="1068">1068</a>
-<a href="#1069" id="1069">1069</a>
-<a href="#1070" id="1070">1070</a>
-<a href="#1071" id="1071">1071</a>
-<a href="#1072" id="1072">1072</a>
-<a href="#1073" id="1073">1073</a>
-<a href="#1074" id="1074">1074</a>
-<a href="#1075" id="1075">1075</a>
-<a href="#1076" id="1076">1076</a>
-<a href="#1077" id="1077">1077</a>
-<a href="#1078" id="1078">1078</a>
-<a href="#1079" id="1079">1079</a>
-<a href="#1080" id="1080">1080</a>
-<a href="#1081" id="1081">1081</a>
-<a href="#1082" id="1082">1082</a>
-<a href="#1083" id="1083">1083</a>
-<a href="#1084" id="1084">1084</a>
-<a href="#1085" id="1085">1085</a>
-<a href="#1086" id="1086">1086</a>
-<a href="#1087" id="1087">1087</a>
-<a href="#1088" id="1088">1088</a>
-<a href="#1089" id="1089">1089</a>
-<a href="#1090" id="1090">1090</a>
-<a href="#1091" id="1091">1091</a>
-<a href="#1092" id="1092">1092</a>
-<a href="#1093" id="1093">1093</a>
-<a href="#1094" id="1094">1094</a>
-<a href="#1095" id="1095">1095</a>
-<a href="#1096" id="1096">1096</a>
-<a href="#1097" id="1097">1097</a>
-<a href="#1098" id="1098">1098</a>
-<a href="#1099" id="1099">1099</a>
-<a href="#1100" id="1100">1100</a>
-<a href="#1101" id="1101">1101</a>
-<a href="#1102" id="1102">1102</a>
-<a href="#1103" id="1103">1103</a>
-<a href="#1104" id="1104">1104</a>
-<a href="#1105" id="1105">1105</a>
-<a href="#1106" id="1106">1106</a>
-<a href="#1107" id="1107">1107</a>
-<a href="#1108" id="1108">1108</a>
-<a href="#1109" id="1109">1109</a>
-<a href="#1110" id="1110">1110</a>
-<a href="#1111" id="1111">1111</a>
-<a href="#1112" id="1112">1112</a>
-<a href="#1113" id="1113">1113</a>
-<a href="#1114" id="1114">1114</a>
-<a href="#1115" id="1115">1115</a>
-<a href="#1116" id="1116">1116</a>
-<a href="#1117" id="1117">1117</a>
-<a href="#1118" id="1118">1118</a>
-<a href="#1119" id="1119">1119</a>
-<a href="#1120" id="1120">1120</a>
-<a href="#1121" id="1121">1121</a>
-<a href="#1122" id="1122">1122</a>
-<a href="#1123" id="1123">1123</a>
-<a href="#1124" id="1124">1124</a>
-<a href="#1125" id="1125">1125</a>
-<a href="#1126" id="1126">1126</a>
-<a href="#1127" id="1127">1127</a>
-<a href="#1128" id="1128">1128</a>
-<a href="#1129" id="1129">1129</a>
-<a href="#1130" id="1130">1130</a>
-</pre></div><pre class="rust"><code><span class="doccomment">/// A convenience macro for loading the YAML file at compile time (relative to the current file,
-/// like modules work). That YAML object can then be passed to this function.
-///
-/// # Panics
-///
-/// The YAML file must be properly formatted or this function will panic!(). A good way to
-/// ensure this doesn&#39;t happen is to run your program with the `--help` switch. If this passes
-/// without error, you needn&#39;t worry because the YAML is properly formatted.
-///
-/// # Examples
-///
-/// The following example shows how to load a properly formatted YAML file to build an instance
-/// of an `App` struct.
-///
-/// ```ignore
-/// # #[macro_use]
-/// # extern crate clap;
-/// # use clap::App;
-/// # fn main() {
-/// let yml = load_yaml!(&quot;app.yml&quot;);
-/// let app = App::from_yaml(yml);
-///
-/// // continued logic goes here, such as `app.get_matches()` etc.
-/// # }
-/// ```
+</pre></div><pre class="rust"><code><span class="doccomment">/// Deprecated in [Issue #3087](https://github.com/clap-rs/clap/issues/3087), maybe [`clap::Parser`][crate::Parser] would fit your use case?
 </span><span class="attr">#[cfg(feature = <span class="string">&quot;yaml&quot;</span>)]
+#[cfg_attr(
+    feature = <span class="string">&quot;deprecated&quot;</span>,
+    deprecated(
+        since = <span class="string">&quot;3.0.0&quot;</span>,
+        note = <span class="string">&quot;Deprecated in Issue #3087, maybe clap::Parser would fit your use case?&quot;
+    </span>)
+)]
+#[doc(hidden)]
 #[macro_export]
 </span><span class="macro">macro_rules! </span>load_yaml {
-    (<span class="macro-nonterminal">$yml</span>:expr) =&gt; {
-        <span class="kw-2">&amp;</span>::clap::YamlLoader::load_from_str(<span class="macro">include_str!</span>(<span class="macro-nonterminal">$yml</span>)).expect(<span class="string">&quot;failed to load YAML file&quot;</span>)[<span class="number">0</span>]
+    (<span class="macro-nonterminal">$yaml</span>:expr) =&gt; {
+        <span class="kw-2">&amp;</span><span class="macro-nonterminal">$crate::YamlLoader::load_from_str</span>(<span class="macro">include_str!</span>(<span class="macro-nonterminal">$yaml</span>)).expect(<span class="string">&quot;failed to load YAML file&quot;</span>)
+            [<span class="number">0</span>]
     };
 }
 
-<span class="doccomment">/// Convenience macro getting a typed value `T` where `T` implements [`std::str::FromStr`] from an
-/// argument value. This macro returns a `Result&lt;T,String&gt;` which allows you as the developer to
-/// decide what you&#39;d like to do on a failed parse. There are two types of errors, parse failures
-/// and those where the argument wasn&#39;t present (such as a non-required argument). You can use
-/// it to get a single value, or a iterator as with the [`ArgMatches::values_of`]
-///
-/// # Examples
-///
-/// ```no_run
-/// # #[macro_use]
-/// # extern crate clap;
-/// # use clap::App;
-/// # fn main() {
-/// let matches = App::new(&quot;myapp&quot;)
-///               .arg_from_usage(&quot;[length] &#39;Set the length to use as a pos whole num, i.e. 20&#39;&quot;)
-///               .get_matches();
-///
-/// let len      = value_t!(matches.value_of(&quot;length&quot;), u32).unwrap_or_else(|e| e.exit());
-/// let also_len = value_t!(matches, &quot;length&quot;, u32).unwrap_or_else(|e| e.exit());
-///
-/// println!(&quot;{} + 2: {}&quot;, len, len + 2);
-/// # }
-/// ```
-/// [`std::str::FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
-/// [`ArgMatches::values_of`]: ./struct.ArgMatches.html#method.values_of
-/// [`Result&lt;T,String&gt;`]: https://doc.rust-lang.org/std/result/enum.Result.html
+<span class="doccomment">/// Deprecated, replaced with [`ArgMatches::value_of_t`][crate::ArgMatches::value_of_t]
 </span><span class="attr">#[macro_export]
+#[cfg_attr(
+    feature = <span class="string">&quot;deprecated&quot;</span>,
+    deprecated(since = <span class="string">&quot;3.0.0&quot;</span>, note = <span class="string">&quot;Replaced with `ArgMatches::get_one`&quot;</span>)
+)]
+#[doc(hidden)]
 </span><span class="macro">macro_rules! </span>value_t {
     (<span class="macro-nonterminal">$m</span>:ident, <span class="macro-nonterminal">$v</span>:expr, <span class="macro-nonterminal">$t</span>:ty) =&gt; {
-        <span class="macro">value_t!</span>(<span class="macro-nonterminal">$m</span>.value_of(<span class="macro-nonterminal">$v</span>), <span class="macro-nonterminal">$t</span>)
+        <span class="macro-nonterminal">$</span><span class="macro">crate::value_t!</span>(<span class="macro-nonterminal">$m</span>.value_of(<span class="macro-nonterminal">$v</span>), <span class="macro-nonterminal">$t</span>)
     };
     (<span class="macro-nonterminal">$m</span>:ident.value_of(<span class="macro-nonterminal">$v</span>:expr), <span class="macro-nonterminal">$t</span>:ty) =&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = <span class="macro-nonterminal">$m</span>.value_of(<span class="macro-nonterminal">$v</span>) {
-            <span class="kw">match </span>v.parse::&lt;<span class="macro-nonterminal">$t</span>&gt;() {
-                <span class="prelude-val">Ok</span>(val) =&gt; <span class="prelude-val">Ok</span>(val),
-                <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(::clap::Error::value_validation_auto(<span class="macro">format!</span>(
-                    <span class="string">&quot;The argument &#39;{}&#39; isn&#39;t a valid value&quot;</span>,
-                    v
-                ))),
-            }
-        } <span class="kw">else </span>{
-            <span class="prelude-val">Err</span>(::clap::Error::argument_not_found_auto(<span class="macro-nonterminal">$v</span>))
-        }
+        <span class="macro-nonterminal">$m</span>.value_of_t::&lt;<span class="macro-nonterminal">$t</span>&gt;(<span class="macro-nonterminal">$v</span>)
     };
 }
 
-<span class="doccomment">/// Convenience macro getting a typed value `T` where `T` implements [`std::str::FromStr`] or
-/// exiting upon error, instead of returning a [`Result`] type.
-///
-/// **NOTE:** This macro is for backwards compatibility sake. Prefer
-/// [`value_t!(/* ... */).unwrap_or_else(|e| e.exit())`]
-///
-/// # Examples
-///
-/// ```no_run
-/// # #[macro_use]
-/// # extern crate clap;
-/// # use clap::App;
-/// # fn main() {
-/// let matches = App::new(&quot;myapp&quot;)
-///               .arg_from_usage(&quot;[length] &#39;Set the length to use as a pos whole num, i.e. 20&#39;&quot;)
-///               .get_matches();
-///
-/// let len      = value_t_or_exit!(matches.value_of(&quot;length&quot;), u32);
-/// let also_len = value_t_or_exit!(matches, &quot;length&quot;, u32);
-///
-/// println!(&quot;{} + 2: {}&quot;, len, len + 2);
-/// # }
-/// ```
-/// [`std::str::FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
-/// [`Result`]: https://doc.rust-lang.org/std/result/enum.Result.html
-/// [`value_t!(/* ... */).unwrap_or_else(|e| e.exit())`]: ./macro.value_t!.html
+<span class="doccomment">/// Deprecated, replaced with [`ArgMatches::value_of_t_or_exit`][crate::ArgMatches::value_of_t_or_exit]
 </span><span class="attr">#[macro_export]
+#[cfg_attr(
+    feature = <span class="string">&quot;deprecated&quot;</span>,
+    deprecated(since = <span class="string">&quot;3.0.0&quot;</span>, note = <span class="string">&quot;Replaced with `ArgMatches::get_one`&quot;</span>)
+)]
+#[doc(hidden)]
 </span><span class="macro">macro_rules! </span>value_t_or_exit {
     (<span class="macro-nonterminal">$m</span>:ident, <span class="macro-nonterminal">$v</span>:expr, <span class="macro-nonterminal">$t</span>:ty) =&gt; {
         <span class="macro">value_t_or_exit!</span>(<span class="macro-nonterminal">$m</span>.value_of(<span class="macro-nonterminal">$v</span>), <span class="macro-nonterminal">$t</span>)
     };
     (<span class="macro-nonterminal">$m</span>:ident.value_of(<span class="macro-nonterminal">$v</span>:expr), <span class="macro-nonterminal">$t</span>:ty) =&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = <span class="macro-nonterminal">$m</span>.value_of(<span class="macro-nonterminal">$v</span>) {
-            <span class="kw">match </span>v.parse::&lt;<span class="macro-nonterminal">$t</span>&gt;() {
-                <span class="prelude-val">Ok</span>(val) =&gt; val,
-                <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; ::clap::Error::value_validation_auto(<span class="macro">format!</span>(
-                    <span class="string">&quot;The argument &#39;{}&#39; isn&#39;t a valid value&quot;</span>,
-                    v
-                ))
-                .exit(),
-            }
-        } <span class="kw">else </span>{
-            ::clap::Error::argument_not_found_auto(<span class="macro-nonterminal">$v</span>).exit()
-        }
+        <span class="macro-nonterminal">$m</span>.value_of_t_or_exit::&lt;<span class="macro-nonterminal">$t</span>&gt;(<span class="macro-nonterminal">$v</span>)
     };
 }
 
-<span class="doccomment">/// Convenience macro getting a typed value [`Vec&lt;T&gt;`] where `T` implements [`std::str::FromStr`]
-/// This macro returns a [`clap::Result&lt;Vec&lt;T&gt;&gt;`] which allows you as the developer to decide
-/// what you&#39;d like to do on a failed parse.
-///
-/// # Examples
-///
-/// ```no_run
-/// # #[macro_use]
-/// # extern crate clap;
-/// # use clap::App;
-/// # fn main() {
-/// let matches = App::new(&quot;myapp&quot;)
-///               .arg_from_usage(&quot;[seq]... &#39;A sequence of pos whole nums, i.e. 20 45&#39;&quot;)
-///               .get_matches();
-///
-/// let vals = values_t!(matches.values_of(&quot;seq&quot;), u32).unwrap_or_else(|e| e.exit());
-/// for v in &amp;vals {
-///     println!(&quot;{} + 2: {}&quot;, v, v + 2);
-/// }
-///
-/// let vals = values_t!(matches, &quot;seq&quot;, u32).unwrap_or_else(|e| e.exit());
-/// for v in &amp;vals {
-///     println!(&quot;{} + 2: {}&quot;, v, v + 2);
-/// }
-/// # }
-/// ```
-/// [`std::str::FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
-/// [`Vec&lt;T&gt;`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
-/// [`clap::Result&lt;Vec&lt;T&gt;&gt;`]: ./type.Result.html
+<span class="doccomment">/// Deprecated, replaced with [`ArgMatches::values_of_t`][crate::ArgMatches::value_of_t]
 </span><span class="attr">#[macro_export]
+#[cfg_attr(
+    feature = <span class="string">&quot;deprecated&quot;</span>,
+    deprecated(since = <span class="string">&quot;3.0.0&quot;</span>, note = <span class="string">&quot;Replaced with `ArgMatches::get_many`&quot;</span>)
+)]
+#[doc(hidden)]
 </span><span class="macro">macro_rules! </span>values_t {
     (<span class="macro-nonterminal">$m</span>:ident, <span class="macro-nonterminal">$v</span>:expr, <span class="macro-nonterminal">$t</span>:ty) =&gt; {
         <span class="macro">values_t!</span>(<span class="macro-nonterminal">$m</span>.values_of(<span class="macro-nonterminal">$v</span>), <span class="macro-nonterminal">$t</span>)
     };
     (<span class="macro-nonterminal">$m</span>:ident.values_of(<span class="macro-nonterminal">$v</span>:expr), <span class="macro-nonterminal">$t</span>:ty) =&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(vals) = <span class="macro-nonterminal">$m</span>.values_of(<span class="macro-nonterminal">$v</span>) {
-            <span class="kw">let </span><span class="kw-2">mut </span>tmp = <span class="macro">vec!</span>[];
-            <span class="kw">let </span><span class="kw-2">mut </span>err = <span class="prelude-val">None</span>;
-            <span class="kw">for </span>pv <span class="kw">in </span>vals {
-                <span class="kw">match </span>pv.parse::&lt;<span class="macro-nonterminal">$t</span>&gt;() {
-                    <span class="prelude-val">Ok</span>(rv) =&gt; tmp.push(rv),
-                    <span class="prelude-val">Err</span>(..) =&gt; {
-                        err = <span class="prelude-val">Some</span>(::clap::Error::value_validation_auto(<span class="macro">format!</span>(
-                            <span class="string">&quot;The argument &#39;{}&#39; isn&#39;t a valid value&quot;</span>,
-                            pv
-                        )));
-                        <span class="kw">break</span>;
-                    }
-                }
-            }
-            <span class="kw">match </span>err {
-                <span class="prelude-val">Some</span>(e) =&gt; <span class="prelude-val">Err</span>(e),
-                <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(tmp),
-            }
-        } <span class="kw">else </span>{
-            <span class="prelude-val">Err</span>(::clap::Error::argument_not_found_auto(<span class="macro-nonterminal">$v</span>))
-        }
+        <span class="macro-nonterminal">$m</span>.values_of_t::&lt;<span class="macro-nonterminal">$t</span>&gt;(<span class="macro-nonterminal">$v</span>)
     };
 }
 
-<span class="doccomment">/// Convenience macro getting a typed value [`Vec&lt;T&gt;`] where `T` implements [`std::str::FromStr`]
-/// or exiting upon error.
-///
-/// **NOTE:** This macro is for backwards compatibility sake. Prefer
-/// [`values_t!(/* ... */).unwrap_or_else(|e| e.exit())`]
-///
-/// # Examples
-///
-/// ```no_run
-/// # #[macro_use]
-/// # extern crate clap;
-/// # use clap::App;
-/// # fn main() {
-/// let matches = App::new(&quot;myapp&quot;)
-///               .arg_from_usage(&quot;[seq]... &#39;A sequence of pos whole nums, i.e. 20 45&#39;&quot;)
-///               .get_matches();
-///
-/// let vals = values_t_or_exit!(matches.values_of(&quot;seq&quot;), u32);
-/// for v in &amp;vals {
-///     println!(&quot;{} + 2: {}&quot;, v, v + 2);
-/// }
-///
-/// // type for example only
-/// let vals: Vec&lt;u32&gt; = values_t_or_exit!(matches, &quot;seq&quot;, u32);
-/// for v in &amp;vals {
-///     println!(&quot;{} + 2: {}&quot;, v, v + 2);
-/// }
-/// # }
-/// ```
-/// [`values_t!(/* ... */).unwrap_or_else(|e| e.exit())`]: ./macro.values_t!.html
-/// [`std::str::FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
-/// [`Vec&lt;T&gt;`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
+<span class="doccomment">/// Deprecated, replaced with [`ArgMatches::values_of_t_or_exit`][crate::ArgMatches::value_of_t_or_exit]
 </span><span class="attr">#[macro_export]
+#[cfg_attr(
+    feature = <span class="string">&quot;deprecated&quot;</span>,
+    deprecated(since = <span class="string">&quot;3.0.0&quot;</span>, note = <span class="string">&quot;Replaced with `ArgMatches::get_many`&quot;</span>)
+)]
+#[doc(hidden)]
 </span><span class="macro">macro_rules! </span>values_t_or_exit {
     (<span class="macro-nonterminal">$m</span>:ident, <span class="macro-nonterminal">$v</span>:expr, <span class="macro-nonterminal">$t</span>:ty) =&gt; {
         <span class="macro">values_t_or_exit!</span>(<span class="macro-nonterminal">$m</span>.values_of(<span class="macro-nonterminal">$v</span>), <span class="macro-nonterminal">$t</span>)
     };
     (<span class="macro-nonterminal">$m</span>:ident.values_of(<span class="macro-nonterminal">$v</span>:expr), <span class="macro-nonterminal">$t</span>:ty) =&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(vals) = <span class="macro-nonterminal">$m</span>.values_of(<span class="macro-nonterminal">$v</span>) {
-            vals.map(|v| {
-                v.parse::&lt;<span class="macro-nonterminal">$t</span>&gt;().unwrap_or_else(|<span class="kw">_</span>| {
-                    ::clap::Error::value_validation_auto(<span class="macro">format!</span>(
-                        <span class="string">&quot;One or more arguments aren&#39;t valid values&quot;
-                    </span>))
-                    .exit()
-                })
-            })
-            .collect::&lt;Vec&lt;<span class="macro-nonterminal">$t</span>&gt;&gt;()
-        } <span class="kw">else </span>{
-            ::clap::Error::argument_not_found_auto(<span class="macro-nonterminal">$v</span>).exit()
-        }
+        <span class="macro-nonterminal">$m</span>.values_of_t_or_exit::&lt;<span class="macro-nonterminal">$t</span>&gt;(<span class="macro-nonterminal">$v</span>)
     };
 }
 
-<span class="comment">// _clap_count_exprs! is derived from https://github.com/DanielKeep/rust-grabbag
-// commit: 82a35ca5d9a04c3b920622d542104e3310ee5b07
-// License: MIT
-// Copyright ⓒ 2015 grabbag contributors.
-// Licensed under the MIT license (see LICENSE or &lt;http://opensource.org
-// /licenses/MIT&gt;) or the Apache License, Version 2.0 (see LICENSE of
-// &lt;http://www.apache.org/licenses/LICENSE-2.0&gt;), at your option. All
-// files in the project carrying such notice may not be copied, modified,
-// or distributed except according to those terms.
-//
-</span><span class="doccomment">/// Counts the number of comma-delimited expressions passed to it.  The result is a compile-time
-/// evaluable expression, suitable for use as a static array size, or the value of a `const`.
-///
-/// # Examples
-///
-/// ```
-/// # #[macro_use] extern crate clap;
-/// # fn main() {
-/// const COUNT: usize = _clap_count_exprs!(a, 5+1, &quot;hi there!&quot;.into_string());
-/// assert_eq!(COUNT, 3);
-/// # }
-/// ```
-</span><span class="attr">#[macro_export]
+<span class="attr">#[cfg_attr(
+    feature = <span class="string">&quot;deprecated&quot;</span>,
+    deprecated(since = <span class="string">&quot;3.0.0&quot;</span>, note = <span class="string">&quot;Replaced with `ValueEnum`&quot;</span>)
+)]
+#[doc(hidden)]
+#[macro_export]
 </span><span class="macro">macro_rules! </span>_clap_count_exprs {
     () =&gt; { <span class="number">0 </span>};
     (<span class="macro-nonterminal">$e</span>:expr) =&gt; { <span class="number">1 </span>};
     (<span class="macro-nonterminal">$e</span>:expr, $(<span class="macro-nonterminal">$es</span>:expr),+) =&gt; { <span class="number">1 </span>+ <span class="macro-nonterminal">$</span><span class="macro">crate::_clap_count_exprs!</span>($(<span class="macro-nonterminal">$es</span>),<span class="kw-2">*</span>) };
 }
 
-<span class="doccomment">/// Convenience macro to generate more complete enums with variants to be used as a type when
-/// parsing arguments. This enum also provides a `variants()` function which can be used to
-/// retrieve a `Vec&lt;&amp;&#39;static str&gt;` of the variant names, as well as implementing [`FromStr`] and
-/// [`Display`] automatically.
-///
-/// **NOTE:** Case insensitivity is supported for ASCII characters only. It&#39;s highly recommended to
-/// use [`Arg::case_insensitive(true)`] for args that will be used with these enums
-///
-/// **NOTE:** This macro automatically implements [`std::str::FromStr`] and [`std::fmt::Display`]
-///
-/// **NOTE:** These enums support pub (or not) and uses of the `#[derive()]` traits
-///
-/// # Examples
-///
-/// ```rust
-/// # #[macro_use]
-/// # extern crate clap;
-/// # use clap::{App, Arg};
-/// arg_enum!{
-///     #[derive(PartialEq, Debug)]
-///     pub enum Foo {
-///         Bar,
-///         Baz,
-///         Qux
-///     }
-/// }
-/// // Foo enum can now be used via Foo::Bar, or Foo::Baz, etc
-/// // and implements std::str::FromStr to use with the value_t! macros
-/// fn main() {
-///     let m = App::new(&quot;app&quot;)
-///                 .arg(Arg::from_usage(&quot;&lt;foo&gt; &#39;the foo&#39;&quot;)
-///                     .possible_values(&amp;Foo::variants())
-///                     .case_insensitive(true))
-///                 .get_matches_from(vec![
-///                     &quot;app&quot;, &quot;baz&quot;
-///                 ]);
-///     let f = value_t!(m, &quot;foo&quot;, Foo).unwrap_or_else(|e| e.exit());
-///
-///     assert_eq!(f, Foo::Baz);
-/// }
-/// ```
-/// [`FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
-/// [`std::str::FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
-/// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
-/// [`std::fmt::Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
-/// [`Arg::case_insensitive(true)`]: ./struct.Arg.html#method.case_insensitive
-</span><span class="attr">#[macro_export]
+<span class="doccomment">/// Deprecated, replaced with [`ArgEnum`][crate::ArgEnum]
+</span><span class="attr">#[cfg_attr(
+    feature = <span class="string">&quot;deprecated&quot;</span>,
+    deprecated(since = <span class="string">&quot;3.0.0&quot;</span>, note = <span class="string">&quot;Replaced with `ValueEnum`&quot;</span>)
+)]
+#[doc(hidden)]
+#[macro_export]
 </span><span class="macro">macro_rules! </span>arg_enum {
     (@as_item $(<span class="macro-nonterminal">$i</span>:item)<span class="kw-2">*</span>) =&gt; ($(<span class="macro-nonterminal">$i</span>)<span class="kw-2">*</span>);
     (@impls ( $(<span class="macro-nonterminal">$tts</span>:tt)* ) -&gt; (<span class="macro-nonterminal">$e</span>:ident, $(<span class="macro-nonterminal">$v</span>:ident),+)) =&gt; {
-        <span class="macro">arg_enum!</span>(@as_item
-        $(<span class="macro-nonterminal">$tts</span>)*
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_enum!</span>(@<span class="macro-nonterminal">as_item
+        </span>$(<span class="macro-nonterminal">$tts</span>)*
 
         <span class="kw">impl </span>::std::str::FromStr <span class="kw">for </span><span class="macro-nonterminal">$e </span>{
             <span class="kw">type </span><span class="prelude-val">Err </span>= String;
@@ -1486,61 +1199,61 @@
         });
     };
     ($(<span class="attr">#[$(<span class="macro-nonterminal">$m</span>:meta),+]</span>)+ <span class="kw">pub enum </span><span class="macro-nonterminal">$e</span>:ident { $(<span class="macro-nonterminal">$v</span>:ident $(=<span class="macro-nonterminal">$val</span>:expr)<span class="kw-2">*</span>,)+ } ) =&gt; {
-        <span class="macro">arg_enum!</span>(@impls
-            ($(<span class="attr">#[$(<span class="macro-nonterminal">$m</span>),+]</span>)+
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_enum!</span>(@<span class="macro-nonterminal">impls
+            </span>($(<span class="attr">#[$(<span class="macro-nonterminal">$m</span>),+]</span>)+
             <span class="kw">pub enum </span><span class="macro-nonterminal">$e </span>{
                 $(<span class="macro-nonterminal">$v</span>$(=<span class="macro-nonterminal">$val</span>)<span class="kw-2">*</span>),+
             }) -&gt; (<span class="macro-nonterminal">$e</span>, $(<span class="macro-nonterminal">$v</span>),+)
         );
     };
     ($(<span class="attr">#[$(<span class="macro-nonterminal">$m</span>:meta),+]</span>)+ <span class="kw">pub enum </span><span class="macro-nonterminal">$e</span>:ident { $(<span class="macro-nonterminal">$v</span>:ident $(=<span class="macro-nonterminal">$val</span>:expr)<span class="kw-2">*</span>),+ } ) =&gt; {
-        <span class="macro">arg_enum!</span>(@impls
-            ($(<span class="attr">#[$(<span class="macro-nonterminal">$m</span>),+]</span>)+
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_enum!</span>(@<span class="macro-nonterminal">impls
+            </span>($(<span class="attr">#[$(<span class="macro-nonterminal">$m</span>),+]</span>)+
             <span class="kw">pub enum </span><span class="macro-nonterminal">$e </span>{
                 $(<span class="macro-nonterminal">$v</span>$(=<span class="macro-nonterminal">$val</span>)<span class="kw-2">*</span>),+
             }) -&gt; (<span class="macro-nonterminal">$e</span>, $(<span class="macro-nonterminal">$v</span>),+)
         );
     };
     ($(<span class="attr">#[$(<span class="macro-nonterminal">$m</span>:meta),+]</span>)+ <span class="kw">enum </span><span class="macro-nonterminal">$e</span>:ident { $(<span class="macro-nonterminal">$v</span>:ident $(=<span class="macro-nonterminal">$val</span>:expr)<span class="kw-2">*</span>,)+ } ) =&gt; {
-        <span class="macro">arg_enum!</span>(@impls
-            ($(<span class="attr">#[$(<span class="macro-nonterminal">$m</span>),+]</span>)+
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_enum!</span>(@<span class="macro-nonterminal">impls
+            </span>($(<span class="attr">#[$(<span class="macro-nonterminal">$m</span>),+]</span>)+
              <span class="kw">enum </span><span class="macro-nonterminal">$e </span>{
                  $(<span class="macro-nonterminal">$v</span>$(=<span class="macro-nonterminal">$val</span>)<span class="kw-2">*</span>),+
              }) -&gt; (<span class="macro-nonterminal">$e</span>, $(<span class="macro-nonterminal">$v</span>),+)
         );
     };
     ($(<span class="attr">#[$(<span class="macro-nonterminal">$m</span>:meta),+]</span>)+ <span class="kw">enum </span><span class="macro-nonterminal">$e</span>:ident { $(<span class="macro-nonterminal">$v</span>:ident $(=<span class="macro-nonterminal">$val</span>:expr)<span class="kw-2">*</span>),+ } ) =&gt; {
-        <span class="macro">arg_enum!</span>(@impls
-            ($(<span class="attr">#[$(<span class="macro-nonterminal">$m</span>),+]</span>)+
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_enum!</span>(@<span class="macro-nonterminal">impls
+            </span>($(<span class="attr">#[$(<span class="macro-nonterminal">$m</span>),+]</span>)+
             <span class="kw">enum </span><span class="macro-nonterminal">$e </span>{
                 $(<span class="macro-nonterminal">$v</span>$(=<span class="macro-nonterminal">$val</span>)<span class="kw-2">*</span>),+
             }) -&gt; (<span class="macro-nonterminal">$e</span>, $(<span class="macro-nonterminal">$v</span>),+)
         );
     };
     (<span class="kw">pub enum </span><span class="macro-nonterminal">$e</span>:ident { $(<span class="macro-nonterminal">$v</span>:ident $(=<span class="macro-nonterminal">$val</span>:expr)<span class="kw-2">*</span>,)+ } ) =&gt; {
-        <span class="macro">arg_enum!</span>(@impls
-            (<span class="kw">pub enum </span><span class="macro-nonterminal">$e </span>{
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_enum!</span>(@<span class="macro-nonterminal">impls
+            </span>(<span class="kw">pub enum </span><span class="macro-nonterminal">$e </span>{
                 $(<span class="macro-nonterminal">$v</span>$(=<span class="macro-nonterminal">$val</span>)<span class="kw-2">*</span>),+
             }) -&gt; (<span class="macro-nonterminal">$e</span>, $(<span class="macro-nonterminal">$v</span>),+)
         );
     };
     (<span class="kw">pub enum </span><span class="macro-nonterminal">$e</span>:ident { $(<span class="macro-nonterminal">$v</span>:ident $(=<span class="macro-nonterminal">$val</span>:expr)<span class="kw-2">*</span>),+ } ) =&gt; {
-        <span class="macro">arg_enum!</span>(@impls
-            (<span class="kw">pub enum </span><span class="macro-nonterminal">$e </span>{
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_enum!</span>(@<span class="macro-nonterminal">impls
+            </span>(<span class="kw">pub enum </span><span class="macro-nonterminal">$e </span>{
                 $(<span class="macro-nonterminal">$v</span>$(=<span class="macro-nonterminal">$val</span>)<span class="kw-2">*</span>),+
             }) -&gt; (<span class="macro-nonterminal">$e</span>, $(<span class="macro-nonterminal">$v</span>),+)
         );
     };
     (<span class="kw">enum </span><span class="macro-nonterminal">$e</span>:ident { $(<span class="macro-nonterminal">$v</span>:ident $(=<span class="macro-nonterminal">$val</span>:expr)<span class="kw-2">*</span>,)+ } ) =&gt; {
-        <span class="macro">arg_enum!</span>(@impls
-            (<span class="kw">enum </span><span class="macro-nonterminal">$e </span>{
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_enum!</span>(@<span class="macro-nonterminal">impls
+            </span>(<span class="kw">enum </span><span class="macro-nonterminal">$e </span>{
                 $(<span class="macro-nonterminal">$v</span>$(=<span class="macro-nonterminal">$val</span>)<span class="kw-2">*</span>),+
             }) -&gt; (<span class="macro-nonterminal">$e</span>, $(<span class="macro-nonterminal">$v</span>),+)
         );
     };
     (<span class="kw">enum </span><span class="macro-nonterminal">$e</span>:ident { $(<span class="macro-nonterminal">$v</span>:ident $(=<span class="macro-nonterminal">$val</span>:expr)<span class="kw-2">*</span>),+ } ) =&gt; {
-        <span class="macro">arg_enum!</span>(@impls
-            (<span class="kw">enum </span><span class="macro-nonterminal">$e </span>{
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_enum!</span>(@<span class="macro-nonterminal">impls
+            </span>(<span class="kw">enum </span><span class="macro-nonterminal">$e </span>{
                 $(<span class="macro-nonterminal">$v</span>$(=<span class="macro-nonterminal">$val</span>)<span class="kw-2">*</span>),+
             }) -&gt; (<span class="macro-nonterminal">$e</span>, $(<span class="macro-nonterminal">$v</span>),+)
         );
@@ -1555,14 +1268,14 @@
 /// ```no_run
 /// # #[macro_use]
 /// # extern crate clap;
-/// # use clap::App;
+/// # use clap::Command;
 /// # fn main() {
-/// let m = App::new(&quot;app&quot;)
+/// let m = Command::new(&quot;cmd&quot;)
 ///             .version(crate_version!())
 ///             .get_matches();
 /// # }
 /// ```
-</span><span class="attr">#[cfg(not(feature = <span class="string">&quot;no_cargo&quot;</span>))]
+</span><span class="attr">#[cfg(feature = <span class="string">&quot;cargo&quot;</span>)]
 #[macro_export]
 </span><span class="macro">macro_rules! </span>crate_version {
     () =&gt; {
@@ -1570,7 +1283,7 @@
     };
 }
 
-<span class="doccomment">/// Allows you to pull the authors for the app from your Cargo.toml at
+<span class="doccomment">/// Allows you to pull the authors for the command from your Cargo.toml at
 /// compile time in the form:
 /// `&quot;author1 lastname &lt;author1@example.com&gt;:author2 lastname &lt;author2@example.com&gt;&quot;`
 ///
@@ -1584,50 +1297,24 @@
 /// ```no_run
 /// # #[macro_use]
 /// # extern crate clap;
-/// # use clap::App;
+/// # use clap::Command;
 /// # fn main() {
-/// let m = App::new(&quot;app&quot;)
+/// let m = Command::new(&quot;cmd&quot;)
 ///             .author(crate_authors!(&quot;\n&quot;))
 ///             .get_matches();
 /// # }
 /// ```
-</span><span class="attr">#[cfg(not(feature = <span class="string">&quot;no_cargo&quot;</span>))]
+</span><span class="attr">#[cfg(feature = <span class="string">&quot;cargo&quot;</span>)]
 #[macro_export]
 </span><span class="macro">macro_rules! </span>crate_authors {
     (<span class="macro-nonterminal">$sep</span>:expr) =&gt; {{
-        <span class="kw">use </span>std::ops::Deref;
-        <span class="attr">#[allow(deprecated)]
-        </span><span class="kw">use </span>std::sync::{Once, ONCE_INIT};
+        <span class="kw">static </span>CACHED: clap::__macro_refs::once_cell::sync::Lazy&lt;String&gt; =
+            clap::__macro_refs::once_cell::sync::Lazy::new(|| {
+                <span class="macro">env!</span>(<span class="string">&quot;CARGO_PKG_AUTHORS&quot;</span>).replace(<span class="string">&#39;:&#39;</span>, <span class="macro-nonterminal">$sep</span>)
+            });
 
-        <span class="attr">#[allow(missing_copy_implementations)]
-        #[allow(dead_code)]
-        </span><span class="kw">struct </span>CargoAuthors {
-            __private_field: (),
-        };
-
-        <span class="kw">impl </span>Deref <span class="kw">for </span>CargoAuthors {
-            <span class="kw">type </span>Target = str;
-
-            <span class="attr">#[allow(unsafe_code)]
-            </span><span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
-                <span class="attr">#[allow(deprecated)]
-                </span><span class="kw">static </span>ONCE: Once = ONCE_INIT;
-                <span class="kw">static </span><span class="kw-2">mut </span>VALUE: <span class="kw-2">*const </span>String = <span class="number">0 </span><span class="kw">as </span><span class="kw-2">*const </span>String;
-
-                <span class="kw">unsafe </span>{
-                    ONCE.call_once(|| {
-                        <span class="kw">let </span>s = <span class="macro">env!</span>(<span class="string">&quot;CARGO_PKG_AUTHORS&quot;</span>).replace(<span class="string">&#39;:&#39;</span>, <span class="macro-nonterminal">$sep</span>);
-                        VALUE = Box::into_raw(Box::new(s));
-                    });
-
-                    <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>VALUE)[..]
-                }
-            }
-        }
-
-        <span class="kw-2">&amp;*</span>CargoAuthors {
-            __private_field: (),
-        }
+        <span class="kw">let </span>s: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="kw-2">&amp;*</span>CACHED;
+        s
     }};
     () =&gt; {
         <span class="macro">env!</span>(<span class="string">&quot;CARGO_PKG_AUTHORS&quot;</span>)
@@ -1641,14 +1328,14 @@
 /// ```no_run
 /// # #[macro_use]
 /// # extern crate clap;
-/// # use clap::App;
+/// # use clap::Command;
 /// # fn main() {
-/// let m = App::new(&quot;app&quot;)
+/// let m = Command::new(&quot;cmd&quot;)
 ///             .about(crate_description!())
 ///             .get_matches();
 /// # }
 /// ```
-</span><span class="attr">#[cfg(not(feature = <span class="string">&quot;no_cargo&quot;</span>))]
+</span><span class="attr">#[cfg(feature = <span class="string">&quot;cargo&quot;</span>)]
 #[macro_export]
 </span><span class="macro">macro_rules! </span>crate_description {
     () =&gt; {
@@ -1663,13 +1350,13 @@
 /// ```no_run
 /// # #[macro_use]
 /// # extern crate clap;
-/// # use clap::App;
+/// # use clap::Command;
 /// # fn main() {
-/// let m = App::new(crate_name!())
+/// let m = Command::new(crate_name!())
 ///             .get_matches();
 /// # }
 /// ```
-</span><span class="attr">#[cfg(not(feature = <span class="string">&quot;no_cargo&quot;</span>))]
+</span><span class="attr">#[cfg(feature = <span class="string">&quot;cargo&quot;</span>)]
 #[macro_export]
 </span><span class="macro">macro_rules! </span>crate_name {
     () =&gt; {
@@ -1677,17 +1364,12 @@
     };
 }
 
-<span class="doccomment">/// Allows you to build the `App` instance from your Cargo.toml at compile time.
-///
-/// Equivalent to using the `crate_*!` macros with their respective fields.
-///
-/// Provided separator is for the [`crate_authors!`](macro.crate_authors.html) macro,
-/// refer to the documentation therefor.
+<span class="doccomment">/// Allows you to build the `Command` instance from your Cargo.toml at compile time.
 ///
 /// **NOTE:** Changing the values in your `Cargo.toml` does not trigger a re-build automatically,
 /// and therefore won&#39;t change the generated output until you recompile.
 ///
-/// **Pro Tip:** In some cases you can &quot;trick&quot; the compiler into triggering a rebuild when your
+/// In some cases you can &quot;trick&quot; the compiler into triggering a rebuild when your
 /// `Cargo.toml` is changed by including this in your `src/main.rs` file
 /// `include_str!(&quot;../Cargo.toml&quot;);`
 ///
@@ -1697,160 +1379,526 @@
 /// # #[macro_use]
 /// # extern crate clap;
 /// # fn main() {
-/// let m = app_from_crate!().get_matches();
+/// let m = command!().get_matches();
 /// # }
 /// ```
-</span><span class="attr">#[cfg(not(feature = <span class="string">&quot;no_cargo&quot;</span>))]
+</span><span class="attr">#[cfg(feature = <span class="string">&quot;cargo&quot;</span>)]
 #[macro_export]
-</span><span class="macro">macro_rules! </span>app_from_crate {
-    () =&gt; {
-        <span class="macro-nonterminal">$crate::App::new</span>(<span class="macro">crate_name!</span>())
-            .version(<span class="macro">crate_version!</span>())
-            .author(<span class="macro">crate_authors!</span>())
-            .about(<span class="macro">crate_description!</span>())
-    };
-    (<span class="macro-nonterminal">$sep</span>:expr) =&gt; {
-        <span class="macro-nonterminal">$crate::App::new</span>(<span class="macro">crate_name!</span>())
-            .version(<span class="macro">crate_version!</span>())
-            .author(<span class="macro">crate_authors!</span>(<span class="macro-nonterminal">$sep</span>))
-            .about(<span class="macro">crate_description!</span>())
-    };
+</span><span class="macro">macro_rules! </span>command {
+    () =&gt; {{
+        <span class="macro-nonterminal">$</span><span class="macro">crate::command!</span>(<span class="macro-nonterminal">$</span><span class="macro">crate::crate_name!</span>())
+    }};
+    (<span class="macro-nonterminal">$name</span>:expr) =&gt; {{
+        <span class="kw">let </span><span class="kw-2">mut </span>cmd = <span class="macro-nonterminal">$crate::Command::new</span>(<span class="macro-nonterminal">$name</span>).version(<span class="macro-nonterminal">$</span><span class="macro">crate::crate_version!</span>());
+
+        <span class="kw">let </span><span class="macro-nonterminal">author </span>= <span class="macro-nonterminal">$</span><span class="macro">crate::crate_authors!</span>();
+        <span class="kw">if </span>!<span class="macro-nonterminal">author</span>.is_empty() {
+            cmd = cmd.author(author)
+        }
+
+        <span class="kw">let </span>about = <span class="macro-nonterminal">$</span><span class="macro">crate::crate_description!</span>();
+        <span class="kw">if </span>!<span class="macro-nonterminal">about</span>.is_empty() {
+            cmd = cmd.about(about)
+        }
+
+        cmd
+    }};
 }
 
-<span class="doccomment">/// Build `App`, `Arg`s, `SubCommand`s and `Group`s with Usage-string like input
-/// but without the associated parsing runtime cost.
+<span class="doccomment">/// Requires `cargo` feature flag to be enabled.
+</span><span class="attr">#[cfg(not(feature = <span class="string">&quot;cargo&quot;</span>))]
+#[macro_export]
+</span><span class="macro">macro_rules! </span>command {
+    () =&gt; {{
+        <span class="macro">compile_error!</span>(<span class="string">&quot;`cargo` feature flag is required&quot;</span>);
+    }};
+    (<span class="macro-nonterminal">$name</span>:expr) =&gt; {{
+        <span class="macro">compile_error!</span>(<span class="string">&quot;`cargo` feature flag is required&quot;</span>);
+    }};
+}
+
+<span class="doccomment">/// Deprecated, replaced with [`clap::command!`][crate::command]
+</span><span class="attr">#[cfg(feature = <span class="string">&quot;cargo&quot;</span>)]
+#[cfg_attr(
+    feature = <span class="string">&quot;deprecated&quot;</span>,
+    deprecated(since = <span class="string">&quot;3.1.0&quot;</span>, note = <span class="string">&quot;Replaced with `clap::command!&quot;</span>)
+)]
+#[macro_export]
+</span><span class="macro">macro_rules! </span>app_from_crate {
+    () =&gt; {{
+        <span class="kw">let </span><span class="kw-2">mut </span>cmd = <span class="macro-nonterminal">$crate::Command::new</span>(<span class="macro-nonterminal">$</span><span class="macro">crate::crate_name!</span>()).<span class="macro-nonterminal">version</span>(<span class="macro-nonterminal">$</span><span class="macro">crate::crate_version!</span>());
+
+        <span class="kw">let </span><span class="macro-nonterminal">author </span>= <span class="macro-nonterminal">$</span><span class="macro">crate::crate_authors!</span>(<span class="string">&quot;, &quot;</span>);
+        <span class="kw">if </span>!<span class="macro-nonterminal">author</span>.is_empty() {
+            cmd = cmd.author(author)
+        }
+
+        <span class="kw">let </span>about = <span class="macro-nonterminal">$</span><span class="macro">crate::crate_description!</span>();
+        <span class="kw">if </span>!<span class="macro-nonterminal">about</span>.is_empty() {
+            cmd = cmd.about(about)
+        }
+
+        cmd
+    }};
+    (<span class="macro-nonterminal">$sep</span>:expr) =&gt; {{
+        <span class="kw">let </span><span class="kw-2">mut </span>cmd = <span class="macro-nonterminal">$crate::Command::new</span>(<span class="macro-nonterminal">$</span><span class="macro">crate::crate_name!</span>()).<span class="macro-nonterminal">version</span>(<span class="macro-nonterminal">$</span><span class="macro">crate::crate_version!</span>());
+
+        <span class="kw">let </span><span class="macro-nonterminal">author </span>= <span class="macro-nonterminal">$</span><span class="macro">crate::crate_authors!</span>(<span class="macro-nonterminal">$sep</span>);
+        <span class="kw">if </span>!author.is_empty() {
+            cmd = cmd.author(author)
+        }
+
+        <span class="kw">let </span>about = <span class="macro-nonterminal">$</span><span class="macro">crate::crate_description!</span>();
+        <span class="kw">if </span>!<span class="macro-nonterminal">about</span>.is_empty() {
+            cmd = cmd.about(about)
+        }
+
+        cmd
+    }};
+}
+
+<span class="attr">#[doc(hidden)]
+#[macro_export]
+</span><span class="macro">macro_rules! </span>arg_impl {
+    ( @string <span class="macro-nonterminal">$val</span>:ident ) =&gt; {
+        <span class="macro">stringify!</span>(<span class="macro-nonterminal">$val</span>)
+    };
+    ( @string <span class="macro-nonterminal">$val</span>:literal ) =&gt; {{
+        <span class="kw">let </span>ident_or_string_literal: <span class="kw-2">&amp;</span>str = <span class="macro-nonterminal">$val</span>;
+        ident_or_string_literal
+    }};
+    ( @string <span class="macro-nonterminal">$val</span>:tt ) =&gt; {
+        <span class="macro">::std::compile_error!</span>(<span class="string">&quot;Only identifiers or string literals supported&quot;</span>);
+    };
+    ( @string ) =&gt; {
+        <span class="prelude-val">None
+    </span>};
+
+    ( @char <span class="macro-nonterminal">$val</span>:ident ) =&gt; {{
+        <span class="kw">let </span>ident_or_char_literal = <span class="macro">stringify!</span>(<span class="macro-nonterminal">$val</span>);
+        <span class="macro">debug_assert_eq!</span>(
+            ident_or_char_literal.len(),
+            <span class="number">1</span>,
+            <span class="string">&quot;Single-letter identifier expected, got {}&quot;</span>,
+            ident_or_char_literal
+        );
+        ident_or_char_literal.chars().next().unwrap()
+    }};
+    ( @char <span class="macro-nonterminal">$val</span>:literal ) =&gt; {{
+        <span class="kw">let </span>ident_or_char_literal: char = <span class="macro-nonterminal">$val</span>;
+        ident_or_char_literal
+    }};
+    ( @char ) =&gt; {{
+        <span class="prelude-val">None
+    </span>}};
+
+    (
+        @arg
+        (<span class="macro-nonterminal">$arg</span>:expr)
+        --<span class="macro-nonterminal">$long</span>:ident
+        $(<span class="macro-nonterminal">$tail</span>:tt)*
+    ) =&gt; {
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{
+            @<span class="macro-nonterminal">arg
+            </span>({
+                <span class="macro">debug_assert_eq!</span>(<span class="macro-nonterminal">$arg</span>.get_value_names(), <span class="prelude-val">None</span>, <span class="string">&quot;Flags should precede values&quot;</span>);
+                <span class="attr">#[allow(deprecated)]
+                </span>{
+                    <span class="macro">debug_assert!</span>(!<span class="macro-nonterminal">$arg</span>.is_multiple_occurrences_set(), <span class="string">&quot;Flags should precede `...`&quot;</span>);
+                }
+
+                <span class="kw">let </span><span class="kw-2">mut </span>arg = <span class="macro-nonterminal">$arg</span>;
+                <span class="kw">let </span>long = <span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{ @<span class="macro-nonterminal">string $long </span>};
+                <span class="kw">if </span>arg.get_id().is_empty() {
+                    arg = arg.id(long);
+                }
+                arg.long(long)
+            })
+            $(<span class="macro-nonterminal">$tail</span>)*
+        }
+    };
+    (
+        @arg
+        (<span class="macro-nonterminal">$arg</span>:expr)
+        --<span class="macro-nonterminal">$long</span>:literal
+        $(<span class="macro-nonterminal">$tail</span>:tt)*
+    ) =&gt; {
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{
+            @<span class="macro-nonterminal">arg
+            </span>({
+                <span class="macro">debug_assert_eq!</span>(<span class="macro-nonterminal">$arg</span>.get_value_names(), <span class="prelude-val">None</span>, <span class="string">&quot;Flags should precede values&quot;</span>);
+                <span class="attr">#[allow(deprecated)]
+                </span>{
+                    <span class="macro">debug_assert!</span>(!<span class="macro-nonterminal">$arg</span>.is_multiple_occurrences_set(), <span class="string">&quot;Flags should precede `...`&quot;</span>);
+                }
+
+                <span class="kw">let </span><span class="kw-2">mut </span>arg = <span class="macro-nonterminal">$arg</span>;
+                <span class="kw">let </span>long = <span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{ @<span class="macro-nonterminal">string $long </span>};
+                <span class="kw">if </span>arg.get_id().is_empty() {
+                    arg = arg.id(long);
+                }
+                arg.long(long)
+            })
+            $(<span class="macro-nonterminal">$tail</span>)*
+        }
+    };
+    (
+        @arg
+        (<span class="macro-nonterminal">$arg</span>:expr)
+        -<span class="macro-nonterminal">$short</span>:ident
+        $(<span class="macro-nonterminal">$tail</span>:tt)*
+    ) =&gt; {
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{
+            @<span class="macro-nonterminal">arg
+            </span>({
+                <span class="macro">debug_assert_eq!</span>(<span class="macro-nonterminal">$arg</span>.get_long(), <span class="prelude-val">None</span>, <span class="string">&quot;Short flags should precede long flags&quot;</span>);
+                <span class="macro">debug_assert_eq!</span>(<span class="macro-nonterminal">$arg</span>.get_value_names(), <span class="prelude-val">None</span>, <span class="string">&quot;Flags should precede values&quot;</span>);
+                <span class="attr">#[allow(deprecated)]
+                </span>{
+                    <span class="macro">debug_assert!</span>(!<span class="macro-nonterminal">$arg</span>.is_multiple_occurrences_set(), <span class="string">&quot;Flags should precede `...`&quot;</span>);
+                }
+
+                <span class="macro-nonterminal">$arg</span>.short(<span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{ @<span class="macro-nonterminal">char $short </span>})
+            })
+            $(<span class="macro-nonterminal">$tail</span>)*
+        }
+    };
+    (
+        @arg
+        (<span class="macro-nonterminal">$arg</span>:expr)
+        -<span class="macro-nonterminal">$short</span>:literal
+        $(<span class="macro-nonterminal">$tail</span>:tt)*
+    ) =&gt; {
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{
+            @<span class="macro-nonterminal">arg
+            </span>({
+                <span class="macro">debug_assert_eq!</span>(<span class="macro-nonterminal">$arg</span>.get_long(), <span class="prelude-val">None</span>, <span class="string">&quot;Short flags should precede long flags&quot;</span>);
+                <span class="macro">debug_assert_eq!</span>(<span class="macro-nonterminal">$arg</span>.get_value_names(), <span class="prelude-val">None</span>, <span class="string">&quot;Flags should precede values&quot;</span>);
+                <span class="attr">#[allow(deprecated)]
+                </span>{
+                    <span class="macro">debug_assert!</span>(!<span class="macro-nonterminal">$arg</span>.is_multiple_occurrences_set(), <span class="string">&quot;Flags should precede `...`&quot;</span>);
+                }
+
+                <span class="macro-nonterminal">$arg</span>.short(<span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{ @<span class="macro-nonterminal">char $short </span>})
+            })
+            $(<span class="macro-nonterminal">$tail</span>)*
+        }
+    };
+    (
+        @arg
+        (<span class="macro-nonterminal">$arg</span>:expr)
+        &lt;<span class="macro-nonterminal">$value_name</span>:ident&gt;
+        $(<span class="macro-nonterminal">$tail</span>:tt)*
+    ) =&gt; {
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{
+            @<span class="macro-nonterminal">arg
+            </span>({
+                <span class="attr">#[allow(deprecated)]
+                </span>{
+                    <span class="macro">debug_assert!</span>(!<span class="macro-nonterminal">$arg</span>.is_multiple_occurrences_set(), <span class="string">&quot;Values should precede `...`&quot;</span>);
+                }
+                <span class="macro">debug_assert_eq!</span>(<span class="macro-nonterminal">$arg</span>.get_value_names(), <span class="prelude-val">None</span>, <span class="string">&quot;Multiple values not yet supported&quot;</span>);
+
+                <span class="kw">let </span><span class="kw-2">mut </span>arg = <span class="macro-nonterminal">$arg</span>;
+
+                arg = arg.required(<span class="bool-val">true</span>);
+                arg = arg.takes_value(<span class="bool-val">true</span>);
+
+                <span class="kw">let </span>value_name = <span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{ @<span class="macro-nonterminal">string $value_name </span>};
+                <span class="kw">if </span>arg.get_id().is_empty() {
+                    arg = arg.id(value_name);
+                }
+                arg.value_name(value_name)
+            })
+            $(<span class="macro-nonterminal">$tail</span>)*
+        }
+    };
+    (
+        @arg
+        (<span class="macro-nonterminal">$arg</span>:expr)
+        &lt;<span class="macro-nonterminal">$value_name</span>:literal&gt;
+        $(<span class="macro-nonterminal">$tail</span>:tt)*
+    ) =&gt; {
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{
+            @<span class="macro-nonterminal">arg
+            </span>({
+                <span class="attr">#[allow(deprecated)]
+                </span>{
+                    <span class="macro">debug_assert!</span>(!<span class="macro-nonterminal">$arg</span>.is_multiple_occurrences_set(), <span class="string">&quot;Values should precede `...`&quot;</span>);
+                }
+                <span class="macro">debug_assert_eq!</span>(<span class="macro-nonterminal">$arg</span>.get_value_names(), <span class="prelude-val">None</span>, <span class="string">&quot;Multiple values not yet supported&quot;</span>);
+
+                <span class="kw">let </span><span class="kw-2">mut </span>arg = <span class="macro-nonterminal">$arg</span>;
+
+                arg = arg.required(<span class="bool-val">true</span>);
+                arg = arg.takes_value(<span class="bool-val">true</span>);
+
+                <span class="kw">let </span>value_name = <span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{ @<span class="macro-nonterminal">string $value_name </span>};
+                <span class="kw">if </span>arg.get_id().is_empty() {
+                    arg = arg.id(value_name);
+                }
+                arg.value_name(value_name)
+            })
+            $(<span class="macro-nonterminal">$tail</span>)*
+        }
+    };
+    (
+        @arg
+        (<span class="macro-nonterminal">$arg</span>:expr)
+        [<span class="macro-nonterminal">$value_name</span>:ident]
+        $(<span class="macro-nonterminal">$tail</span>:tt)*
+    ) =&gt; {
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{
+            @<span class="macro-nonterminal">arg
+            </span>({
+                <span class="attr">#[allow(deprecated)]
+                </span>{
+                    <span class="macro">debug_assert!</span>(!<span class="macro-nonterminal">$arg</span>.is_multiple_occurrences_set(), <span class="string">&quot;Values should precede `...`&quot;</span>);
+                }
+                <span class="macro">debug_assert_eq!</span>(<span class="macro-nonterminal">$arg</span>.get_value_names(), <span class="prelude-val">None</span>, <span class="string">&quot;Multiple values not yet supported&quot;</span>);
+
+                <span class="kw">let </span><span class="kw-2">mut </span>arg = <span class="macro-nonterminal">$arg</span>;
+
+                <span class="kw">if </span>arg.get_long().is_none() &amp;&amp; arg.get_short().is_none() {
+                    arg = arg.required(<span class="bool-val">false</span>);
+                } <span class="kw">else </span>{
+                    arg = arg.min_values(<span class="number">0</span>).max_values(<span class="number">1</span>);
+                }
+                arg = arg.takes_value(<span class="bool-val">true</span>);
+
+                <span class="kw">let </span>value_name = <span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{ @<span class="macro-nonterminal">string $value_name </span>};
+                <span class="kw">if </span>arg.get_id().is_empty() {
+                    arg = arg.id(value_name);
+                }
+                arg.value_name(value_name)
+            })
+            $(<span class="macro-nonterminal">$tail</span>)*
+        }
+    };
+    (
+        @arg
+        (<span class="macro-nonterminal">$arg</span>:expr)
+        [<span class="macro-nonterminal">$value_name</span>:literal]
+        $(<span class="macro-nonterminal">$tail</span>:tt)*
+    ) =&gt; {
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{
+            @<span class="macro-nonterminal">arg
+            </span>({
+                <span class="attr">#[allow(deprecated)]
+                </span>{
+                    <span class="macro">debug_assert!</span>(!<span class="macro-nonterminal">$arg</span>.is_multiple_occurrences_set(), <span class="string">&quot;Values should precede `...`&quot;</span>);
+                }
+                <span class="macro">debug_assert_eq!</span>(<span class="macro-nonterminal">$arg</span>.get_value_names(), <span class="prelude-val">None</span>, <span class="string">&quot;Multiple values not yet supported&quot;</span>);
+
+                <span class="kw">let </span><span class="kw-2">mut </span>arg = <span class="macro-nonterminal">$arg</span>;
+
+                <span class="kw">if </span>arg.get_long().is_none() &amp;&amp; arg.get_short().is_none() {
+                    arg = arg.required(<span class="bool-val">false</span>);
+                } <span class="kw">else </span>{
+                    arg = arg.min_values(<span class="number">0</span>).max_values(<span class="number">1</span>);
+                }
+                arg = arg.takes_value(<span class="bool-val">true</span>);
+
+                <span class="kw">let </span>value_name = <span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{ @<span class="macro-nonterminal">string $value_name </span>};
+                <span class="kw">if </span>arg.get_id().is_empty() {
+                    arg = arg.id(value_name);
+                }
+                arg.value_name(value_name)
+            })
+            $(<span class="macro-nonterminal">$tail</span>)*
+        }
+    };
+    (
+        @arg
+        (<span class="macro-nonterminal">$arg</span>:expr)
+        ...
+        $(<span class="macro-nonterminal">$tail</span>:tt)*
+    ) =&gt; {
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{
+            @<span class="macro-nonterminal">arg
+            </span>({<span class="attr">#[allow(deprecated)]</span>{
+                <span class="macro-nonterminal">$arg</span>.multiple_occurrences(<span class="bool-val">true</span>)
+            }})
+            $(<span class="macro-nonterminal">$tail</span>)*
+        }
+    };
+    (
+        @arg
+        (<span class="macro-nonterminal">$arg</span>:expr)
+        <span class="macro-nonterminal">$help</span>:literal
+    ) =&gt; {
+        <span class="macro-nonterminal">$arg</span>.help(<span class="macro-nonterminal">$help</span>)
+    };
+    (
+        @arg
+        (<span class="macro-nonterminal">$arg</span>:expr)
+    ) =&gt; {
+        <span class="macro-nonterminal">$arg
+    </span>};
+}
+
+<span class="doccomment">/// Create an [`Arg`] from a usage string.
 ///
-/// `clap_app!` also supports several shorthand syntaxes.
+/// Allows creation of basic settings for the [`Arg`].
+///
+/// **NOTE**: Not all settings may be set using the usage string method. Some properties are
+/// only available via the builder pattern.
+///
+/// # Syntax
+///
+/// Usage strings typically following the form:
+///
+/// ```notrust
+/// [explicit name] [short] [long] [value names] [...] [help string]
+/// ```
+///
+/// ### Explicit Name
+///
+/// The name may be either a bare-word or a string, followed by a `:`, like `name:` or
+/// `&quot;name&quot;:`.
+///
+/// *Note:* This is an optional field, if it&#39;s omitted the argument will use one of the additional
+/// fields as the name using the following priority order:
+///
+///  1. Explicit Name
+///  2. Long
+///  3. Value Name
+///
+/// See [`Arg::name`][crate::Arg::name].
+///
+/// ### Short
+///
+/// A short flag is a `-` followed by either a bare-character or quoted character, like `-f` or
+/// `-&#39;f&#39;`.
+///
+/// See [`Arg::short`][crate::Arg::short].
+///
+/// ### Long
+///
+/// A long flag is a `--` followed by either a bare-word or a string, like `--foo` or
+/// `--&quot;foo&quot;`.
+///
+/// See [`Arg::long`][crate::Arg::long].
+///
+/// ### Values (Value Notation)
+///
+/// This is set by placing bare-word between:
+/// - `[]` like `[FOO]`
+///   - Positional argument: optional
+///   - Named argument: optional value
+/// - `&lt;&gt;` like `&lt;FOO&gt;`: required
+///
+/// See [`Arg::value_name`][crate::Arg::value_name].
+///
+/// ### `...`
+///
+/// `...` (three consecutive dots/periods) specifies that this argument may occur multiple
+/// times (not to be confused with multiple values per occurrence).
+///
+/// See [`Arg::multiple_occurrences`][crate::Arg::multiple_occurrences].
+///
+/// ### Help String
+///
+/// The help string is denoted between a pair of double quotes `&quot;&quot;` and may contain any
+/// characters.
 ///
 /// # Examples
 ///
-/// ```no_run
-/// # #[macro_use]
-/// # extern crate clap;
-/// # fn main() {
-/// let matches = clap_app!(myapp =&gt;
-///     (version: &quot;1.0&quot;)
-///     (author: &quot;Kevin K. &lt;kbknapp@gmail.com&gt;&quot;)
-///     (about: &quot;Does awesome things&quot;)
-///     (@arg CONFIG: -c --config +takes_value &quot;Sets a custom config file&quot;)
-///     (@arg INPUT: +required &quot;Sets the input file to use&quot;)
-///     (@arg debug: -d ... &quot;Sets the level of debugging information&quot;)
-///     (@group difficulty =&gt;
-///         (@arg hard: -h --hard &quot;Sets hard mode&quot;)
-///         (@arg normal: -n --normal &quot;Sets normal mode&quot;)
-///         (@arg easy: -e --easy &quot;Sets easy mode&quot;)
-///     )
-///     (@subcommand test =&gt;
-///         (about: &quot;controls testing features&quot;)
-///         (version: &quot;1.3&quot;)
-///         (author: &quot;Someone E. &lt;someone_else@other.com&gt;&quot;)
-///         (@arg verbose: -v --verbose &quot;Print test information verbosely&quot;)
-///     )
-/// )
-/// .get_matches();
-/// # }
+/// ```rust
+/// # use clap::{Command, Arg, arg};
+/// Command::new(&quot;prog&quot;)
+///     .args(&amp;[
+///         arg!(--config &lt;FILE&gt; &quot;a required file for the configuration and no short&quot;),
+///         arg!(-d --debug ... &quot;turns on debugging information and allows multiples&quot;),
+///         arg!([input] &quot;an optional input file to use&quot;)
+/// ])
+/// # ;
 /// ```
-/// # Shorthand Syntax for Args
-///
-/// * A single hyphen followed by a character (such as `-c`) sets the [`Arg::short`]
-/// * A double hyphen followed by a character or word (such as `--config`) sets [`Arg::long`]
-///   * If one wishes to use a [`Arg::long`] with a hyphen inside (i.e. `--config-file`), you
-///     must use `--(&quot;config-file&quot;)` due to limitations of the Rust macro system.
-/// * Three dots (`...`) sets [`Arg::multiple(true)`]
-/// * Angled brackets after either a short or long will set [`Arg::value_name`] and
-/// `Arg::required(true)` such as `--config &lt;FILE&gt;` = `Arg::value_name(&quot;FILE&quot;)` and
-/// `Arg::required(true)`
-/// * Square brackets after either a short or long will set [`Arg::value_name`] and
-/// `Arg::required(false)` such as `--config [FILE]` = `Arg::value_name(&quot;FILE&quot;)` and
-/// `Arg::required(false)`
-/// * There are short hand syntaxes for Arg methods that accept booleans
-///   * A plus sign will set that method to `true` such as `+required` = `Arg::required(true)`
-///   * An exclamation will set that method to `false` such as `!required` = `Arg::required(false)`
-/// * A `#{min, max}` will set [`Arg::min_values(min)`] and [`Arg::max_values(max)`]
-/// * An asterisk (`*`) will set `Arg::required(true)`
-/// * Curly brackets around a `fn` will set [`Arg::validator`] as in `{fn}` = `Arg::validator(fn)`
-/// * An Arg method that accepts a string followed by square brackets will set that method such as
-/// `conflicts_with[FOO]` will set `Arg::conflicts_with(&quot;FOO&quot;)` (note the lack of quotes around
-/// `FOO` in the macro)
-/// * An Arg method that takes a string and can be set multiple times (such as
-/// [`Arg::conflicts_with`]) followed by square brackets and a list of values separated by spaces
-/// will set that method such as `conflicts_with[FOO BAR BAZ]` will set
-/// `Arg::conflicts_with(&quot;FOO&quot;)`, `Arg::conflicts_with(&quot;BAR&quot;)`, and `Arg::conflicts_with(&quot;BAZ&quot;)`
-/// (note the lack of quotes around the values in the macro)
-///
-/// # Shorthand Syntax for Groups
-///
-/// * There are short hand syntaxes for `ArgGroup` methods that accept booleans
-///   * A plus sign will set that method to `true` such as `+required` = `ArgGroup::required(true)`
-///   * An exclamation will set that method to `false` such as `!required` = `ArgGroup::required(false)`
-///
-/// [`Arg::short`]: ./struct.Arg.html#method.short
-/// [`Arg::long`]: ./struct.Arg.html#method.long
-/// [`Arg::multiple(true)`]: ./struct.Arg.html#method.multiple
-/// [`Arg::value_name`]: ./struct.Arg.html#method.value_name
-/// [`Arg::min_values(min)`]: ./struct.Arg.html#method.min_values
-/// [`Arg::max_values(max)`]: ./struct.Arg.html#method.max_values
-/// [`Arg::validator`]: ./struct.Arg.html#method.validator
-/// [`Arg::conflicts_with`]: ./struct.Arg.html#method.conflicts_with
+/// [`Arg`]: ./struct.Arg.html
 </span><span class="attr">#[macro_export]
+</span><span class="macro">macro_rules! </span>arg {
+    ( <span class="macro-nonterminal">$name</span>:ident: $(<span class="macro-nonterminal">$tail</span>:tt)+ ) =&gt; {
+        <span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{
+            @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$crate::Arg::new</span>(<span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{ @<span class="macro-nonterminal">string $name </span>})) $(<span class="macro-nonterminal">$tail</span>)+
+        }
+    };
+    ( $(<span class="macro-nonterminal">$tail</span>:tt)+ ) =&gt; {{
+        <span class="kw">let </span>arg = <span class="macro-nonterminal">$</span><span class="macro">crate::arg_impl! </span>{
+            @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$crate::Arg::default</span>()) $(<span class="macro-nonterminal">$tail</span>)+
+        };
+        <span class="macro">debug_assert!</span>(!arg.get_id().is_empty(), <span class="string">&quot;Without a value or long flag, the `name:` prefix is required&quot;</span>);
+        arg
+    }};
+}
+
+<span class="doccomment">/// Deprecated, replaced with [`clap::Parser`][crate::Parser] and [`clap::arg!`][crate::arg] (Issue clap-rs/clap#2835)
+</span><span class="attr">#[cfg_attr(
+    feature = <span class="string">&quot;deprecated&quot;</span>,
+    deprecated(
+        since = <span class="string">&quot;3.0.0&quot;</span>,
+        note = <span class="string">&quot;Replaced with `clap::Parser` for a declarative API (Issue clap-rs/clap#2835)&quot;
+    </span>)
+)]
+#[doc(hidden)]
+#[macro_export]
 </span><span class="macro">macro_rules! </span>clap_app {
     (@app (<span class="macro-nonterminal">$builder</span>:expr)) =&gt; { <span class="macro-nonterminal">$builder </span>};
     (@app (<span class="macro-nonterminal">$builder</span>:expr) (@arg (<span class="macro-nonterminal">$name</span>:expr): $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) $(<span class="macro-nonterminal">$tt</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @app
-            (<span class="macro-nonterminal">$builder</span>.arg(
-                <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$crate::Arg::with_name</span>(<span class="macro-nonterminal">$name</span>)) (-) $(<span class="macro-nonterminal">$tail</span>)* }))
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">app
+            </span>(<span class="macro-nonterminal">$builder</span>.arg(
+                <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$crate::Arg::new</span>(<span class="macro-nonterminal">$name</span>)) (-) $(<span class="macro-nonterminal">$tail</span>)* }))
             $(<span class="macro-nonterminal">$tt</span>)*
         }
     };
     (@app (<span class="macro-nonterminal">$builder</span>:expr) (@arg <span class="macro-nonterminal">$name</span>:ident: $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) $(<span class="macro-nonterminal">$tt</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @app
-            (<span class="macro-nonterminal">$builder</span>.arg(
-                <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$crate::Arg::with_name</span>(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>))) (-) $(<span class="macro-nonterminal">$tail</span>)* }))
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">app
+            </span>(<span class="macro-nonterminal">$builder</span>.arg(
+                <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$crate::Arg::new</span>(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>))) (-) $(<span class="macro-nonterminal">$tail</span>)* }))
             $(<span class="macro-nonterminal">$tt</span>)*
         }
     };
     (@app (<span class="macro-nonterminal">$builder</span>:expr) (@setting <span class="macro-nonterminal">$setting</span>:ident) $(<span class="macro-nonterminal">$tt</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @app
-            (<span class="macro-nonterminal">$builder</span>.setting(<span class="macro-nonterminal">$crate::AppSettings</span>::<span class="macro-nonterminal">$setting</span>))
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">app
+            </span>(<span class="macro-nonterminal">$builder</span>.setting(<span class="macro-nonterminal">$crate::AppSettings</span>::<span class="macro-nonterminal">$setting</span>))
             $(<span class="macro-nonterminal">$tt</span>)*
         }
     };
 <span class="comment">// Treat the application builder as an argument to set its attributes
     </span>(@app (<span class="macro-nonterminal">$builder</span>:expr) (@attributes $(<span class="macro-nonterminal">$attr</span>:tt)<span class="kw-2">*</span>) $(<span class="macro-nonterminal">$tt</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @app (<span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$builder</span>) $(<span class="macro-nonterminal">$attr</span>)* }) $(<span class="macro-nonterminal">$tt</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">app </span>(<span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$builder</span>) $(<span class="macro-nonterminal">$attr</span>)* }) $(<span class="macro-nonterminal">$tt</span>)* }
     };
     (@app (<span class="macro-nonterminal">$builder</span>:expr) (@group <span class="macro-nonterminal">$name</span>:ident =&gt; $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) $(<span class="macro-nonterminal">$tt</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @app
-            (<span class="macro">clap_app!</span>{ @group (<span class="macro-nonterminal">$builder</span>, <span class="macro-nonterminal">$crate::ArgGroup::with_name</span>(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>))) $(<span class="macro-nonterminal">$tail</span>)* })
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">app
+            </span>(<span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">group </span>(<span class="macro-nonterminal">$builder</span>, <span class="macro-nonterminal">$crate::ArgGroup::new</span>(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>))) $(<span class="macro-nonterminal">$tail</span>)* })
             $(<span class="macro-nonterminal">$tt</span>)*
         }
     };
     (@app (<span class="macro-nonterminal">$builder</span>:expr) (@group <span class="macro-nonterminal">$name</span>:ident !<span class="macro-nonterminal">$ident</span>:ident =&gt; $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) $(<span class="macro-nonterminal">$tt</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @app
-            (<span class="macro">clap_app!</span>{ @group (<span class="macro-nonterminal">$builder</span>, <span class="macro-nonterminal">$crate::ArgGroup::with_name</span>(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>)).<span class="macro-nonterminal">$ident</span>(<span class="bool-val">false</span>)) $(<span class="macro-nonterminal">$tail</span>)* })
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">app
+            </span>(<span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">group </span>(<span class="macro-nonterminal">$builder</span>, <span class="macro-nonterminal">$crate::ArgGroup::new</span>(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>)).<span class="macro-nonterminal">$ident</span>(<span class="bool-val">false</span>)) $(<span class="macro-nonterminal">$tail</span>)* })
             $(<span class="macro-nonterminal">$tt</span>)*
         }
     };
     (@app (<span class="macro-nonterminal">$builder</span>:expr) (@group <span class="macro-nonterminal">$name</span>:ident +<span class="macro-nonterminal">$ident</span>:ident =&gt; $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) $(<span class="macro-nonterminal">$tt</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @app
-            (<span class="macro">clap_app!</span>{ @group (<span class="macro-nonterminal">$builder</span>, <span class="macro-nonterminal">$crate::ArgGroup::with_name</span>(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>)).<span class="macro-nonterminal">$ident</span>(<span class="bool-val">true</span>)) $(<span class="macro-nonterminal">$tail</span>)* })
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">app
+            </span>(<span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">group </span>(<span class="macro-nonterminal">$builder</span>, <span class="macro-nonterminal">$crate::ArgGroup::new</span>(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>)).<span class="macro-nonterminal">$ident</span>(<span class="bool-val">true</span>)) $(<span class="macro-nonterminal">$tail</span>)* })
             $(<span class="macro-nonterminal">$tt</span>)*
         }
     };
 <span class="comment">// Handle subcommand creation
     </span>(@app (<span class="macro-nonterminal">$builder</span>:expr) (@subcommand <span class="macro-nonterminal">$name</span>:ident =&gt; $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) $(<span class="macro-nonterminal">$tt</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @app
-            (<span class="macro-nonterminal">$builder</span>.subcommand(
-                <span class="macro">clap_app!</span>{ @app (<span class="macro-nonterminal">$crate::SubCommand::with_name</span>(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>))) $(<span class="macro-nonterminal">$tail</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">app
+            </span>(<span class="macro-nonterminal">$builder</span>.subcommand(
+                <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">app </span>(<span class="macro-nonterminal">$crate::Command::new</span>(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>))) $(<span class="macro-nonterminal">$tail</span>)* }
             ))
             $(<span class="macro-nonterminal">$tt</span>)*
         }
     };
 <span class="comment">// Yaml like function calls - used for setting various meta directly against the app
     </span>(@app (<span class="macro-nonterminal">$builder</span>:expr) (<span class="macro-nonterminal">$ident</span>:ident: $(<span class="macro-nonterminal">$v</span>:expr),<span class="kw-2">*</span>) $(<span class="macro-nonterminal">$tt</span>:tt)<span class="kw-2">*</span>) =&gt; {
-<span class="comment">// clap_app!{ @app ($builder.$ident($($v),*)) $($tt)* }
-        </span><span class="macro">clap_app!</span>{ @app
-            (<span class="macro-nonterminal">$builder</span>.<span class="macro-nonterminal">$ident</span>($(<span class="macro-nonterminal">$v</span>),<span class="kw-2">*</span>))
+<span class="comment">// $crate::clap_app!{ @app ($builder.$ident($($v),*)) $($tt)* }
+        </span><span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">app
+            </span>(<span class="macro-nonterminal">$builder</span>.<span class="macro-nonterminal">$ident</span>($(<span class="macro-nonterminal">$v</span>),<span class="kw-2">*</span>))
             $(<span class="macro-nonterminal">$tt</span>)*
         }
     };
@@ -1859,11 +1907,11 @@
     </span>(@group (<span class="macro-nonterminal">$builder</span>:expr, <span class="macro-nonterminal">$group</span>:expr)) =&gt; { <span class="macro-nonterminal">$builder</span>.group(<span class="macro-nonterminal">$group</span>) };
     <span class="comment">// Treat the group builder as an argument to set its attributes
     </span>(@group (<span class="macro-nonterminal">$builder</span>:expr, <span class="macro-nonterminal">$group</span>:expr) (@attributes $(<span class="macro-nonterminal">$attr</span>:tt)<span class="kw-2">*</span>) $(<span class="macro-nonterminal">$tt</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @group (<span class="macro-nonterminal">$builder</span>, <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$group</span>) (-) $(<span class="macro-nonterminal">$attr</span>)* }) $(<span class="macro-nonterminal">$tt</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">group </span>(<span class="macro-nonterminal">$builder</span>, <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$group</span>) (-) $(<span class="macro-nonterminal">$attr</span>)* }) $(<span class="macro-nonterminal">$tt</span>)* }
     };
     (@group (<span class="macro-nonterminal">$builder</span>:expr, <span class="macro-nonterminal">$group</span>:expr) (@arg <span class="macro-nonterminal">$name</span>:ident: $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) $(<span class="macro-nonterminal">$tt</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @group
-            (<span class="macro">clap_app!</span>{ @app (<span class="macro-nonterminal">$builder</span>) (@arg <span class="macro-nonterminal">$name</span>: $(<span class="macro-nonterminal">$tail</span>)<span class="kw-2">*</span>) },
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">group
+            </span>(<span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">app </span>(<span class="macro-nonterminal">$builder</span>) (@arg <span class="macro-nonterminal">$name</span>: $(<span class="macro-nonterminal">$tail</span>)<span class="kw-2">*</span>) },
              <span class="macro-nonterminal">$group</span>.arg(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>)))
             $(<span class="macro-nonterminal">$tt</span>)*
         }
@@ -1873,389 +1921,197 @@
     </span>(@arg (<span class="macro-nonterminal">$arg</span>:expr) <span class="macro-nonterminal">$modes</span>:tt) =&gt; { <span class="macro-nonterminal">$arg </span>};
 <span class="comment">// Shorthand tokens influenced by the usage_string
     </span>(@arg (<span class="macro-nonterminal">$arg</span>:expr) <span class="macro-nonterminal">$modes</span>:tt --(<span class="macro-nonterminal">$long</span>:expr) $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$arg</span>.long(<span class="macro-nonterminal">$long</span>)) <span class="macro-nonterminal">$modes </span>$(<span class="macro-nonterminal">$tail</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$arg</span>.long(<span class="macro-nonterminal">$long</span>)) <span class="macro-nonterminal">$modes </span>$(<span class="macro-nonterminal">$tail</span>)* }
     };
     (@arg (<span class="macro-nonterminal">$arg</span>:expr) <span class="macro-nonterminal">$modes</span>:tt --<span class="macro-nonterminal">$long</span>:ident $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$arg</span>.long(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$long</span>))) <span class="macro-nonterminal">$modes </span>$(<span class="macro-nonterminal">$tail</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$arg</span>.long(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$long</span>))) <span class="macro-nonterminal">$modes </span>$(<span class="macro-nonterminal">$tail</span>)* }
     };
     (@arg (<span class="macro-nonterminal">$arg</span>:expr) <span class="macro-nonterminal">$modes</span>:tt -<span class="macro-nonterminal">$short</span>:ident $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$arg</span>.short(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$short</span>))) <span class="macro-nonterminal">$modes </span>$(<span class="macro-nonterminal">$tail</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$arg</span>.short(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$short</span>).chars().next().unwrap())) <span class="macro-nonterminal">$modes </span>$(<span class="macro-nonterminal">$tail</span>)* }
     };
     (@arg (<span class="macro-nonterminal">$arg</span>:expr) (-) &lt;<span class="macro-nonterminal">$var</span>:ident&gt; $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$arg</span>.value_name(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$var</span>))) (+) +takes_value +required $(<span class="macro-nonterminal">$tail</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$arg</span>.value_name(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$var</span>))) (+) +takes_value +required $(<span class="macro-nonterminal">$tail</span>)* }
     };
     (@arg (<span class="macro-nonterminal">$arg</span>:expr) (+) &lt;<span class="macro-nonterminal">$var</span>:ident&gt; $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$arg</span>.value_name(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$var</span>))) (+) $(<span class="macro-nonterminal">$tail</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$arg</span>.value_name(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$var</span>))) (+) $(<span class="macro-nonterminal">$tail</span>)* }
     };
     (@arg (<span class="macro-nonterminal">$arg</span>:expr) (-) [<span class="macro-nonterminal">$var</span>:ident] $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$arg</span>.value_name(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$var</span>))) (+) +takes_value $(<span class="macro-nonterminal">$tail</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$arg</span>.value_name(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$var</span>))) (+) +takes_value $(<span class="macro-nonterminal">$tail</span>)* }
     };
     (@arg (<span class="macro-nonterminal">$arg</span>:expr) (+) [<span class="macro-nonterminal">$var</span>:ident] $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$arg</span>.value_name(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$var</span>))) (+) $(<span class="macro-nonterminal">$tail</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$arg</span>.value_name(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$var</span>))) (+) $(<span class="macro-nonterminal">$tail</span>)* }
     };
     (@arg (<span class="macro-nonterminal">$arg</span>:expr) <span class="macro-nonterminal">$modes</span>:tt ... $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$arg</span>) <span class="macro-nonterminal">$modes </span>+multiple $(<span class="macro-nonterminal">$tail</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$arg</span>) <span class="macro-nonterminal">$modes </span>+multiple +takes_value $(<span class="macro-nonterminal">$tail</span>)* }
     };
 <span class="comment">// Shorthand magic
     </span>(@arg (<span class="macro-nonterminal">$arg</span>:expr) <span class="macro-nonterminal">$modes</span>:tt #{<span class="macro-nonterminal">$n</span>:expr, <span class="macro-nonterminal">$m</span>:expr} $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$arg</span>) <span class="macro-nonterminal">$modes </span>min_values(<span class="macro-nonterminal">$n</span>) max_values(<span class="macro-nonterminal">$m</span>) $(<span class="macro-nonterminal">$tail</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$arg</span>) <span class="macro-nonterminal">$modes </span>min_values(<span class="macro-nonterminal">$n</span>) max_values(<span class="macro-nonterminal">$m</span>) $(<span class="macro-nonterminal">$tail</span>)* }
     };
     (@arg (<span class="macro-nonterminal">$arg</span>:expr) <span class="macro-nonterminal">$modes</span>:tt * $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$arg</span>) <span class="macro-nonterminal">$modes </span>+required $(<span class="macro-nonterminal">$tail</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$arg</span>) <span class="macro-nonterminal">$modes </span>+required $(<span class="macro-nonterminal">$tail</span>)* }
     };
 <span class="comment">// !foo -&gt; .foo(false)
     </span>(@arg (<span class="macro-nonterminal">$arg</span>:expr) <span class="macro-nonterminal">$modes</span>:tt !<span class="macro-nonterminal">$ident</span>:ident $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$arg</span>.<span class="macro-nonterminal">$ident</span>(<span class="bool-val">false</span>)) <span class="macro-nonterminal">$modes </span>$(<span class="macro-nonterminal">$tail</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$arg</span>.<span class="macro-nonterminal">$ident</span>(<span class="bool-val">false</span>)) <span class="macro-nonterminal">$modes </span>$(<span class="macro-nonterminal">$tail</span>)* }
     };
 <span class="comment">// +foo -&gt; .foo(true)
     </span>(@arg (<span class="macro-nonterminal">$arg</span>:expr) <span class="macro-nonterminal">$modes</span>:tt +<span class="macro-nonterminal">$ident</span>:ident $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$arg</span>.<span class="macro-nonterminal">$ident</span>(<span class="bool-val">true</span>)) <span class="macro-nonterminal">$modes </span>$(<span class="macro-nonterminal">$tail</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$arg</span>.<span class="macro-nonterminal">$ident</span>(<span class="bool-val">true</span>)) <span class="macro-nonterminal">$modes </span>$(<span class="macro-nonterminal">$tail</span>)* }
     };
 <span class="comment">// Validator
     </span>(@arg (<span class="macro-nonterminal">$arg</span>:expr) <span class="macro-nonterminal">$modes</span>:tt {<span class="macro-nonterminal">$fn_</span>:expr} $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$arg</span>.validator(<span class="macro-nonterminal">$fn_</span>)) <span class="macro-nonterminal">$modes </span>$(<span class="macro-nonterminal">$tail</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$arg</span>.validator(<span class="macro-nonterminal">$fn_</span>)) <span class="macro-nonterminal">$modes </span>$(<span class="macro-nonterminal">$tail</span>)* }
     };
     (@as_expr <span class="macro-nonterminal">$expr</span>:expr) =&gt; { <span class="macro-nonterminal">$expr </span>};
 <span class="comment">// Help
-    </span>(@arg (<span class="macro-nonterminal">$arg</span>:expr) <span class="macro-nonterminal">$modes</span>:tt <span class="macro-nonterminal">$desc</span>:tt) =&gt; { <span class="macro-nonterminal">$arg</span>.help(<span class="macro">clap_app!</span>{ @as_expr <span class="macro-nonterminal">$desc </span>}) };
+    </span>(@arg (<span class="macro-nonterminal">$arg</span>:expr) <span class="macro-nonterminal">$modes</span>:tt <span class="macro-nonterminal">$desc</span>:tt) =&gt; { <span class="macro-nonterminal">$arg</span>.help(<span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">as_expr $desc </span>}) };
 <span class="comment">// Handle functions that need to be called multiple times for each argument
     </span>(@arg (<span class="macro-nonterminal">$arg</span>:expr) <span class="macro-nonterminal">$modes</span>:tt <span class="macro-nonterminal">$ident</span>:ident[$(<span class="macro-nonterminal">$target</span>:ident)<span class="kw-2">*</span>] $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$arg </span>$( .<span class="macro-nonterminal">$ident</span>(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$target</span>)) )<span class="kw-2">*</span>) <span class="macro-nonterminal">$modes </span>$(<span class="macro-nonterminal">$tail</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$arg </span>$( .<span class="macro-nonterminal">$ident</span>(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$target</span>)) )<span class="kw-2">*</span>) <span class="macro-nonterminal">$modes </span>$(<span class="macro-nonterminal">$tail</span>)* }
     };
 <span class="comment">// Inherit builder&#39;s functions, e.g. `index(2)`, `requires_if(&quot;val&quot;, &quot;arg&quot;)`
     </span>(@arg (<span class="macro-nonterminal">$arg</span>:expr) <span class="macro-nonterminal">$modes</span>:tt <span class="macro-nonterminal">$ident</span>:ident($(<span class="macro-nonterminal">$expr</span>:expr),<span class="kw-2">*</span>) $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$arg</span>.<span class="macro-nonterminal">$ident</span>($(<span class="macro-nonterminal">$expr</span>),<span class="kw-2">*</span>)) <span class="macro-nonterminal">$modes </span>$(<span class="macro-nonterminal">$tail</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$arg</span>.<span class="macro-nonterminal">$ident</span>($(<span class="macro-nonterminal">$expr</span>),<span class="kw-2">*</span>)) <span class="macro-nonterminal">$modes </span>$(<span class="macro-nonterminal">$tail</span>)* }
     };
 <span class="comment">// Inherit builder&#39;s functions with trailing comma, e.g. `index(2,)`, `requires_if(&quot;val&quot;, &quot;arg&quot;,)`
     </span>(@arg (<span class="macro-nonterminal">$arg</span>:expr) <span class="macro-nonterminal">$modes</span>:tt <span class="macro-nonterminal">$ident</span>:ident($(<span class="macro-nonterminal">$expr</span>:expr,)<span class="kw-2">*</span>) $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @arg (<span class="macro-nonterminal">$arg</span>.<span class="macro-nonterminal">$ident</span>($(<span class="macro-nonterminal">$expr</span>),<span class="kw-2">*</span>)) <span class="macro-nonterminal">$modes </span>$(<span class="macro-nonterminal">$tail</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">arg </span>(<span class="macro-nonterminal">$arg</span>.<span class="macro-nonterminal">$ident</span>($(<span class="macro-nonterminal">$expr</span>),<span class="kw-2">*</span>)) <span class="macro-nonterminal">$modes </span>$(<span class="macro-nonterminal">$tail</span>)* }
     };
 
 <span class="comment">// Build a subcommand outside of an app.
     </span>(@subcommand <span class="macro-nonterminal">$name</span>:ident =&gt; $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="macro">clap_app!</span>{ @app (<span class="macro-nonterminal">$crate::SubCommand::with_name</span>(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>))) $(<span class="macro-nonterminal">$tail</span>)* }
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">app </span>(<span class="macro-nonterminal">$crate::Command::new</span>(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>))) $(<span class="macro-nonterminal">$tail</span>)* }
     };
 <span class="comment">// Start the magic
     </span>((<span class="macro-nonterminal">$name</span>:expr) =&gt; $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {{
-        <span class="macro">clap_app!</span>{ @app (<span class="macro-nonterminal">$crate::App::new</span>(<span class="macro-nonterminal">$name</span>)) $(<span class="macro-nonterminal">$tail</span>)<span class="kw-2">*</span>}
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">app </span>(<span class="macro-nonterminal">$crate::Command::new</span>(<span class="macro-nonterminal">$name</span>)) $(<span class="macro-nonterminal">$tail</span>)<span class="kw-2">*</span>}
     }};
 
     (<span class="macro-nonterminal">$name</span>:ident =&gt; $(<span class="macro-nonterminal">$tail</span>:tt)<span class="kw-2">*</span>) =&gt; {{
-        <span class="macro">clap_app!</span>{ @app (<span class="macro-nonterminal">$crate::App::new</span>(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>))) $(<span class="macro-nonterminal">$tail</span>)<span class="kw-2">*</span>}
+        <span class="macro-nonterminal">$</span><span class="macro">crate::clap_app!</span>{ @<span class="macro-nonterminal">app </span>(<span class="macro-nonterminal">$crate::Command::new</span>(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>))) $(<span class="macro-nonterminal">$tail</span>)<span class="kw-2">*</span>}
     }};
 }
 
 <span class="macro">macro_rules! </span>impl_settings {
-    (<span class="macro-nonterminal">$n</span>:ident, $(<span class="macro-nonterminal">$v</span>:ident =&gt; <span class="macro-nonterminal">$c</span>:path),+) =&gt; {
-        <span class="kw">pub fn </span>set(<span class="kw-2">&amp;mut </span><span class="self">self</span>, s: <span class="macro-nonterminal">$n</span>) {
-            <span class="kw">match </span>s {
-                $(<span class="macro-nonterminal">$n</span>::<span class="macro-nonterminal">$v </span>=&gt; <span class="self">self</span>.<span class="number">0</span>.insert(<span class="macro-nonterminal">$c</span>)),+
+    (<span class="macro-nonterminal">$settings</span>:ident, <span class="macro-nonterminal">$flags</span>:ident,
+        $(
+            $(<span class="attr">#[<span class="macro-nonterminal">$inner</span>:ident $(<span class="macro-nonterminal">$args</span>:tt)<span class="kw-2">*</span>]</span>)*
+            <span class="macro-nonterminal">$setting</span>:ident =&gt; <span class="macro-nonterminal">$flag</span>:path
+        ),+
+    ) =&gt; {
+        <span class="kw">impl </span><span class="macro-nonterminal">$flags </span>{
+            <span class="attr">#[allow(dead_code)]
+            </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>empty() -&gt; <span class="self">Self </span>{
+                <span class="macro-nonterminal">$flags</span>(Flags::empty())
+            }
+
+            <span class="attr">#[allow(dead_code)]
+            </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: <span class="self">Self</span>) {
+                <span class="self">self</span>.<span class="number">0</span>.insert(rhs.<span class="number">0</span>);
+            }
+
+            <span class="attr">#[allow(dead_code)]
+            </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: <span class="self">Self</span>) {
+                <span class="self">self</span>.<span class="number">0</span>.remove(rhs.<span class="number">0</span>);
+            }
+
+            <span class="attr">#[allow(dead_code)]
+            </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>set(<span class="kw-2">&amp;mut </span><span class="self">self</span>, s: <span class="macro-nonterminal">$settings</span>) {
+                <span class="attr">#[allow(deprecated)]  </span><span class="comment">// some Settings might be deprecated
+                </span><span class="kw">match </span>s {
+                    $(
+                        $(<span class="attr">#[<span class="macro-nonterminal">$inner </span>$(<span class="macro-nonterminal">$args</span>)<span class="kw-2">*</span>]</span>)*
+                        <span class="macro-nonterminal">$settings</span>::<span class="macro-nonterminal">$setting </span>=&gt; <span class="self">self</span>.<span class="number">0</span>.insert(<span class="macro-nonterminal">$flag</span>),
+                    )*
+                }
+            }
+
+            <span class="attr">#[allow(dead_code)]
+            </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>unset(<span class="kw-2">&amp;mut </span><span class="self">self</span>, s: <span class="macro-nonterminal">$settings</span>) {
+                <span class="attr">#[allow(deprecated)]  </span><span class="comment">// some Settings might be deprecated
+                </span><span class="kw">match </span>s {
+                    $(
+                        $(<span class="attr">#[<span class="macro-nonterminal">$inner </span>$(<span class="macro-nonterminal">$args</span>)<span class="kw-2">*</span>]</span>)*
+                        <span class="macro-nonterminal">$settings</span>::<span class="macro-nonterminal">$setting </span>=&gt; <span class="self">self</span>.<span class="number">0</span>.remove(<span class="macro-nonterminal">$flag</span>),
+                    )*
+                }
+            }
+
+            <span class="attr">#[allow(dead_code)]
+            </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>is_set(<span class="kw-2">&amp;</span><span class="self">self</span>, s: <span class="macro-nonterminal">$settings</span>) -&gt; bool {
+                <span class="attr">#[allow(deprecated)]  </span><span class="comment">// some Settings might be deprecated
+                </span><span class="kw">match </span>s {
+                    $(
+                        $(<span class="attr">#[<span class="macro-nonterminal">$inner </span>$(<span class="macro-nonterminal">$args</span>)<span class="kw-2">*</span>]</span>)*
+                        <span class="macro-nonterminal">$settings</span>::<span class="macro-nonterminal">$setting </span>=&gt; <span class="self">self</span>.<span class="number">0</span>.contains(<span class="macro-nonterminal">$flag</span>),
+                    )*
+                }
             }
         }
 
-        <span class="kw">pub fn </span>unset(<span class="kw-2">&amp;mut </span><span class="self">self</span>, s: <span class="macro-nonterminal">$n</span>) {
-            <span class="kw">match </span>s {
-                $(<span class="macro-nonterminal">$n</span>::<span class="macro-nonterminal">$v </span>=&gt; <span class="self">self</span>.<span class="number">0</span>.remove(<span class="macro-nonterminal">$c</span>)),+
+        <span class="kw">impl </span>BitOr <span class="kw">for </span><span class="macro-nonterminal">$flags </span>{
+            <span class="kw">type </span>Output = <span class="self">Self</span>;
+
+            <span class="kw">fn </span>bitor(<span class="kw-2">mut </span><span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
+                <span class="self">self</span>.<span class="number">0</span>.insert(rhs.<span class="number">0</span>);
+                <span class="self">self
+            </span>}
+        }
+
+        <span class="kw">impl </span>From&lt;<span class="macro-nonterminal">$settings</span>&gt; <span class="kw">for </span><span class="macro-nonterminal">$flags </span>{
+            <span class="kw">fn </span>from(setting: <span class="macro-nonterminal">$settings</span>) -&gt; <span class="self">Self </span>{
+                <span class="kw">let </span><span class="kw-2">mut </span>flags = <span class="macro-nonterminal">$flags::empty</span>();
+                flags.set(setting);
+                flags
             }
         }
 
-        <span class="kw">pub fn </span>is_set(<span class="kw-2">&amp;</span><span class="self">self</span>, s: <span class="macro-nonterminal">$n</span>) -&gt; bool {
-            <span class="kw">match </span>s {
-                $(<span class="macro-nonterminal">$n</span>::<span class="macro-nonterminal">$v </span>=&gt; <span class="self">self</span>.<span class="number">0</span>.contains(<span class="macro-nonterminal">$c</span>)),+
+        <span class="kw">impl </span>BitOr&lt;<span class="macro-nonterminal">$settings</span>&gt; <span class="kw">for </span><span class="macro-nonterminal">$flags </span>{
+            <span class="kw">type </span>Output = <span class="self">Self</span>;
+
+            <span class="kw">fn </span>bitor(<span class="kw-2">mut </span><span class="self">self</span>, rhs: <span class="macro-nonterminal">$settings</span>) -&gt; <span class="self">Self</span>::Output {
+                <span class="self">self</span>.set(rhs);
+                <span class="self">self
+            </span>}
+        }
+
+        <span class="kw">impl </span>BitOr <span class="kw">for </span><span class="macro-nonterminal">$settings </span>{
+            <span class="kw">type </span>Output = <span class="macro-nonterminal">$flags</span>;
+
+            <span class="kw">fn </span>bitor(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
+                <span class="kw">let </span><span class="kw-2">mut </span>flags = <span class="macro-nonterminal">$flags::empty</span>();
+                flags.set(<span class="self">self</span>);
+                flags.set(rhs);
+                flags
             }
         }
-    };
+    }
 }
 
 <span class="comment">// Convenience for writing to stderr thanks to https://github.com/BurntSushi
-</span><span class="macro">macro_rules! </span>wlnerr(
-    (@nopanic $(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; ({
-        <span class="kw">use </span>std::io::{Write, stderr};
-        <span class="kw">let _ </span>= <span class="macro">writeln!</span>(<span class="kw-2">&amp;mut </span>stderr().lock(), $(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>);
-    });
+</span><span class="macro">macro_rules! </span>wlnerr {
     ($(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; ({
         <span class="kw">use </span>std::io::{Write, stderr};
         <span class="macro">writeln!</span>(<span class="kw-2">&amp;mut </span>stderr(), $(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>).ok();
     })
-);
+}
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;debug&quot;</span>)]
-#[cfg_attr(feature = <span class="string">&quot;debug&quot;</span>, macro_use)]
-#[cfg_attr(feature = <span class="string">&quot;debug&quot;</span>, allow(unused_macros))]
-</span><span class="kw">mod </span>debug_macros {
-    <span class="macro">macro_rules! </span>debugln {
-        (<span class="macro-nonterminal">$fmt</span>:expr) =&gt; (<span class="macro">println!</span>(<span class="macro">concat!</span>(<span class="string">&quot;DEBUG:clap:&quot;</span>, <span class="macro-nonterminal">$fmt</span>)));
-        (<span class="macro-nonterminal">$fmt</span>:expr, $(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; (<span class="macro">println!</span>(<span class="macro">concat!</span>(<span class="string">&quot;DEBUG:clap:&quot;</span>,<span class="macro-nonterminal">$fmt</span>), $(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
-    }
-    <span class="macro">macro_rules! </span>sdebugln {
-        (<span class="macro-nonterminal">$fmt</span>:expr) =&gt; (<span class="macro">println!</span>(<span class="macro-nonterminal">$fmt</span>));
-        (<span class="macro-nonterminal">$fmt</span>:expr, $(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; (<span class="macro">println!</span>(<span class="macro-nonterminal">$fmt</span>, $(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
-    }
-    <span class="macro">macro_rules! </span>debug {
-        (<span class="macro-nonterminal">$fmt</span>:expr) =&gt; (<span class="macro">print!</span>(<span class="macro">concat!</span>(<span class="string">&quot;DEBUG:clap:&quot;</span>, <span class="macro-nonterminal">$fmt</span>)));
-        (<span class="macro-nonterminal">$fmt</span>:expr, $(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; (<span class="macro">print!</span>(<span class="macro">concat!</span>(<span class="string">&quot;DEBUG:clap:&quot;</span>,<span class="macro-nonterminal">$fmt</span>), $(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
-    }
-    <span class="macro">macro_rules! </span>sdebug {
-        (<span class="macro-nonterminal">$fmt</span>:expr) =&gt; (<span class="macro">print!</span>(<span class="macro-nonterminal">$fmt</span>));
-        (<span class="macro-nonterminal">$fmt</span>:expr, $(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; (<span class="macro">print!</span>(<span class="macro-nonterminal">$fmt</span>, $(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
-    }
+</span><span class="macro">macro_rules! </span>debug {
+    ($(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; ({
+        <span class="kw">let </span>prefix = <span class="macro">format!</span>(<span class="string">&quot;[{:&gt;w$}] \t&quot;</span>, <span class="macro">module_path!</span>(), w = <span class="number">28</span>);
+        <span class="kw">let </span>body = <span class="macro">format!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>color = <span class="macro-nonterminal">$crate::output::fmt::Colorizer::new</span>(<span class="macro-nonterminal">$crate::output::fmt::Stream::Stderr</span>, <span class="macro-nonterminal">$crate::ColorChoice::Auto</span>);
+        color.hint(prefix);
+        color.hint(body);
+        color.none(<span class="string">&quot;\n&quot;</span>);
+        <span class="kw">let _ </span>= color.print();
+    })
 }
 
 <span class="attr">#[cfg(not(feature = <span class="string">&quot;debug&quot;</span>))]
-#[cfg_attr(not(feature = <span class="string">&quot;debug&quot;</span>), macro_use)]
-</span><span class="kw">mod </span>debug_macros {
-    <span class="macro">macro_rules! </span>debugln {
-        (<span class="macro-nonterminal">$fmt</span>:expr) =&gt; {};
-        (<span class="macro-nonterminal">$fmt</span>:expr, $(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; {};
-    }
-    <span class="macro">macro_rules! </span>sdebugln {
-        (<span class="macro-nonterminal">$fmt</span>:expr) =&gt; {};
-        (<span class="macro-nonterminal">$fmt</span>:expr, $(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; {};
-    }
-    <span class="macro">macro_rules! </span>debug {
-        (<span class="macro-nonterminal">$fmt</span>:expr) =&gt; {};
-        (<span class="macro-nonterminal">$fmt</span>:expr, $(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; {};
-    }
-}
-
-<span class="comment">// Helper/deduplication macro for printing the correct number of spaces in help messages
-// used in:
-//    src/args/arg_builder/*.rs
-//    src/app/mod.rs
-</span><span class="macro">macro_rules! </span>write_nspaces {
-    (<span class="macro-nonterminal">$dst</span>:expr, <span class="macro-nonterminal">$num</span>:expr) =&gt; {{
-        <span class="macro">debugln!</span>(<span class="string">&quot;write_spaces!: num={}&quot;</span>, <span class="macro-nonterminal">$num</span>);
-        <span class="kw">for _ in </span><span class="number">0</span>..<span class="macro-nonterminal">$num </span>{
-            <span class="macro-nonterminal">$dst</span>.write_all(<span class="string">b&quot; &quot;</span>)<span class="question-mark">?</span>;
-        }
-    }};
-}
-
-<span class="comment">// convenience macro for remove an item from a vec
-//macro_rules! vec_remove_all {
-//    ($vec:expr, $to_rem:expr) =&gt; {
-//        debugln!(&quot;vec_remove_all! to_rem={:?}&quot;, $to_rem);
-//        for i in (0 .. $vec.len()).rev() {
-//            let should_remove = $to_rem.any(|name| name == &amp;$vec[i]);
-//            if should_remove { $vec.swap_remove(i); }
-//        }
-//    };
-//}
-</span><span class="macro">macro_rules! </span>find_from {
-    (<span class="macro-nonterminal">$_self</span>:expr, <span class="macro-nonterminal">$arg_name</span>:expr, <span class="macro-nonterminal">$from</span>:ident, <span class="macro-nonterminal">$matcher</span>:expr) =&gt; {{
-        <span class="kw">let </span><span class="kw-2">mut </span>ret = <span class="prelude-val">None</span>;
-        <span class="kw">for </span>k <span class="kw">in </span><span class="macro-nonterminal">$matcher</span>.arg_names() {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(f) = <span class="macro">find_by_name!</span>(<span class="macro-nonterminal">$_self</span>, k, flags, iter) {
-                <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>v) = f.<span class="macro-nonterminal">$from</span>() {
-                    <span class="kw">if </span>v.contains(<span class="macro-nonterminal">$arg_name</span>) {
-                        ret = <span class="prelude-val">Some</span>(f.to_string());
-                    }
-                }
-            }
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(o) = <span class="macro">find_by_name!</span>(<span class="macro-nonterminal">$_self</span>, k, opts, iter) {
-                <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>v) = o.<span class="macro-nonterminal">$from</span>() {
-                    <span class="kw">if </span>v.contains(<span class="kw-2">&amp;</span><span class="macro-nonterminal">$arg_name</span>) {
-                        ret = <span class="prelude-val">Some</span>(o.to_string());
-                    }
-                }
-            }
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(pos) = <span class="macro">find_by_name!</span>(<span class="macro-nonterminal">$_self</span>, k, positionals, values) {
-                <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>v) = pos.<span class="macro-nonterminal">$from</span>() {
-                    <span class="kw">if </span>v.contains(<span class="macro-nonterminal">$arg_name</span>) {
-                        ret = <span class="prelude-val">Some</span>(pos.b.name.to_owned());
-                    }
-                }
-            }
-        }
-        ret
-    }};
-}
-
-<span class="comment">//macro_rules! find_name_from {
-//    ($_self:expr, $arg_name:expr, $from:ident, $matcher:expr) =&gt; {{
-//        let mut ret = None;
-//        for k in $matcher.arg_names() {
-//            if let Some(f) = find_by_name!($_self, k, flags, iter) {
-//                if let Some(ref v) = f.$from() {
-//                    if v.contains($arg_name) {
-//                        ret = Some(f.b.name);
-//                    }
-//                }
-//            }
-//            if let Some(o) = find_by_name!($_self, k, opts, iter) {
-//                if let Some(ref v) = o.$from() {
-//                    if v.contains(&amp;$arg_name) {
-//                        ret = Some(o.b.name);
-//                    }
-//                }
-//            }
-//            if let Some(pos) = find_by_name!($_self, k, positionals, values) {
-//                if let Some(ref v) = pos.$from() {
-//                    if v.contains($arg_name) {
-//                        ret = Some(pos.b.name);
-//                    }
-//                }
-//            }
-//        }
-//        ret
-//    }};
-//}
-
-</span><span class="macro">macro_rules! </span>find_any_by_name {
-    (<span class="macro-nonterminal">$p</span>:expr, <span class="macro-nonterminal">$name</span>:expr) =&gt; {{
-        <span class="kw">fn </span>as_trait_obj&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, T: AnyArg&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt;&gt;(x: <span class="kw-2">&amp;</span>T) -&gt; <span class="kw-2">&amp;</span>AnyArg&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt; {
-            x
-        }
-        <span class="macro">find_by_name!</span>(<span class="macro-nonterminal">$p</span>, <span class="macro-nonterminal">$name</span>, flags, iter)
-            .map(as_trait_obj)
-            .or(<span class="macro">find_by_name!</span>(<span class="macro-nonterminal">$p</span>, <span class="macro-nonterminal">$name</span>, opts, iter)
-                .map(as_trait_obj)
-                .or(<span class="macro">find_by_name!</span>(<span class="macro-nonterminal">$p</span>, <span class="macro-nonterminal">$name</span>, positionals, values).map(as_trait_obj)))
-    }};
-}
-<span class="comment">// Finds an arg by name
-</span><span class="macro">macro_rules! </span>find_by_name {
-    (<span class="macro-nonterminal">$p</span>:expr, <span class="macro-nonterminal">$name</span>:expr, <span class="macro-nonterminal">$what</span>:ident, <span class="macro-nonterminal">$how</span>:ident) =&gt; {
-        <span class="macro-nonterminal">$p</span>.<span class="macro-nonterminal">$what</span>.<span class="macro-nonterminal">$how</span>().find(|o| o.b.name == <span class="macro-nonterminal">$name</span>)
-    };
-}
-
-<span class="comment">// Finds an option including if it&#39;s aliased
-</span><span class="macro">macro_rules! </span>find_opt_by_long {
-    (@os <span class="macro-nonterminal">$_self</span>:ident, <span class="macro-nonterminal">$long</span>:expr) =&gt; {{
-        <span class="macro">_find_by_long!</span>(<span class="macro-nonterminal">$_self</span>, <span class="macro-nonterminal">$long</span>, opts)
-    }};
-    (<span class="macro-nonterminal">$_self</span>:ident, <span class="macro-nonterminal">$long</span>:expr) =&gt; {{
-        <span class="macro">_find_by_long!</span>(<span class="macro-nonterminal">$_self</span>, <span class="macro-nonterminal">$long</span>, opts)
-    }};
-}
-
-<span class="macro">macro_rules! </span>find_flag_by_long {
-    (@os <span class="macro-nonterminal">$_self</span>:ident, <span class="macro-nonterminal">$long</span>:expr) =&gt; {{
-        <span class="macro">_find_by_long!</span>(<span class="macro-nonterminal">$_self</span>, <span class="macro-nonterminal">$long</span>, flags)
-    }};
-    (<span class="macro-nonterminal">$_self</span>:ident, <span class="macro-nonterminal">$long</span>:expr) =&gt; {{
-        <span class="macro">_find_by_long!</span>(<span class="macro-nonterminal">$_self</span>, <span class="macro-nonterminal">$long</span>, flags)
-    }};
-}
-
-<span class="macro">macro_rules! </span>_find_by_long {
-    (<span class="macro-nonterminal">$_self</span>:ident, <span class="macro-nonterminal">$long</span>:expr, <span class="macro-nonterminal">$what</span>:ident) =&gt; {{
-        <span class="macro-nonterminal">$_self
-            </span>.<span class="macro-nonterminal">$what
-            </span>.iter()
-            .filter(|a| a.s.long.is_some())
-            .find(|a| {
-                a.s.long.unwrap() == <span class="macro-nonterminal">$long
-                    </span>|| (a.s.aliases.is_some()
-                        &amp;&amp; a.s
-                            .aliases
-                            .as_ref()
-                            .unwrap()
-                            .iter()
-                            .any(|<span class="kw-2">&amp;</span>(alias, <span class="kw">_</span>)| alias == <span class="macro-nonterminal">$long</span>))
-            })
-    }};
-}
-
-<span class="comment">// Finds an option
-</span><span class="macro">macro_rules! </span>find_opt_by_short {
-    (<span class="macro-nonterminal">$_self</span>:ident, <span class="macro-nonterminal">$short</span>:expr) =&gt; {{
-        <span class="macro">_find_by_short!</span>(<span class="macro-nonterminal">$_self</span>, <span class="macro-nonterminal">$short</span>, opts)
-    }};
-}
-
-<span class="macro">macro_rules! </span>find_flag_by_short {
-    (<span class="macro-nonterminal">$_self</span>:ident, <span class="macro-nonterminal">$short</span>:expr) =&gt; {{
-        <span class="macro">_find_by_short!</span>(<span class="macro-nonterminal">$_self</span>, <span class="macro-nonterminal">$short</span>, flags)
-    }};
-}
-
-<span class="macro">macro_rules! </span>_find_by_short {
-    (<span class="macro-nonterminal">$_self</span>:ident, <span class="macro-nonterminal">$short</span>:expr, <span class="macro-nonterminal">$what</span>:ident) =&gt; {{
-        <span class="macro-nonterminal">$_self
-            </span>.<span class="macro-nonterminal">$what
-            </span>.iter()
-            .filter(|a| a.s.short.is_some())
-            .find(|a| a.s.short.unwrap() == <span class="macro-nonterminal">$short</span>)
-    }};
-}
-
-<span class="macro">macro_rules! </span>find_subcmd {
-    (<span class="macro-nonterminal">$_self</span>:expr, <span class="macro-nonterminal">$sc</span>:expr) =&gt; {{
-        <span class="macro-nonterminal">$_self</span>.subcommands.iter().find(|s| {
-            <span class="kw-2">&amp;*</span>s.p.meta.name == <span class="macro-nonterminal">$sc
-                </span>|| (s.p.meta.aliases.is_some()
-                    &amp;&amp; s.p
-                        .meta
-                        .aliases
-                        .as_ref()
-                        .unwrap()
-                        .iter()
-                        .any(|<span class="kw-2">&amp;</span>(n, <span class="kw">_</span>)| n == <span class="macro-nonterminal">$sc</span>))
-        })
-    }};
-}
-
-<span class="macro">macro_rules! </span>shorts {
-    (<span class="macro-nonterminal">$_self</span>:ident) =&gt; {{
-        <span class="macro">_shorts_longs!</span>(<span class="macro-nonterminal">$_self</span>, short)
-    }};
-}
-
-<span class="macro">macro_rules! </span>longs {
-    (<span class="macro-nonterminal">$_self</span>:ident) =&gt; {{
-        <span class="macro">_shorts_longs!</span>(<span class="macro-nonterminal">$_self</span>, long)
-    }};
-}
-
-<span class="macro">macro_rules! </span>_shorts_longs {
-    (<span class="macro-nonterminal">$_self</span>:ident, <span class="macro-nonterminal">$what</span>:ident) =&gt; {{
-        <span class="macro-nonterminal">$_self
-            </span>.flags
-            .iter()
-            .filter(|f| f.s.<span class="macro-nonterminal">$what</span>.is_some())
-            .map(|f| f.s.<span class="macro-nonterminal">$what</span>.as_ref().unwrap())
-            .chain(
-                <span class="macro-nonterminal">$_self
-                    </span>.opts
-                    .iter()
-                    .filter(|o| o.s.<span class="macro-nonterminal">$what</span>.is_some())
-                    .map(|o| o.s.<span class="macro-nonterminal">$what</span>.as_ref().unwrap()),
-            )
-    }};
-}
-
-<span class="macro">macro_rules! </span>arg_names {
-    (<span class="macro-nonterminal">$_self</span>:ident) =&gt; {{
-        <span class="macro">_names!</span>(@args <span class="macro-nonterminal">$_self</span>)
-    }};
-}
-
-<span class="macro">macro_rules! </span>sc_names {
-    (<span class="macro-nonterminal">$_self</span>:ident) =&gt; {{
-        <span class="macro">_names!</span>(@sc <span class="macro-nonterminal">$_self</span>)
-    }};
-}
-
-<span class="macro">macro_rules! </span>_names {
-    (@args <span class="macro-nonterminal">$_self</span>:ident) =&gt; {{
-        <span class="macro-nonterminal">$_self</span>.flags.iter().map(|f| <span class="kw-2">&amp;*</span>f.b.name).chain(
-            <span class="macro-nonterminal">$_self
-                </span>.opts
-                .iter()
-                .map(|o| <span class="kw-2">&amp;*</span>o.b.name)
-                .chain(<span class="macro-nonterminal">$_self</span>.positionals.values().map(|p| <span class="kw-2">&amp;*</span>p.b.name)),
-        )
-    }};
-    (@sc <span class="macro-nonterminal">$_self</span>:ident) =&gt; {{
-        <span class="macro-nonterminal">$_self</span>.subcommands.iter().map(|s| <span class="kw-2">&amp;*</span>s.p.meta.name).chain(
-            <span class="macro-nonterminal">$_self
-                </span>.subcommands
-                .iter()
-                .filter(|s| s.p.meta.aliases.is_some())
-                .flat_map(|s| s.p.meta.aliases.as_ref().unwrap().iter().map(|<span class="kw-2">&amp;</span>(n, <span class="kw">_</span>)| n)),
-        )
-    }};
+</span><span class="macro">macro_rules! </span>debug {
+    ($(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; {};
 }
 </code></pre></div></section></main></body></html>

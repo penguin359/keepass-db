@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/lorenl/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.1.16/src/util_libc.rs`."><title>util_libc.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-f3501f0f5ae15dfb.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="getrandom" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.0 (8ede3aae2 2023-07-12)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-f0540c1d82cde29b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="icon" href="https://www.rust-lang.org/favicon.ico"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../getrandom/index.html"><img src="https://www.rust-lang.org/logos/rust-logo-128x128-blk.png" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/lorenl/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.2.10/src/util_libc.rs`."><title>util_libc.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-f3501f0f5ae15dfb.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="getrandom" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.0 (8ede3aae2 2023-07-12)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-f0540c1d82cde29b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="icon" href="https://www.rust-lang.org/favicon.ico"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../getrandom/index.html"><img src="https://www.rust-lang.org/logos/rust-logo-128x128-blk.png" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -120,6 +120,43 @@
 <a href="#120" id="120">120</a>
 <a href="#121" id="121">121</a>
 <a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2019 Developers of the Rand project.
 //
 // Licensed under the Apache License, Version 2.0 &lt;LICENSE-APACHE or
@@ -128,11 +165,15 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 </span><span class="attr">#![allow(dead_code)]
-</span><span class="kw">use </span><span class="kw">crate</span>::error::ERRNO_NOT_POSITIVE;
-<span class="kw">use </span><span class="kw">crate</span>::util::LazyUsize;
-<span class="kw">use </span><span class="kw">crate</span>::Error;
-<span class="kw">use </span>core::num::NonZeroU32;
-<span class="kw">use </span>core::ptr::NonNull;
+</span><span class="kw">use </span><span class="kw">crate</span>::Error;
+<span class="kw">use </span>core::{
+    cmp::min,
+    mem::MaybeUninit,
+    num::NonZeroU32,
+    ptr::NonNull,
+    sync::atomic::{fence, AtomicPtr, Ordering},
+};
+<span class="kw">use </span>libc::c_void;
 
 <span class="macro">cfg_if! </span>{
     <span class="kw">if </span><span class="attr">#[cfg(any(target_os = <span class="string">&quot;netbsd&quot;</span>, target_os = <span class="string">&quot;openbsd&quot;</span>, target_os = <span class="string">&quot;android&quot;</span>))] </span>{
@@ -145,6 +186,16 @@
         <span class="kw">use </span>libc::__error <span class="kw">as </span>errno_location;
     } <span class="kw">else if </span><span class="attr">#[cfg(target_os = <span class="string">&quot;haiku&quot;</span>)] </span>{
         <span class="kw">use </span>libc::_errnop <span class="kw">as </span>errno_location;
+    } <span class="kw">else if </span><span class="attr">#[cfg(target_os = <span class="string">&quot;nto&quot;</span>)] </span>{
+        <span class="kw">use </span>libc::__get_errno_ptr <span class="kw">as </span>errno_location;
+    } <span class="kw">else if </span><span class="attr">#[cfg(any(all(target_os = <span class="string">&quot;horizon&quot;</span>, target_arch = <span class="string">&quot;arm&quot;</span>), target_os = <span class="string">&quot;vita&quot;</span>))] </span>{
+        <span class="kw">extern </span><span class="string">&quot;C&quot; </span>{
+            <span class="comment">// Not provided by libc: https://github.com/rust-lang/libc/issues/1995
+            </span><span class="kw">fn </span>__errno() -&gt; <span class="kw-2">*mut </span>libc::c_int;
+        }
+        <span class="kw">use </span>__errno <span class="kw">as </span>errno_location;
+    } <span class="kw">else if </span><span class="attr">#[cfg(target_os = <span class="string">&quot;aix&quot;</span>)] </span>{
+        <span class="kw">use </span>libc::_Errno <span class="kw">as </span>errno_location;
     }
 }
 
@@ -165,7 +216,7 @@
     <span class="kw">if </span>errno &gt; <span class="number">0 </span>{
         Error::from(NonZeroU32::new(errno <span class="kw">as </span>u32).unwrap())
     } <span class="kw">else </span>{
-        ERRNO_NOT_POSITIVE
+        Error::ERRNO_NOT_POSITIVE
     }
 }
 
@@ -173,8 +224,8 @@
 //   - should return -1 and set errno on failure
 //   - should return the number of bytes written on success
 </span><span class="kw">pub fn </span>sys_fill_exact(
-    <span class="kw-2">mut </span>buf: <span class="kw-2">&amp;mut </span>[u8],
-    sys_fill: <span class="kw">impl </span>Fn(<span class="kw-2">&amp;mut </span>[u8]) -&gt; libc::ssize_t,
+    <span class="kw-2">mut </span>buf: <span class="kw-2">&amp;mut </span>[MaybeUninit&lt;u8&gt;],
+    sys_fill: <span class="kw">impl </span>Fn(<span class="kw-2">&amp;mut </span>[MaybeUninit&lt;u8&gt;]) -&gt; libc::ssize_t,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
     <span class="kw">while </span>!buf.is_empty() {
         <span class="kw">let </span>res = sys_fill(buf);
@@ -187,7 +238,8 @@
         } <span class="kw">else </span>{
             <span class="comment">// We don&#39;t check for EOF (ret = 0) as the data we are reading
             // should be an infinite stream of random bytes.
-            </span>buf = <span class="kw-2">&amp;mut </span>buf[(res <span class="kw">as </span>usize)..];
+            </span><span class="kw">let </span>len = min(res <span class="kw">as </span>usize, buf.len());
+            buf = <span class="kw-2">&amp;mut </span>buf[len..];
         }
     }
     <span class="prelude-val">Ok</span>(())
@@ -195,51 +247,73 @@
 
 <span class="comment">// A &quot;weak&quot; binding to a C function that may or may not be present at runtime.
 // Used for supporting newer OS features while still building on older systems.
-// F must be a function pointer of type `unsafe extern &quot;C&quot; fn`. Based off of the
-// weak! macro in libstd.
+// Based off of the DlsymWeak struct in libstd:
+// https://github.com/rust-lang/rust/blob/1.61.0/library/std/src/sys/unix/weak.rs#L84
+// except that the caller must manually cast self.ptr() to a function pointer.
 </span><span class="kw">pub struct </span>Weak {
     name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
-    addr: LazyUsize,
+    addr: AtomicPtr&lt;c_void&gt;,
 }
 
 <span class="kw">impl </span>Weak {
+    <span class="comment">// A non-null pointer value which indicates we are uninitialized. This
+    // constant should ideally not be a valid address of a function pointer.
+    // However, if by chance libc::dlsym does return UNINIT, there will not
+    // be undefined behavior. libc::dlsym will just be called each time ptr()
+    // is called. This would be inefficient, but correct.
+    // TODO: Replace with core::ptr::invalid_mut(1) when that is stable.
+    </span><span class="kw">const </span>UNINIT: <span class="kw-2">*mut </span>c_void = <span class="number">1 </span><span class="kw">as </span><span class="kw-2">*mut </span>c_void;
+
     <span class="comment">// Construct a binding to a C function with a given name. This function is
     // unsafe because `name` _must_ be null terminated.
     </span><span class="kw">pub const unsafe fn </span>new(name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             name,
-            addr: LazyUsize::new(),
+            addr: AtomicPtr::new(<span class="self">Self</span>::UNINIT),
         }
     }
 
-    <span class="comment">// Return a function pointer if present at runtime. Otherwise, return null.
-    </span><span class="kw">pub fn </span>ptr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;NonNull&lt;libc::c_void&gt;&gt; {
-        <span class="kw">let </span>addr = <span class="self">self</span>.addr.unsync_init(|| <span class="kw">unsafe </span>{
-            libc::dlsym(libc::RTLD_DEFAULT, <span class="self">self</span>.name.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_</span>) <span class="kw">as </span>usize
-        });
-        NonNull::new(addr <span class="kw">as </span><span class="kw-2">*mut </span><span class="kw">_</span>)
-    }
-}
-
-<span class="macro">cfg_if! </span>{
-    <span class="kw">if </span><span class="attr">#[cfg(any(target_os = <span class="string">&quot;linux&quot;</span>, target_os = <span class="string">&quot;emscripten&quot;</span>))] </span>{
-        <span class="kw">use </span>libc::open64 <span class="kw">as </span>open;
-    } <span class="kw">else </span>{
-        <span class="kw">use </span>libc::open;
+    <span class="comment">// Return the address of a function if present at runtime. Otherwise,
+    // return None. Multiple callers can call ptr() concurrently. It will
+    // always return _some_ value returned by libc::dlsym. However, the
+    // dlsym function may be called multiple times.
+    </span><span class="kw">pub fn </span>ptr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;NonNull&lt;c_void&gt;&gt; {
+        <span class="comment">// Despite having only a single atomic variable (self.addr), we still
+        // cannot always use Ordering::Relaxed, as we need to make sure a
+        // successful call to dlsym() is &quot;ordered before&quot; any data read through
+        // the returned pointer (which occurs when the function is called).
+        // Our implementation mirrors that of the one in libstd, meaning that
+        // the use of non-Relaxed operations is probably unnecessary.
+        </span><span class="kw">match </span><span class="self">self</span>.addr.load(Ordering::Relaxed) {
+            <span class="self">Self</span>::UNINIT =&gt; {
+                <span class="kw">let </span>symbol = <span class="self">self</span>.name.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_</span>;
+                <span class="kw">let </span>addr = <span class="kw">unsafe </span>{ libc::dlsym(libc::RTLD_DEFAULT, symbol) };
+                <span class="comment">// Synchronizes with the Acquire fence below
+                </span><span class="self">self</span>.addr.store(addr, Ordering::Release);
+                NonNull::new(addr)
+            }
+            addr =&gt; {
+                <span class="kw">let </span>func = NonNull::new(addr)<span class="question-mark">?</span>;
+                fence(Ordering::Acquire);
+                <span class="prelude-val">Some</span>(func)
+            }
+        }
     }
 }
 
 <span class="comment">// SAFETY: path must be null terminated, FD must be manually closed.
 </span><span class="kw">pub unsafe fn </span>open_readonly(path: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;libc::c_int, Error&gt; {
-    <span class="macro">debug_assert!</span>(path.as_bytes().last() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="number">0</span>));
-    <span class="kw">let </span>fd = open(path.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_</span>, libc::O_RDONLY | libc::O_CLOEXEC);
-    <span class="kw">if </span>fd &lt; <span class="number">0 </span>{
-        <span class="kw">return </span><span class="prelude-val">Err</span>(last_os_error());
+    <span class="macro">debug_assert_eq!</span>(path.as_bytes().last(), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="number">0</span>));
+    <span class="kw">loop </span>{
+        <span class="kw">let </span>fd = libc::open(path.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_</span>, libc::O_RDONLY | libc::O_CLOEXEC);
+        <span class="kw">if </span>fd &gt;= <span class="number">0 </span>{
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(fd);
+        }
+        <span class="kw">let </span>err = last_os_error();
+        <span class="comment">// We should try again if open() was interrupted.
+        </span><span class="kw">if </span>err.raw_os_error() != <span class="prelude-val">Some</span>(libc::EINTR) {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(err);
+        }
     }
-    <span class="comment">// O_CLOEXEC works on all Unix targets except for older Linux kernels (pre
-    // 2.6.23), so we also use an ioctl to make sure FD_CLOEXEC is set.
-    </span><span class="attr">#[cfg(target_os = <span class="string">&quot;linux&quot;</span>)]
-    </span>libc::ioctl(fd, libc::FIOCLEX);
-    <span class="prelude-val">Ok</span>(fd)
 }
 </code></pre></div></section></main></body></html>
