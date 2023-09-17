@@ -41,12 +41,12 @@
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=keepass-db",
+                    "--lib",
                     "--package=keepass-db"
                 ],
                 "filter": {
                     "name": "keepass-db",
-                    "kind": "bin"
+                    "kind": "lib"
                 }
             },
             "args": [],

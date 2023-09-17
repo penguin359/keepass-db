@@ -17,7 +17,8 @@ pub struct Key {
 
 impl Key {
     /// Create a new composite key
-    /// ```ignore
+    /// ```
+    /// # use keepass_db::Key;
     /// let mut key = Key::new();
     /// ```
     pub fn new() -> Key {
@@ -29,8 +30,10 @@ impl Key {
     }
 
     /// Set the password for the compsite key
-    /// ```ignore
-    /// key.set_userpassword("secret");
+    /// ```
+    /// # use keepass_db::Key;
+    /// # let mut key = Key::new();
+    /// key.set_user_password("secret");
     /// ```
     pub fn set_user_password<T>(&mut self, user_password: T)
     where
@@ -42,7 +45,9 @@ impl Key {
     }
 
     /// Load a key file for the composite key
-    /// ```ignore
+    /// ```
+    /// # use keepass_db::Key;
+    /// # let mut key = Key::new();
     /// key.set_keyfile("secret");
     /// ```
     pub fn set_keyfile<T>(&mut self, keyfile: T)

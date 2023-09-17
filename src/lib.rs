@@ -1,4 +1,26 @@
 //! Read, modify and write KeePass 2.x databases
+//!
+//! The main types used in this crate are:
+//!
+//! * [`Key`] which represents the composite key used to lock a database
+//! * [`KeePassDoc`] which represents the contents of an unlocked KeePass database
+//!
+//! # Opening a database:
+//!
+//! ```
+//! use std::io::Error;
+//! use keepass_db::{KeePassDoc, protected_stream::CipherValue, Key};
+//! fn main() -> Result<(), Error> {
+//!     let mut key = Key::new();
+//!     key.set_user_password("asdf");
+//!     let mut doc = KeePassDoc::load_file("testdata/dummy-kdbx41.kdbx", &key)?;
+//!     let database = doc.file;
+//!     let stream = &mut doc.cipher;
+//!     let basic_entry = database.root_group().all_entries().filter(|e| e.url().unprotect(stream).unwrap() == "https://keepass.info/").last().unwrap();
+//!     println!("Password: {}", basic_entry.password().unprotect(stream).unwrap());
+//!     Ok(())
+//! }
+//! ```
 
 use std::collections::VecDeque;
 use std::collections::{BTreeMap, HashMap};
@@ -1435,16 +1457,24 @@ impl<C> KdbxSerialize<C> for HashMap<String, String> {
     }
 }
 
+/// Various times about password or group item
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
 //#[derive(Debug, Default, KdbxParse)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Times {
+    /// Time item was first created
     creation_time: DateTime<Utc>,
+    /// Time item was last modified
     last_modification_time: DateTime<Utc>,
+    /// Time item was last accessed
     last_access_time: DateTime<Utc>,
+    /// Time item should expire or has expired
     expiry_time: DateTime<Utc>,
+    /// Should item expire?
     expires: bool,
+    /// Number of times item has been used
     usage_count: i32,
+    /// Last time item has been moved in database
     location_changed: DateTime<Utc>,
 }
 
@@ -1670,6 +1700,7 @@ impl<'a> Iterator for GroupIter<'a> {
     }
 }
 
+/// Iterator over password [`Entry`]
 pub struct EntryIter<'a> {
     entries: Option<Iter<'a, Entry>>,
     groups: GroupIter<'a>,
@@ -1711,17 +1742,23 @@ struct AutoType {
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize, Getters)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Entry {
+    /// UUID for password entry
     #[keepass_db(element = "UUID")]
     uuid: Uuid,
+    /// Entry Icon unless a custom icon is provided
     #[keepass_db(element = "IconID")]
     icon_id: u32,
+    /// Provides a custom icon for the group overiding icon_id
     #[keepass_db(element = "CustomIconUUID")]
     custom_icon_uuid: Option<Uuid>,
+    /// Foreground text color of entry
     foreground_color: String,
+    /// Background text color of entry
     background_color: String,
     #[keepass_db(element = "OverrideURL")]
     override_url: String,
     quality_check: Option<bool>,
+    /// Tags for password entry
     tags: String,
     previous_parent_group: Option<Uuid>,
     times: Times,
@@ -2057,7 +2094,7 @@ impl KeePassDoc {
         if major_version == 4 {
             file.read_exact(&mut hmac_tag)?;
             println!("Verifying HMAC");
-            hmac::verify(&hmac_key, &header, &hmac_tag).unwrap();
+            hmac::verify(&hmac_key, &header, &hmac_tag).map_err(|_| io::Error::new(io::ErrorKind::Other, "Bad password or key file"))?;
             println!("Complete");
         }
 
@@ -2095,11 +2132,6 @@ impl KeePassDoc {
                 &ciphertext,
             )
             .unwrap();
-            // let mut gz = if let compress = Compression::None {
-            //     GzDecoder::new(Cursor::new(data))
-            // } else{
-            //     GzDecoder::new(Cursor::new(data))
-            // };
             let mut gz: Box<dyn Read> = match compress {
                 Compression::Gzip => Box::new(GzDecoder::new(Cursor::new(data))),
                 Compression::None => Box::new(Cursor::new(data)),
