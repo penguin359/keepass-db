@@ -1,18 +1,12 @@
+//#![feature(iterator_try_collect)]
+
 use proc_macro::TokenStream as TS1;
 use proc_macro2::{token_stream::IntoIter, Delimiter, Ident, Span, TokenStream, TokenTree};
 
 use quote::{quote, format_ident};
 
 use change_case::pascal_case;
-use syn::{Attribute, Type};
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+use syn::{Attribute, Error, Type};
 
 #[derive(Debug)]
 struct KdbxField {
@@ -46,34 +40,35 @@ fn get_value(tokens: &mut IntoIter) -> Option<String> {
 }
 
 impl KdbxAttributes {
-    fn parse(attrs: &[Attribute]) -> Self {
+    fn parse(attrs: &[Attribute]) -> Result<Self, Error> {
         let mut element_name = None;
         let mut flatten = false;
-        for attr in attrs.iter().filter(|a| a.path.is_ident("keepass_db")) {
-            let mut attr_token = attr.tokens.clone().into_iter();
-            if let Some(TokenTree::Group(value)) = attr_token.next() {
-                if value.delimiter() == Delimiter::Parenthesis {
-                    let mut attr_token = value.stream().into_iter();
-                    while let Some(item) = attr_token.next() {
-                        if let TokenTree::Ident(name) = item {
-                            match name.to_string().as_str() {
-                                "element" => {
-                                    element_name = get_value(&mut attr_token);
-                                }
-                                "flatten" => {
-                                    flatten = true;
-                                }
-                                _ => {}
-                            }
+        for attr in attrs.iter().filter(|a| a.path().is_ident("keepass_db")).filter_map(|a| match a.meta {
+            syn::Meta::List(ref v) => Some(&v.tokens),
+            _ => None
+        }) {
+            eprintln!("Inner attr tokens: {:#?}", attr);
+            let mut attr_token = attr.clone().into_iter();
+            while let Some(item) = attr_token.next() {
+                if let TokenTree::Ident(name) = item {
+                    match name.to_string().as_str() {
+                        "element" => {
+                            element_name = get_value(&mut attr_token);
+                        }
+                        "flatten" => {
+                            flatten = true;
+                        }
+                        _ => {
+                            return Err(Error::new(name.span(), "Unrecognized attribute"));
                         }
                     }
                 }
             }
         }
-        KdbxAttributes {
+        Ok(Self {
             element_name,
             flatten,
-        }
+        })
     }
 }
 
@@ -136,8 +131,8 @@ fn get_type(t: &Type) -> TypeCategory {
     }
 }
 
-fn decode_struct(ast: &syn::DeriveInput) -> Vec<KdbxField> {
-    match ast.data {
+fn decode_struct(ast: &syn::DeriveInput) -> Result<Vec<KdbxField>, Error> {
+    Ok(match ast.data {
         syn::Data::Struct(ref data_struct) => {
             let v = data_struct
                 .fields
@@ -145,13 +140,13 @@ fn decode_struct(ast: &syn::DeriveInput) -> Vec<KdbxField> {
                 .map(|field| {
                     let field = field.clone();
                     let name = field.ident.unwrap();
-                    let attrs = KdbxAttributes::parse(&field.attrs);
+                    let attrs = KdbxAttributes::parse(&field.attrs)?;
                     let big_name = attrs
                         .element_name
                         .clone()
                         .unwrap_or_else(|| pascal_case(&name.to_string()));
                     let flatten = attrs.flatten;
-                    match get_type(&field.ty) {
+                    Ok::<_, Error>(match get_type(&field.ty) {
                         TypeCategory::Vec(inner_type) => {
                             let subtype = match get_type(inner_type) {
                                 TypeCategory::Basic(t) => t,
@@ -228,14 +223,15 @@ fn decode_struct(ast: &syn::DeriveInput) -> Vec<KdbxField> {
                             option: false,
                             flatten,
                         },
-                    }
+                    })
                 })
-                .collect::<Vec<KdbxField>>();
+                //.try_collect::<Vec<KdbxField>>()?;
+                .map(|v| v.unwrap()).collect::<Vec<KdbxField>>();
             // eprintln!("Fields done: {:?}.", &v);
             v
         }
         _ => unimplemented!("Only structs currently supported for derive")
-    }
+    })
 }
 
 #[proc_macro_derive(KdbxParse, attributes(keepass_db))]
@@ -246,11 +242,11 @@ pub fn derive_deserializer(input: TS1) -> TS1 {
 fn derive_deserializer2(input: TokenStream) -> TokenStream {
     let ast: syn::DeriveInput = syn::parse2(input).expect("bad parsing");
     let outer_type = &ast.ident;
-    let attrs = &ast.attrs;
 
-    let _ = KdbxAttributes::parse(attrs);
-
-    let impl_block = decode_struct(&ast);
+    let impl_block = match decode_struct(&ast) {
+        Ok(v) => v,
+        Err(e) => { return e.into_compile_error(); },
+    };
     // eprintln!("Struct fields: {:#?}", &impl_block);
     let variables: TokenStream = impl_block
         .iter()
@@ -434,12 +430,11 @@ pub fn derive_serializer(input: TS1) -> TS1 {
 fn derive_serializer2(input: TokenStream) -> TokenStream {
     let ast: syn::DeriveInput = syn::parse2(input).expect("bad parsing");
     let outer_type = &ast.ident;
-    let attrs = &ast.attrs;
-    // let _data = &ast.data;
 
-    let _ = KdbxAttributes::parse(attrs);
-
-    let impl_block = decode_struct(&ast);
+    let impl_block = match decode_struct(&ast) {
+        Ok(v) => v,
+        Err(e) => { return e.into_compile_error(); },
+    };
     let elements: TokenStream = impl_block.iter().map(|r| {
         let name = &r.name;
         let my_type = &r.r#type;
@@ -522,36 +517,148 @@ fn derive_serializer2(input: TokenStream) -> TokenStream {
     results
 }
 
-#[test]
-fn parse() {
-    //derive_serializer2(quote! { struct ASD ( fds, f ); });
-    derive_serializer2(quote! { struct One { field: i32, string: String } });
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[test]
-fn quote_expand() {
-    let var = "hello";
-    assert_eq!(quote! { test #var insert }.to_string(), r#"test "hello" insert"#);
-}
+    #[test]
+    fn parse() {
+        derive_deserializer2(quote! { struct One { field: i32, string: String } });
+    }
 
-#[test]
-fn quote_expand_vec() {
-    let var = vec!["hello", "world"];
-    assert_eq!(quote! { test #(#var)* insert }.to_string(), r#"test "hello" "world" insert"#);
-}
+    #[test]
+    fn serialize() {
+        derive_serializer2(quote! { struct One { field: i32, string: String } });
+    }
 
-#[test]
-fn quote_expand_multi_vec() {
-    let var = vec!["hello", "world"];
-    let var2 = vec!["one", "two", "three"];
-    assert_eq!(quote! { test #(#var = #var2)* insert }.to_string(),
-    r#"test "hello" = "one" "world" = "two" insert"#);
-}
+    #[test]
+    fn quote_expand() {
+        let var = "hello";
+        assert_eq!(quote! { test #var insert }.to_string(), r#"test "hello" insert"#);
+    }
 
-#[test]
-fn quote_expand_multi_vec_with_separator() {
-    let var = vec!["hello", "world"];
-    let var2 = vec!["one", "two", "three"];
-    assert_eq!(quote! { test #(#var = #var2),* insert }.to_string(),
-    r#"test "hello" = "one" , "world" = "two" insert"#);
+    #[test]
+    fn quote_expand_vec() {
+        let var = vec!["hello", "world"];
+        assert_eq!(quote! { test #(#var)* insert }.to_string(), r#"test "hello" "world" insert"#);
+    }
+
+    #[test]
+    fn quote_expand_multi_vec() {
+        let var = vec!["hello", "world"];
+        let var2 = vec!["one", "two", "three"];
+        assert_eq!(quote! { test #(#var = #var2)* insert }.to_string(),
+        r#"test "hello" = "one" "world" = "two" insert"#);
+    }
+
+    #[test]
+    fn quote_expand_multi_vec_with_separator() {
+        let var = vec!["hello", "world"];
+        let var2 = vec!["one", "two", "three"];
+        assert_eq!(quote! { test #(#var = #var2),* insert }.to_string(),
+        r#"test "hello" = "one" , "world" = "two" insert"#);
+    }
+
+    #[test]
+    fn decode_attributes_missing() {
+        let input = quote! { struct test; };
+        let ast: syn::DeriveInput = syn::parse2(input).expect("bad parsing");
+        let value = KdbxAttributes::parse(&ast.attrs).expect("Error in attributes");
+        assert!(!value.flatten);
+        assert!(value.element_name.is_none());
+    }
+
+    #[test]
+    fn decode_attributes_empty() {
+        let input = quote! { #[keepass_db()] struct test; };
+        let ast: syn::DeriveInput = syn::parse2(input).expect("bad parsing");
+        let value = KdbxAttributes::parse(&ast.attrs).expect("Error in attributes");
+        assert!(!value.flatten);
+        assert!(value.element_name.is_none());
+    }
+
+    #[test]
+    fn decode_attributes_full() {
+        let input = quote! {
+            #[derive(Debug)]
+            #[keepass_db(flatten, element = "foobar")]
+            struct test;
+        };
+        let ast: syn::DeriveInput = syn::parse2(input).expect("bad parsing");
+        let value = KdbxAttributes::parse(&ast.attrs).expect("Error in attributes");
+        assert!(value.flatten);
+        assert!(value.element_name.is_some());
+        assert_eq!(value.element_name.unwrap(), "foobar");
+    }
+
+    #[test]
+    fn decode_attributes_misspelled() {
+        let input = quote! {
+            #[derive(Debug)]
+            #[keepass_db(flatten, elment = "foobar")]
+            struct test;
+        };
+        let ast: syn::DeriveInput = syn::parse2(input).expect("bad parsing");
+        let value = KdbxAttributes::parse(&ast.attrs);
+        assert!(value.is_err());
+    }
+
+    #[test]
+    fn decode_struct_valid() {
+        let input = quote! {
+            struct test {
+                one: bool,
+            }
+        };
+        let ast: syn::DeriveInput = syn::parse2(input).expect("bad parsing");
+        let value = decode_struct(&ast).expect("Failed to decode struct");
+        assert_eq!(value.len(), 1);
+        assert_eq!(value[0].name.to_string(), "one");
+        assert_eq!(value[0].r#type.to_string(), "bool");
+        assert_eq!(value[0].element_name, "One");
+        // TODO test inner_type and full_type
+        assert!(!value[0].array);
+        assert!(!value[0].option);
+        assert!(!value[0].flatten);
+    }
+
+    #[test]
+    fn decode_struct_complex() {
+        let input = quote! {
+            struct test {
+                #[keepass_db(flatten)]
+                one: u32,
+                two: Option<String>,
+                three: Vec<bool>,
+                four: Option<Vec<i16>>,
+            }
+        };
+        let ast: syn::DeriveInput = syn::parse2(input).expect("bad parsing");
+        let value = decode_struct(&ast).expect("Failed to decode struct");
+        assert_eq!(value.len(), 4);
+        assert_eq!(value[0].name.to_string(), "one");
+        assert_eq!(value[0].r#type.to_string(), "u32");
+        assert_eq!(value[0].element_name, "One");
+        assert!(!value[0].array);
+        assert!(!value[0].option);
+        assert!(value[0].flatten);
+        assert_eq!(value[1].name.to_string(), "two");
+        assert_eq!(value[1].r#type.to_string(), "String");
+        assert_eq!(value[1].element_name, "Two");
+        assert!(!value[1].array);
+        assert!(value[1].option);
+        assert!(!value[1].flatten);
+        assert_eq!(value[2].name.to_string(), "three");
+        assert_eq!(value[2].r#type.to_string(), "bool");
+        assert_eq!(value[2].element_name, "Three");
+        assert!(value[2].array);
+        assert!(!value[2].option);
+        assert!(!value[2].flatten);
+        assert_eq!(value[3].name.to_string(), "four");
+        assert_eq!(value[3].r#type.to_string(), "i16");
+        assert_eq!(value[3].element_name, "Four");
+        assert!(value[3].array);
+        assert!(value[3].option);
+        assert!(!value[3].flatten);
+    }
 }
