@@ -665,7 +665,7 @@
 </pre></div><pre class="rust"><code><span class="comment">//#![feature(iterator_try_collect)]
 
 </span><span class="kw">use </span>proc_macro::TokenStream <span class="kw">as </span>TS1;
-<span class="kw">use </span>proc_macro2::{token_stream::IntoIter, Delimiter, Ident, Span, TokenStream, TokenTree};
+<span class="kw">use </span>proc_macro2::{token_stream::IntoIter, Ident, Span, TokenStream, TokenTree};
 
 <span class="kw">use </span>quote::{quote, format_ident};
 
@@ -948,7 +948,7 @@
                                     });
                                 },
                                 XmlEvent::StartElement { .. } =&gt; {
-                                    reader.skip();
+                                    reader.skip().map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Malformed XML document: {e}&quot;</span>))<span class="question-mark">?</span>;
                                 },
                                 XmlEvent::EndElement { .. } =&gt; {
                                     <span class="kw">break</span>;

@@ -2,7 +2,6 @@ var sourcesIndex = JSON.parse('{\
 "addr2line":["",[],["function.rs","lazy.rs","lib.rs"]],\
 "adler":["",[],["algo.rs","lib.rs"]],\
 "aho_corasick":["",[["nfa",[],["contiguous.rs","mod.rs","noncontiguous.rs"]],["packed",[["teddy",[],["compile.rs","mod.rs","runtime.rs"]]],["api.rs","mod.rs","pattern.rs","rabinkarp.rs","vector.rs"]],["util",[],["alphabet.rs","buffer.rs","byte_frequencies.rs","debug.rs","error.rs","int.rs","mod.rs","prefilter.rs","primitives.rs","remapper.rs","search.rs","special.rs"]]],["ahocorasick.rs","automaton.rs","dfa.rs","lib.rs","macros.rs"]],\
-"ansi_term":["",[],["ansi.rs","debug.rs","difference.rs","display.rs","lib.rs","style.rs","util.rs","windows.rs","write.rs"]],\
 "argonautica":["",[["backend",[["c",[],["hash_raw.rs","mod.rs"]],["rust",[],["decode.rs","encode.rs","mod.rs"]]],["mod.rs"]],["config",[],["backend.rs","defaults.rs","flags.rs","hasher_config.rs","mod.rs","variant.rs","verifier_config.rs","version.rs"]],["input",[],["additional_data.rs","container.rs","mod.rs","password.rs","salt.rs","secret_key.rs"]],["output",[],["hash_raw.rs","mod.rs"]]],["error.rs","error_kind.rs","ffi.rs","hasher.rs","lib.rs","utils.rs","verifier.rs"]],\
 "atty":["",[],["lib.rs"]],\
 "backtrace":["",[["backtrace",[],["libunwind.rs","mod.rs"]],["symbolize",[["gimli",[],["elf.rs","libs_dl_iterate_phdr.rs","mmap_unix.rs","parse_running_mmaps_unix.rs","stash.rs"]]],["gimli.rs","mod.rs"]]],["capture.rs","lib.rs","print.rs","types.rs"]],\
@@ -42,7 +41,6 @@ var sourcesIndex = JSON.parse('{\
 "indexmap":["",[["map",[["core",[],["raw.rs"]]],["core.rs"]]],["arbitrary.rs","equivalent.rs","lib.rs","macros.rs","map.rs","mutable_keys.rs","set.rs","util.rs"]],\
 "inout":["",[],["errors.rs","inout.rs","inout_buf.rs","lib.rs","reserved.rs"]],\
 "is_terminal":["",[],["lib.rs"]],\
-"kdbx_derive":["",[],["lib.rs"]],\
 "keepass_db":["",[["kdf",[],["argon2.rs","mod.rs"]],["protected_stream",[],["arc4variant.rs","mod.rs"]]],["kdb1.rs","key.rs","lib.rs","utils.rs"]],\
 "keepass_db_derive":["",[],["lib.rs"]],\
 "lazy_static":["",[],["inline_lazy.rs","lib.rs"]],\
@@ -89,11 +87,9 @@ var sourcesIndex = JSON.parse('{\
 "typed_arena":["",[],["lib.rs"]],\
 "typenum":["",[],["array.rs","bit.rs","int.rs","lib.rs","marker_traits.rs","operator_aliases.rs","private.rs","type_operators.rs","uint.rs"]],\
 "unicode_ident":["",[],["lib.rs","tables.rs"]],\
-"unicode_width":["",[],["lib.rs","tables.rs"]],\
 "unicode_xid":["",[],["lib.rs","tables.rs"]],\
 "untrusted":["",[],["untrusted.rs"]],\
 "uuid":["",[],["builder.rs","error.rs","external.rs","fmt.rs","lib.rs","macros.rs","parser.rs","timestamp.rs"]],\
-"vec_map":["",[],["lib.rs"]],\
 "xml":["",[["reader",[["parser",[],["inside_cdata.rs","inside_closing_tag_name.rs","inside_comment.rs","inside_declaration.rs","inside_doctype.rs","inside_opening_tag.rs","inside_processing_instruction.rs","inside_reference.rs","outside_tag.rs"]]],["config.rs","error.rs","events.rs","indexset.rs","lexer.rs","parser.rs"]],["writer",[],["config.rs","emitter.rs","events.rs"]]],["attribute.rs","common.rs","escape.rs","lib.rs","macros.rs","name.rs","namespace.rs","reader.rs","util.rs","writer.rs"]]\
 }');
 createSourceSidebar();

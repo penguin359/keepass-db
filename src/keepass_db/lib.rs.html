@@ -2543,18 +2543,6 @@
 <a href="#2543" id="2543">2543</a>
 <a href="#2544" id="2544">2544</a>
 <a href="#2545" id="2545">2545</a>
-<a href="#2546" id="2546">2546</a>
-<a href="#2547" id="2547">2547</a>
-<a href="#2548" id="2548">2548</a>
-<a href="#2549" id="2549">2549</a>
-<a href="#2550" id="2550">2550</a>
-<a href="#2551" id="2551">2551</a>
-<a href="#2552" id="2552">2552</a>
-<a href="#2553" id="2553">2553</a>
-<a href="#2554" id="2554">2554</a>
-<a href="#2555" id="2555">2555</a>
-<a href="#2556" id="2556">2556</a>
-<a href="#2557" id="2557">2557</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Read, modify and write KeePass 2.x databases
 //!
 //! The main types used in this crate are:
@@ -2588,35 +2576,23 @@
 <span class="kw">use </span>std::io::Cursor;
 <span class="kw">use </span>std::io::{<span class="self">self</span>, SeekFrom};
 <span class="kw">use </span>std::process;
-<span class="comment">//use std::cell::RefCell;
-//use std::rc::Rc;
-</span><span class="kw">use </span>std::cmp;
+<span class="kw">use </span>std::cmp;
 
 <span class="kw">use </span>num_derive::{FromPrimitive, ToPrimitive};
-<span class="kw">use </span>num_traits::{FromPrimitive, ToPrimitive};
+<span class="kw">use </span>num_traits::FromPrimitive;
 
 <span class="kw">use </span>log::debug;
 
-<span class="comment">//use hex::ToHex;
-// use hex::FromHex;
-</span><span class="kw">use </span>base64::{decode, encode};
-<span class="kw">use </span>byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
-<span class="kw">use </span>hex_literal::hex;
+<span class="kw">use </span>base64::engine::{Engine, general_purpose::STANDARD <span class="kw">as </span>base64};
+<span class="kw">use </span>byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 <span class="kw">use </span>openssl::error::ErrorStack;
 <span class="kw">use </span>uuid::{uuid, Uuid};
 <span class="comment">//use borsh::de::BorshDeserialize;  // try_from_slice()
-// use chacha20::stream_cipher::generic_array::GenericArray;
-// use chacha20::stream_cipher::{NewStreamCipher, SyncStreamCipher};
-</span><span class="kw">use </span>chacha20::ChaCha20;
-<span class="kw">use </span>generic_array::GenericArray;
-<span class="kw">use </span>chrono::prelude::<span class="kw-2">*</span>;
+</span><span class="kw">use </span>chrono::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>flate2::read::GzDecoder;
-<span class="kw">use </span>openssl::symm::{decrypt, encrypt, Cipher, Crypter, Mode};
+<span class="kw">use </span>openssl::symm::{decrypt, Cipher, Crypter, Mode};
 <span class="kw">use </span>ring::digest::{Context, SHA256, SHA512};
 <span class="kw">use </span>ring::hmac;
-<span class="kw">use </span>salsa20::cipher::{KeyIvInit, StreamCipher};
-<span class="kw">use </span>salsa20::Key <span class="kw">as </span>Salsa20_Key;
-<span class="kw">use </span>salsa20::Salsa20;
 <span class="kw">use </span>sxd_document::parser;
 <span class="kw">use </span>sxd_xpath::{evaluate_xpath, Context <span class="kw">as </span>XPathContext, Factory, Value};
 
@@ -2995,7 +2971,7 @@
         //     let header_hash = evaluate_xpath(&amp;document, &quot;/KeePassFile/Meta/HeaderHash/text()&quot;).expect(&quot;Missing header hash&quot;);
         //     if header_hash.string() != &quot;&quot; {
         //         println!(&quot;Header Hash: &#39;{}&#39;&quot;, header_hash.string());
-        //         let expected_hash = decode(&amp;header_hash.string()).expect(&quot;Valid base64&quot;);
+        //         let expected_hash = base64.decode(&amp;header_hash.string()).expect(&quot;Valid base64&quot;);
         //         if expected_hash != digest.as_ref() {
         //             eprintln!(&quot;Possible header corruption\n&quot;);
         //             process::exit(1);
@@ -3449,16 +3425,16 @@
     attributes: Vec&lt;OwnedAttribute&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;, String&gt; {
     <span class="prelude-val">Ok</span>(decode_optional_string(reader, name, attributes)<span class="question-mark">?
-        </span>.map(|x| decode(<span class="kw-2">&amp;</span>x).unwrap() <span class="comment">/* .as_bytes().into() */</span>))
+        </span>.map(|x| base64.decode(<span class="kw-2">&amp;</span>x).unwrap() <span class="comment">/* .as_bytes().into() */</span>))
 }
 
 <span class="kw">fn </span>encode_optional_base64&lt;W: Write, T: AsRef&lt;[u8]&gt;&gt;(
     writer: <span class="kw-2">&amp;mut </span>EventWriter&lt;W&gt;,
     value: <span class="prelude-ty">Option</span>&lt;T&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-    <span class="comment">// let bytes = value.map(|x| encode(x.as_ref()));
+    <span class="comment">// let bytes = value.map(|x| base64.encode(x.as_ref()));
     // encode_optional_string(writer, bytes.map(|x| x.as_str()))
-    </span>encode_optional_string(writer, value.map(|x| encode(x.as_ref())).as_deref())
+    </span>encode_optional_string(writer, value.map(|x| base64.encode(x.as_ref())).as_deref())
 }
 
 <span class="kw">fn </span>decode_base64&lt;R: Read&gt;(
@@ -3628,7 +3604,7 @@
         decode_optional_string(reader, name, attributes).map(|x| {
             x.map(|y| {
                 Utc.timestamp_opt(
-                    Cursor::new(decode(<span class="kw-2">&amp;</span>y).expect(<span class="string">&quot;Valid base64&quot;</span>))
+                    Cursor::new(base64.decode(<span class="kw-2">&amp;</span>y).expect(<span class="string">&quot;Valid base64&quot;</span>))
                         .read_i64::&lt;LittleEndian&gt;()
                         .unwrap()
                         - KDBX4_TIME_OFFSET,
@@ -3663,7 +3639,7 @@
     encode_optional_string(
         writer,
         value
-            .map(|x| encode(<span class="kw-2">&amp;</span>(x.timestamp() + KDBX4_TIME_OFFSET).to_le_bytes()))
+            .map(|x| base64.encode(<span class="kw-2">&amp;</span>(x.timestamp() + KDBX4_TIME_OFFSET).to_le_bytes()))
             .as_deref(),
     )
 }
@@ -3743,14 +3719,14 @@
     attributes: Vec&lt;OwnedAttribute&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Uuid&gt;, String&gt; {
     decode_optional_string(reader, name, attributes)
-        .map(|x| x.map(|y| Uuid::from_slice(<span class="kw-2">&amp;</span>decode(<span class="kw-2">&amp;</span>y).expect(<span class="string">&quot;Valid base64&quot;</span>)).unwrap()))
+        .map(|x| x.map(|y| Uuid::from_slice(<span class="kw-2">&amp;</span>base64.decode(<span class="kw-2">&amp;</span>y).expect(<span class="string">&quot;Valid base64&quot;</span>)).unwrap()))
 }
 
 <span class="kw">fn </span>encode_optional_uuid&lt;W: Write&gt;(
     writer: <span class="kw-2">&amp;mut </span>EventWriter&lt;W&gt;,
     value: <span class="prelude-ty">Option</span>&lt;Uuid&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-    encode_optional_string(writer, value.map(|x| encode(x.as_ref())).as_deref())
+    encode_optional_string(writer, value.map(|x| base64.encode(x.as_ref())).as_deref())
 }
 
 <span class="comment">// fn decode_uuid&lt;R: Read&gt;(
@@ -4088,8 +4064,8 @@
 
 <span class="kw">impl</span>&lt;C&gt; KdbxSerialize&lt;C&gt; <span class="kw">for </span>ProtectedValue {
     <span class="kw">fn </span>serialize2&lt;W: Write&gt;(
-        writer: <span class="kw-2">&amp;mut </span>EventWriter&lt;W&gt;,
-        value: <span class="self">Self</span>,
+        _writer: <span class="kw-2">&amp;mut </span>EventWriter&lt;W&gt;,
+        _value: <span class="self">Self</span>,
         _context: <span class="kw-2">&amp;mut </span>C,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
         <span class="comment">//encode_string(writer, &amp;value)
@@ -4120,7 +4096,7 @@
 <span class="kw">impl </span>KdbxParse&lt;KdbxContext&gt; <span class="kw">for </span>BinaryRef {
     <span class="kw">fn </span>parse&lt;R: Read&gt;(
         reader: <span class="kw-2">&amp;mut </span>EventReader&lt;R&gt;,
-        name: OwnedName,
+        _name: OwnedName,
         attributes: Vec&lt;OwnedAttribute&gt;,
         context: <span class="kw-2">&amp;mut </span>KdbxContext,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt;, String&gt; {
@@ -4136,7 +4112,7 @@
                     <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Malformed XML document&quot;</span>.to_string());
                 }
                 XmlEvent::StartElement { .. } =&gt; {
-                    reader.skip();
+                    reader.skip().map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Malformed XML document: {e}&quot;</span>))<span class="question-mark">?</span>;
                 }
                 XmlEvent::EndElement { .. } =&gt; {
                     <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="self">Self</span>(context.binaries.get(id).map(|v| v.clone()).unwrap_or_else(|| <span class="macro">vec!</span>[]))));
@@ -4149,8 +4125,8 @@
 
 <span class="kw">impl</span>&lt;C&gt; KdbxSerialize&lt;C&gt; <span class="kw">for </span>BinaryRef {
     <span class="kw">fn </span>serialize2&lt;W: Write&gt;(
-        writer: <span class="kw-2">&amp;mut </span>EventWriter&lt;W&gt;,
-        value: <span class="self">Self</span>,
+        _writer: <span class="kw-2">&amp;mut </span>EventWriter&lt;W&gt;,
+        _value: <span class="self">Self</span>,
         _context: <span class="kw-2">&amp;mut </span>C,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
         <span class="comment">//encode_string(writer, &amp;value)
@@ -4755,7 +4731,7 @@
                 .expect(<span class="string">&quot;Missing header hash&quot;</span>);
             <span class="kw">if </span>header_hash.string() != <span class="string">&quot;&quot; </span>{
                 <span class="macro">println!</span>(<span class="string">&quot;Header Hash: &#39;{}&#39;&quot;</span>, header_hash.string());
-                <span class="kw">let </span>expected_hash = decode(<span class="kw-2">&amp;</span>header_hash.string()).expect(<span class="string">&quot;Valid base64&quot;</span>);
+                <span class="kw">let </span>expected_hash = base64.decode(<span class="kw-2">&amp;</span>header_hash.string()).expect(<span class="string">&quot;Valid base64&quot;</span>);
                 <span class="kw">if </span>expected_hash != digest.as_ref() {
                     <span class="macro">eprintln!</span>(<span class="string">&quot;Possible header corruption\n&quot;</span>);
                     process::exit(<span class="number">1</span>);
@@ -4804,7 +4780,7 @@
                     .with_timezone(<span class="kw-2">&amp;</span>Local)
             } <span class="kw">else </span>{
                 <span class="kw">let </span>timestamp =
-                    Cursor::new(decode(<span class="kw-2">&amp;</span>database_name_changed_node.string()).expect(<span class="string">&quot;Valid base64&quot;</span>))
+                    Cursor::new(base64.decode(<span class="kw-2">&amp;</span>database_name_changed_node.string()).expect(<span class="string">&quot;Valid base64&quot;</span>))
                         .read_i64::&lt;LittleEndian&gt;()<span class="question-mark">?
                         </span>- KDBX4_TIME_OFFSET;
                 <span class="comment">//let naive = NaiveDateTime::from_timestamp(timestamp, 0);
@@ -4830,7 +4806,7 @@
                         .evaluate(<span class="kw-2">&amp;</span>xpath_context, entry)
                         .expect(<span class="string">&quot;Missing entry text&quot;</span>);
                     <span class="macro">println!</span>(<span class="string">&quot;P: {:?}, (&#39;{}&#39;)&quot;</span>, p, p.string());
-                    <span class="kw">let </span><span class="kw-2">mut </span>p_ciphertext = decode(<span class="kw-2">&amp;</span>p.string()).expect(<span class="string">&quot;Valid base64&quot;</span>);
+                    <span class="kw">let </span><span class="kw-2">mut </span>p_ciphertext = base64.decode(<span class="kw-2">&amp;</span>p.string()).expect(<span class="string">&quot;Valid base64&quot;</span>);
                     <span class="macro">println!</span>(<span class="string">&quot;Protected Value Ciphertext: {p_ciphertext:#04X?} (+{protected_offset})&quot;</span>);
                     protected_offset += p_ciphertext.len();
                     inner_cipher.apply_keystream(<span class="kw-2">&amp;mut </span>p_ciphertext);
@@ -4888,7 +4864,7 @@
                         } <span class="kw">else </span>{
                             <span class="macro">println!</span>(<span class="string">&quot;Inner: {:?}&quot;</span>, <span class="kw-2">&amp;</span>t.string());
                             <span class="kw">let </span>timestamp =
-                                Cursor::new(decode(<span class="kw-2">&amp;</span>t.string()).expect(<span class="string">&quot;Valid base64&quot;</span>))
+                                Cursor::new(base64.decode(<span class="kw-2">&amp;</span>t.string()).expect(<span class="string">&quot;Valid base64&quot;</span>))
                                     .read_i64::&lt;LittleEndian&gt;()<span class="question-mark">?
                                     </span>- KDBX4_TIME_OFFSET;
                             <span class="comment">//let naive = NaiveDateTime::from_timestamp(timestamp, 0);
