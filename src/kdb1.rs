@@ -14,12 +14,32 @@ use uuid::Uuid;
 use rand::Rng;
 use ring::digest::{Context, SHA256, SHA512};
 use derive_getters::Getters;
+use bitflags::bitflags;
 
 use crate::Key;
 use crate::kdf::{transform_aes_kdf, KDF_PARAM_ROUNDS, KDF_PARAM_SALT};
 use crate::utils::{make_u64, unmake_u64_be};
 
 use super::{Group, Entry, Times, AutoType, ProtectedString, ProtectedValue, ProtectedBinary, BinaryRef, TITLE_FIELD, USER_NAME_FIELD, PASSWORD_FIELD, URL_FIELD};
+
+bitflags! {
+    #[derive(Debug)]
+    struct Flags: u32 {
+        const SHA2          = 1;
+        const RIJNDAEL      = 2;
+        const ARCFOUR       = 4;
+        const TWOFISH       = 8;
+    }
+}
+
+bitflags! {
+    #[derive(Debug)]
+    pub struct GroupFlags: u32 {
+        const EXPANDED    = 1;
+        const RESERVED0   = 0x1000;     /* Reserved for KeePassMobile */
+        const TEMP_BIT    = 0x40000000;
+    }
+}
 
 #[derive(Getters)]
 pub struct KdbGroup {
@@ -31,7 +51,7 @@ pub struct KdbGroup {
     pub access_time: DateTime<Local>,
     pub expiry_time: DateTime<Local>,
     pub icon: u32,
-    pub flags: u32,
+    pub flags: GroupFlags,
     pub groups: Vec<u32>,
     pub entries: Vec<Uuid>,
 }
@@ -230,7 +250,7 @@ fn read_tlvs<R: Read>(file: &mut R) -> io::Result<HashMap<u16, Vec<u8>>> {
 }
 
 pub fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<KdbDatabase> {
-    let flags = file.read_u32::<LittleEndian>()?;
+    let flags = Flags::from_bits(file.read_u32::<LittleEndian>()?).ok_or_else(|| io::Error::new(io::ErrorKind::Unsupported, "Unknown file flags"))?;
     let version = file.read_u32::<LittleEndian>()?;
     let mut master_seed = vec![0; 16];
     file.read_exact(&mut master_seed)?;
@@ -244,7 +264,7 @@ pub fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<KdbDatab
     file.read_exact(&mut transform_seed)?;
     let transform_round = file.read_u32::<LittleEndian>()?;
     println!(
-        "flags: {}, version: {}, groups: {}, entries: {}, round: {:?}",
+        "flags: {:?}, version: {}, groups: {}, entries: {}, round: {:?}",
         flags, version, num_groups, num_entries, transform_round
     );
 
@@ -313,7 +333,7 @@ pub fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<KdbDatab
         access_time: now,
         expiry_time: now,
         icon: 1,
-        flags: 0,
+        flags: GroupFlags::empty(),
         groups: vec![],
         entries: vec![],
     };
@@ -326,6 +346,7 @@ pub fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<KdbDatab
 
     let mut c = Cursor::new(data);
     println!("Groups:");
+    //let mut parent_map = HashMap::new();
     for _ in 0..num_groups {
         let mut group = KdbGroup {
             uuid: rng.gen(),
@@ -336,7 +357,7 @@ pub fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<KdbDatab
             access_time: now,
             expiry_time: now,
             icon: 1,
-            flags: 0,
+            flags: GroupFlags::empty(),
             groups: vec![],
             entries: vec![],
         };
@@ -415,10 +436,10 @@ pub fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<KdbDatab
                 }
                 0x0009 => {
                     let mut c = Cursor::new(&field_content);
-                    let flags = c.read_u32::<LittleEndian>()?;
+                    let flags = GroupFlags::from_bits(c.read_u32::<LittleEndian>()?).ok_or_else(|| io::Error::new(io::ErrorKind::Unsupported, "Unknown group flags"))?;
                     group.flags = flags;
                     assert_eq!(c.position(), field_content.len() as u64);
-                    println!("Flags: 0x{:08x}", flags);
+                    println!("Flags: {:?}", &group.flags);
                 }
                 _ => {
                     panic!("Unknown field");
@@ -442,6 +463,7 @@ pub fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<KdbDatab
         //uuid_map.insert(u, g);
     }
     println!("Entries:");
+    //let mut parent_map = HashMap::new();
     for _ in 0..num_entries {
         let mut entry = KdbEntry {
             uuid: Uuid::default(),
@@ -460,6 +482,7 @@ pub fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<KdbDatab
             binary_data: vec![],
         };
         let tlvs = read_tlvs(&mut c)?;
+        //let mut parent_id = 0;
         for (field_type, field_content) in tlvs {
             //println!("TLV({}, {}): {:?}", field_type, field_len, field_content);
             match field_type {
@@ -479,6 +502,7 @@ pub fn read_kdb1_header<R: Read>(file: &mut R, key: &Key) -> io::Result<KdbDatab
                     let mut c = Cursor::new(&field_content);
                     let group_id = c.read_u32::<LittleEndian>()?;
                     entry.parent = group_id;
+                    //parent_id = group_id;
                     assert_eq!(c.position(), field_content.len() as u64);
                     println!("Group: {}", entry.parent);
                 }
