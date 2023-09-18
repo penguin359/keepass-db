@@ -2,6 +2,10 @@ var sourcesIndex = JSON.parse('{\
 "addr2line":["",[],["function.rs","lazy.rs","lib.rs"]],\
 "adler":["",[],["algo.rs","lib.rs"]],\
 "aho_corasick":["",[["nfa",[],["contiguous.rs","mod.rs","noncontiguous.rs"]],["packed",[["teddy",[],["compile.rs","mod.rs","runtime.rs"]]],["api.rs","mod.rs","pattern.rs","rabinkarp.rs","vector.rs"]],["util",[],["alphabet.rs","buffer.rs","byte_frequencies.rs","debug.rs","error.rs","int.rs","mod.rs","prefilter.rs","primitives.rs","remapper.rs","search.rs","special.rs"]]],["ahocorasick.rs","automaton.rs","dfa.rs","lib.rs","macros.rs"]],\
+"anstream":["",[["adapter",[],["mod.rs","strip.rs","wincon.rs"]]],["auto.rs","buffer.rs","is_terminal.rs","lib.rs","lockable.rs","macros.rs","raw.rs","strip.rs"]],\
+"anstyle":["",[],["color.rs","effect.rs","lib.rs","macros.rs","reset.rs","style.rs"]],\
+"anstyle_parse":["",[["state",[],["definitions.rs","mod.rs","table.rs"]]],["lib.rs","params.rs"]],\
+"anstyle_query":["",[],["lib.rs","windows.rs"]],\
 "argon2_kdf":["",[],["bindings.rs","error.rs","hasher.rs","lexer.rs","lib.rs"]],\
 "argonautica":["",[["backend",[["c",[],["hash_raw.rs","mod.rs"]],["rust",[],["decode.rs","encode.rs","mod.rs"]]],["mod.rs"]],["config",[],["backend.rs","defaults.rs","flags.rs","hasher_config.rs","mod.rs","variant.rs","verifier_config.rs","version.rs"]],["input",[],["additional_data.rs","container.rs","mod.rs","password.rs","salt.rs","secret_key.rs"]],["output",[],["hash_raw.rs","mod.rs"]]],["error.rs","error_kind.rs","ffi.rs","hasher.rs","lib.rs","utils.rs","verifier.rs"]],\
 "atty":["",[],["lib.rs"]],\
@@ -16,8 +20,10 @@ var sourcesIndex = JSON.parse('{\
 "change_case":["",[],["lib.rs","title_case.rs"]],\
 "chrono":["",[["datetime",[],["mod.rs"]],["format",[],["formatting.rs","locales.rs","mod.rs","parse.rs","parsed.rs","scan.rs","strftime.rs"]],["naive",[["datetime",[],["mod.rs"]],["time",[],["mod.rs"]]],["date.rs","internals.rs","isoweek.rs","mod.rs"]],["offset",[["local",[["tz_info",[],["mod.rs","parser.rs","rule.rs","timezone.rs"]]],["mod.rs","unix.rs"]]],["fixed.rs","mod.rs","utc.rs"]]],["date.rs","duration.rs","lib.rs","month.rs","round.rs","traits.rs","weekday.rs"]],\
 "cipher":["",[],["block.rs","errors.rs","lib.rs","stream.rs","stream_core.rs","stream_wrapper.rs"]],\
-"clap":["",[["builder",[],["action.rs","app_settings.rs","arg.rs","arg_group.rs","arg_predicate.rs","arg_settings.rs","command.rs","debug_asserts.rs","macros.rs","mod.rs","possible_value.rs","usage_parser.rs","value_hint.rs","value_parser.rs"]],["error",[],["context.rs","kind.rs","mod.rs"]],["output",[],["fmt.rs","help.rs","mod.rs","usage.rs"]],["parser",[["features",[],["mod.rs","suggestions.rs"]],["matches",[],["any_value.rs","arg_matches.rs","matched_arg.rs","mod.rs","value_source.rs"]]],["arg_matcher.rs","error.rs","mod.rs","parser.rs","validator.rs"]],["util",[],["color.rs","fnv.rs","graph.rs","id.rs","mod.rs","str_to_bool.rs"]]],["derive.rs","lib.rs","macros.rs","mkeymap.rs"]],\
-"clap_lex":["",[],["lib.rs"]],\
+"clap":["",[],["lib.rs"]],\
+"clap_builder":["",[["builder",[],["action.rs","app_settings.rs","arg.rs","arg_group.rs","arg_predicate.rs","arg_settings.rs","command.rs","debug_asserts.rs","ext.rs","mod.rs","os_str.rs","possible_value.rs","range.rs","resettable.rs","str.rs","styled_str.rs","styling.rs","value_hint.rs","value_parser.rs"]],["error",[],["context.rs","format.rs","kind.rs","mod.rs"]],["output",[["textwrap",[],["core.rs","mod.rs"]]],["fmt.rs","help.rs","help_template.rs","mod.rs","usage.rs"]],["parser",[["features",[],["mod.rs","suggestions.rs"]],["matches",[],["arg_matches.rs","matched_arg.rs","mod.rs","value_source.rs"]]],["arg_matcher.rs","error.rs","mod.rs","parser.rs","validator.rs"]],["util",[],["any_value.rs","color.rs","flat_map.rs","flat_set.rs","graph.rs","id.rs","mod.rs","str_to_bool.rs"]]],["derive.rs","lib.rs","macros.rs","mkeymap.rs"]],\
+"clap_lex":["",[],["ext.rs","lib.rs"]],\
+"colorchoice":["",[],["lib.rs"]],\
 "cpufeatures":["",[],["lib.rs","x86.rs"]],\
 "crc32fast":["",[["specialized",[],["mod.rs","pclmulqdq.rs"]]],["baseline.rs","combine.rs","lib.rs","table.rs"]],\
 "crypto_common":["",[],["lib.rs"]],\
@@ -90,6 +96,7 @@ var sourcesIndex = JSON.parse('{\
 "unicode_ident":["",[],["lib.rs","tables.rs"]],\
 "unicode_xid":["",[],["lib.rs","tables.rs"]],\
 "untrusted":["",[],["untrusted.rs"]],\
+"utf8parse":["",[],["lib.rs","types.rs"]],\
 "uuid":["",[],["builder.rs","error.rs","external.rs","fmt.rs","lib.rs","macros.rs","parser.rs","timestamp.rs"]],\
 "xml":["",[["reader",[["parser",[],["inside_cdata.rs","inside_closing_tag_name.rs","inside_comment.rs","inside_declaration.rs","inside_doctype.rs","inside_opening_tag.rs","inside_processing_instruction.rs","inside_reference.rs","outside_tag.rs"]]],["config.rs","error.rs","events.rs","indexset.rs","lexer.rs","parser.rs"]],["writer",[],["config.rs","emitter.rs","events.rs"]]],["attribute.rs","common.rs","escape.rs","lib.rs","macros.rs","name.rs","namespace.rs","reader.rs","util.rs","writer.rs"]]\
 }');
