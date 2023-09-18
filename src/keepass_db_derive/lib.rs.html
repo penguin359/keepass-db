@@ -555,21 +555,122 @@
 <a href="#555" id="555">555</a>
 <a href="#556" id="556">556</a>
 <a href="#557" id="557">557</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>proc_macro::TokenStream <span class="kw">as </span>TS1;
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
+<a href="#653" id="653">653</a>
+<a href="#654" id="654">654</a>
+<a href="#655" id="655">655</a>
+<a href="#656" id="656">656</a>
+<a href="#657" id="657">657</a>
+<a href="#658" id="658">658</a>
+<a href="#659" id="659">659</a>
+<a href="#660" id="660">660</a>
+<a href="#661" id="661">661</a>
+<a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
+<a href="#664" id="664">664</a>
+</pre></div><pre class="rust"><code><span class="comment">//#![feature(iterator_try_collect)]
+
+</span><span class="kw">use </span>proc_macro::TokenStream <span class="kw">as </span>TS1;
 <span class="kw">use </span>proc_macro2::{token_stream::IntoIter, Delimiter, Ident, Span, TokenStream, TokenTree};
 
 <span class="kw">use </span>quote::{quote, format_ident};
 
 <span class="kw">use </span>change_case::pascal_case;
-<span class="kw">use </span>syn::{Attribute, Type};
-
-<span class="attr">#[cfg(test)]
-</span><span class="kw">mod </span>tests {
-    <span class="attr">#[test]
-    </span><span class="kw">fn </span>it_works() {
-        <span class="macro">assert_eq!</span>(<span class="number">2 </span>+ <span class="number">2</span>, <span class="number">4</span>);
-    }
-}
+<span class="kw">use </span>syn::{Attribute, Error, Type};
 
 <span class="attr">#[derive(Debug)]
 </span><span class="kw">struct </span>KdbxField {
@@ -603,34 +704,35 @@
 }
 
 <span class="kw">impl </span>KdbxAttributes {
-    <span class="kw">fn </span>parse(attrs: <span class="kw-2">&amp;</span>[Attribute]) -&gt; <span class="self">Self </span>{
+    <span class="kw">fn </span>parse(attrs: <span class="kw-2">&amp;</span>[Attribute]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>element_name = <span class="prelude-val">None</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>flatten = <span class="bool-val">false</span>;
-        <span class="kw">for </span>attr <span class="kw">in </span>attrs.iter().filter(|a| a.path.is_ident(<span class="string">&quot;keepass_db&quot;</span>)) {
-            <span class="kw">let </span><span class="kw-2">mut </span>attr_token = attr.tokens.clone().into_iter();
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(TokenTree::Group(value)) = attr_token.next() {
-                <span class="kw">if </span>value.delimiter() == Delimiter::Parenthesis {
-                    <span class="kw">let </span><span class="kw-2">mut </span>attr_token = value.stream().into_iter();
-                    <span class="kw">while let </span><span class="prelude-val">Some</span>(item) = attr_token.next() {
-                        <span class="kw">if let </span>TokenTree::Ident(name) = item {
-                            <span class="kw">match </span>name.to_string().as_str() {
-                                <span class="string">&quot;element&quot; </span>=&gt; {
-                                    element_name = get_value(<span class="kw-2">&amp;mut </span>attr_token);
-                                }
-                                <span class="string">&quot;flatten&quot; </span>=&gt; {
-                                    flatten = <span class="bool-val">true</span>;
-                                }
-                                <span class="kw">_ </span>=&gt; {}
-                            }
+        <span class="kw">for </span>attr <span class="kw">in </span>attrs.iter().filter(|a| a.path().is_ident(<span class="string">&quot;keepass_db&quot;</span>)).filter_map(|a| <span class="kw">match </span>a.meta {
+            syn::Meta::List(<span class="kw-2">ref </span>v) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>v.tokens),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">None
+        </span>}) {
+            <span class="macro">eprintln!</span>(<span class="string">&quot;Inner attr tokens: {:#?}&quot;</span>, attr);
+            <span class="kw">let </span><span class="kw-2">mut </span>attr_token = attr.clone().into_iter();
+            <span class="kw">while let </span><span class="prelude-val">Some</span>(item) = attr_token.next() {
+                <span class="kw">if let </span>TokenTree::Ident(name) = item {
+                    <span class="kw">match </span>name.to_string().as_str() {
+                        <span class="string">&quot;element&quot; </span>=&gt; {
+                            element_name = get_value(<span class="kw-2">&amp;mut </span>attr_token);
+                        }
+                        <span class="string">&quot;flatten&quot; </span>=&gt; {
+                            flatten = <span class="bool-val">true</span>;
+                        }
+                        <span class="kw">_ </span>=&gt; {
+                            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::new(name.span(), <span class="string">&quot;Unrecognized attribute&quot;</span>));
                         }
                     }
                 }
             }
         }
-        KdbxAttributes {
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             element_name,
             flatten,
-        }
+        })
     }
 }
 
@@ -693,8 +795,8 @@
     }
 }
 
-<span class="kw">fn </span>decode_struct(ast: <span class="kw-2">&amp;</span>syn::DeriveInput) -&gt; Vec&lt;KdbxField&gt; {
-    <span class="kw">match </span>ast.data {
+<span class="kw">fn </span>decode_struct(ast: <span class="kw-2">&amp;</span>syn::DeriveInput) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;KdbxField&gt;, Error&gt; {
+    <span class="prelude-val">Ok</span>(<span class="kw">match </span>ast.data {
         syn::Data::Struct(<span class="kw-2">ref </span>data_struct) =&gt; {
             <span class="kw">let </span>v = data_struct
                 .fields
@@ -702,13 +804,13 @@
                 .map(|field| {
                     <span class="kw">let </span>field = field.clone();
                     <span class="kw">let </span>name = field.ident.unwrap();
-                    <span class="kw">let </span>attrs = KdbxAttributes::parse(<span class="kw-2">&amp;</span>field.attrs);
+                    <span class="kw">let </span>attrs = KdbxAttributes::parse(<span class="kw-2">&amp;</span>field.attrs)<span class="question-mark">?</span>;
                     <span class="kw">let </span>big_name = attrs
                         .element_name
                         .clone()
                         .unwrap_or_else(|| pascal_case(<span class="kw-2">&amp;</span>name.to_string()));
                     <span class="kw">let </span>flatten = attrs.flatten;
-                    <span class="kw">match </span>get_type(<span class="kw-2">&amp;</span>field.ty) {
+                    <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, Error&gt;(<span class="kw">match </span>get_type(<span class="kw-2">&amp;</span>field.ty) {
                         TypeCategory::Vec(inner_type) =&gt; {
                             <span class="kw">let </span>subtype = <span class="kw">match </span>get_type(inner_type) {
                                 TypeCategory::Basic(t) =&gt; t,
@@ -785,14 +887,15 @@
                             option: <span class="bool-val">false</span>,
                             flatten,
                         },
-                    }
+                    })
                 })
-                .collect::&lt;Vec&lt;KdbxField&gt;&gt;();
+                <span class="comment">//.try_collect::&lt;Vec&lt;KdbxField&gt;&gt;()?;
+                </span>.map(|v| v.unwrap()).collect::&lt;Vec&lt;KdbxField&gt;&gt;();
             <span class="comment">// eprintln!(&quot;Fields done: {:?}.&quot;, &amp;v);
             </span>v
         }
         <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(<span class="string">&quot;Only structs currently supported for derive&quot;</span>)
-    }
+    })
 }
 
 <span class="attr">#[proc_macro_derive(KdbxParse, attributes(keepass_db))]
@@ -803,11 +906,11 @@
 <span class="kw">fn </span>derive_deserializer2(input: TokenStream) -&gt; TokenStream {
     <span class="kw">let </span>ast: syn::DeriveInput = syn::parse2(input).expect(<span class="string">&quot;bad parsing&quot;</span>);
     <span class="kw">let </span>outer_type = <span class="kw-2">&amp;</span>ast.ident;
-    <span class="kw">let </span>attrs = <span class="kw-2">&amp;</span>ast.attrs;
 
-    <span class="kw">let _ </span>= KdbxAttributes::parse(attrs);
-
-    <span class="kw">let </span>impl_block = decode_struct(<span class="kw-2">&amp;</span>ast);
+    <span class="kw">let </span>impl_block = <span class="kw">match </span>decode_struct(<span class="kw-2">&amp;</span>ast) {
+        <span class="prelude-val">Ok</span>(v) =&gt; v,
+        <span class="prelude-val">Err</span>(e) =&gt; { <span class="kw">return </span>e.into_compile_error(); },
+    };
     <span class="comment">// eprintln!(&quot;Struct fields: {:#?}&quot;, &amp;impl_block);
     </span><span class="kw">let </span>variables: TokenStream = impl_block
         .iter()
@@ -991,12 +1094,11 @@
 <span class="kw">fn </span>derive_serializer2(input: TokenStream) -&gt; TokenStream {
     <span class="kw">let </span>ast: syn::DeriveInput = syn::parse2(input).expect(<span class="string">&quot;bad parsing&quot;</span>);
     <span class="kw">let </span>outer_type = <span class="kw-2">&amp;</span>ast.ident;
-    <span class="kw">let </span>attrs = <span class="kw-2">&amp;</span>ast.attrs;
-    <span class="comment">// let _data = &amp;ast.data;
 
-    </span><span class="kw">let _ </span>= KdbxAttributes::parse(attrs);
-
-    <span class="kw">let </span>impl_block = decode_struct(<span class="kw-2">&amp;</span>ast);
+    <span class="kw">let </span>impl_block = <span class="kw">match </span>decode_struct(<span class="kw-2">&amp;</span>ast) {
+        <span class="prelude-val">Ok</span>(v) =&gt; v,
+        <span class="prelude-val">Err</span>(e) =&gt; { <span class="kw">return </span>e.into_compile_error(); },
+    };
     <span class="kw">let </span>elements: TokenStream = impl_block.iter().map(|r| {
         <span class="kw">let </span>name = <span class="kw-2">&amp;</span>r.name;
         <span class="kw">let </span>my_type = <span class="kw-2">&amp;</span>r.r#type;
@@ -1079,37 +1181,149 @@
     </span>results
 }
 
-<span class="attr">#[test]
-</span><span class="kw">fn </span>parse() {
-    <span class="comment">//derive_serializer2(quote! { struct ASD ( fds, f ); });
-    </span>derive_serializer2(<span class="macro">quote! </span>{ <span class="kw">struct </span>One { field: i32, string: String } });
-}
+<span class="attr">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-<span class="attr">#[test]
-</span><span class="kw">fn </span>quote_expand() {
-    <span class="kw">let </span>var = <span class="string">&quot;hello&quot;</span>;
-    <span class="macro">assert_eq!</span>(<span class="macro">quote! </span>{ test #var insert }.to_string(), <span class="string">r#&quot;test &quot;hello&quot; insert&quot;#</span>);
-}
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>parse() {
+        derive_deserializer2(<span class="macro">quote! </span>{ <span class="kw">struct </span>One { field: i32, string: String } });
+    }
 
-<span class="attr">#[test]
-</span><span class="kw">fn </span>quote_expand_vec() {
-    <span class="kw">let </span>var = <span class="macro">vec!</span>[<span class="string">&quot;hello&quot;</span>, <span class="string">&quot;world&quot;</span>];
-    <span class="macro">assert_eq!</span>(<span class="macro">quote! </span>{ test #(#var)* insert }.to_string(), <span class="string">r#&quot;test &quot;hello&quot; &quot;world&quot; insert&quot;#</span>);
-}
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>serialize() {
+        derive_serializer2(<span class="macro">quote! </span>{ <span class="kw">struct </span>One { field: i32, string: String } });
+    }
 
-<span class="attr">#[test]
-</span><span class="kw">fn </span>quote_expand_multi_vec() {
-    <span class="kw">let </span>var = <span class="macro">vec!</span>[<span class="string">&quot;hello&quot;</span>, <span class="string">&quot;world&quot;</span>];
-    <span class="kw">let </span>var2 = <span class="macro">vec!</span>[<span class="string">&quot;one&quot;</span>, <span class="string">&quot;two&quot;</span>, <span class="string">&quot;three&quot;</span>];
-    <span class="macro">assert_eq!</span>(<span class="macro">quote! </span>{ test #(#var = #var2)* insert }.to_string(),
-    <span class="string">r#&quot;test &quot;hello&quot; = &quot;one&quot; &quot;world&quot; = &quot;two&quot; insert&quot;#</span>);
-}
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>quote_expand() {
+        <span class="kw">let </span>var = <span class="string">&quot;hello&quot;</span>;
+        <span class="macro">assert_eq!</span>(<span class="macro">quote! </span>{ test #var insert }.to_string(), <span class="string">r#&quot;test &quot;hello&quot; insert&quot;#</span>);
+    }
 
-<span class="attr">#[test]
-</span><span class="kw">fn </span>quote_expand_multi_vec_with_separator() {
-    <span class="kw">let </span>var = <span class="macro">vec!</span>[<span class="string">&quot;hello&quot;</span>, <span class="string">&quot;world&quot;</span>];
-    <span class="kw">let </span>var2 = <span class="macro">vec!</span>[<span class="string">&quot;one&quot;</span>, <span class="string">&quot;two&quot;</span>, <span class="string">&quot;three&quot;</span>];
-    <span class="macro">assert_eq!</span>(<span class="macro">quote! </span>{ test #(#var = #var2),* insert }.to_string(),
-    <span class="string">r#&quot;test &quot;hello&quot; = &quot;one&quot; , &quot;world&quot; = &quot;two&quot; insert&quot;#</span>);
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>quote_expand_vec() {
+        <span class="kw">let </span>var = <span class="macro">vec!</span>[<span class="string">&quot;hello&quot;</span>, <span class="string">&quot;world&quot;</span>];
+        <span class="macro">assert_eq!</span>(<span class="macro">quote! </span>{ test #(#var)* insert }.to_string(), <span class="string">r#&quot;test &quot;hello&quot; &quot;world&quot; insert&quot;#</span>);
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>quote_expand_multi_vec() {
+        <span class="kw">let </span>var = <span class="macro">vec!</span>[<span class="string">&quot;hello&quot;</span>, <span class="string">&quot;world&quot;</span>];
+        <span class="kw">let </span>var2 = <span class="macro">vec!</span>[<span class="string">&quot;one&quot;</span>, <span class="string">&quot;two&quot;</span>, <span class="string">&quot;three&quot;</span>];
+        <span class="macro">assert_eq!</span>(<span class="macro">quote! </span>{ test #(#var = #var2)* insert }.to_string(),
+        <span class="string">r#&quot;test &quot;hello&quot; = &quot;one&quot; &quot;world&quot; = &quot;two&quot; insert&quot;#</span>);
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>quote_expand_multi_vec_with_separator() {
+        <span class="kw">let </span>var = <span class="macro">vec!</span>[<span class="string">&quot;hello&quot;</span>, <span class="string">&quot;world&quot;</span>];
+        <span class="kw">let </span>var2 = <span class="macro">vec!</span>[<span class="string">&quot;one&quot;</span>, <span class="string">&quot;two&quot;</span>, <span class="string">&quot;three&quot;</span>];
+        <span class="macro">assert_eq!</span>(<span class="macro">quote! </span>{ test #(#var = #var2),* insert }.to_string(),
+        <span class="string">r#&quot;test &quot;hello&quot; = &quot;one&quot; , &quot;world&quot; = &quot;two&quot; insert&quot;#</span>);
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>decode_attributes_missing() {
+        <span class="kw">let </span>input = <span class="macro">quote! </span>{ <span class="kw">struct </span>test; };
+        <span class="kw">let </span>ast: syn::DeriveInput = syn::parse2(input).expect(<span class="string">&quot;bad parsing&quot;</span>);
+        <span class="kw">let </span>value = KdbxAttributes::parse(<span class="kw-2">&amp;</span>ast.attrs).expect(<span class="string">&quot;Error in attributes&quot;</span>);
+        <span class="macro">assert!</span>(!value.flatten);
+        <span class="macro">assert!</span>(value.element_name.is_none());
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>decode_attributes_empty() {
+        <span class="kw">let </span>input = <span class="macro">quote! </span>{ <span class="attr">#[keepass_db()] </span><span class="kw">struct </span>test; };
+        <span class="kw">let </span>ast: syn::DeriveInput = syn::parse2(input).expect(<span class="string">&quot;bad parsing&quot;</span>);
+        <span class="kw">let </span>value = KdbxAttributes::parse(<span class="kw-2">&amp;</span>ast.attrs).expect(<span class="string">&quot;Error in attributes&quot;</span>);
+        <span class="macro">assert!</span>(!value.flatten);
+        <span class="macro">assert!</span>(value.element_name.is_none());
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>decode_attributes_full() {
+        <span class="kw">let </span>input = <span class="macro">quote! </span>{
+            <span class="attr">#[derive(Debug)]
+            #[keepass_db(flatten, element = <span class="string">&quot;foobar&quot;</span>)]
+            </span><span class="kw">struct </span>test;
+        };
+        <span class="kw">let </span>ast: syn::DeriveInput = syn::parse2(input).expect(<span class="string">&quot;bad parsing&quot;</span>);
+        <span class="kw">let </span>value = KdbxAttributes::parse(<span class="kw-2">&amp;</span>ast.attrs).expect(<span class="string">&quot;Error in attributes&quot;</span>);
+        <span class="macro">assert!</span>(value.flatten);
+        <span class="macro">assert!</span>(value.element_name.is_some());
+        <span class="macro">assert_eq!</span>(value.element_name.unwrap(), <span class="string">&quot;foobar&quot;</span>);
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>decode_attributes_misspelled() {
+        <span class="kw">let </span>input = <span class="macro">quote! </span>{
+            <span class="attr">#[derive(Debug)]
+            #[keepass_db(flatten, elment = <span class="string">&quot;foobar&quot;</span>)]
+            </span><span class="kw">struct </span>test;
+        };
+        <span class="kw">let </span>ast: syn::DeriveInput = syn::parse2(input).expect(<span class="string">&quot;bad parsing&quot;</span>);
+        <span class="kw">let </span>value = KdbxAttributes::parse(<span class="kw-2">&amp;</span>ast.attrs);
+        <span class="macro">assert!</span>(value.is_err());
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>decode_struct_valid() {
+        <span class="kw">let </span>input = <span class="macro">quote! </span>{
+            <span class="kw">struct </span>test {
+                one: bool,
+            }
+        };
+        <span class="kw">let </span>ast: syn::DeriveInput = syn::parse2(input).expect(<span class="string">&quot;bad parsing&quot;</span>);
+        <span class="kw">let </span>value = decode_struct(<span class="kw-2">&amp;</span>ast).expect(<span class="string">&quot;Failed to decode struct&quot;</span>);
+        <span class="macro">assert_eq!</span>(value.len(), <span class="number">1</span>);
+        <span class="macro">assert_eq!</span>(value[<span class="number">0</span>].name.to_string(), <span class="string">&quot;one&quot;</span>);
+        <span class="macro">assert_eq!</span>(value[<span class="number">0</span>].r#type.to_string(), <span class="string">&quot;bool&quot;</span>);
+        <span class="macro">assert_eq!</span>(value[<span class="number">0</span>].element_name, <span class="string">&quot;One&quot;</span>);
+        <span class="comment">// TODO test inner_type and full_type
+        </span><span class="macro">assert!</span>(!value[<span class="number">0</span>].array);
+        <span class="macro">assert!</span>(!value[<span class="number">0</span>].option);
+        <span class="macro">assert!</span>(!value[<span class="number">0</span>].flatten);
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>decode_struct_complex() {
+        <span class="kw">let </span>input = <span class="macro">quote! </span>{
+            <span class="kw">struct </span>test {
+                <span class="attr">#[keepass_db(flatten)]
+                </span>one: u32,
+                two: <span class="prelude-ty">Option</span>&lt;String&gt;,
+                three: Vec&lt;bool&gt;,
+                four: <span class="prelude-ty">Option</span>&lt;Vec&lt;i16&gt;&gt;,
+            }
+        };
+        <span class="kw">let </span>ast: syn::DeriveInput = syn::parse2(input).expect(<span class="string">&quot;bad parsing&quot;</span>);
+        <span class="kw">let </span>value = decode_struct(<span class="kw-2">&amp;</span>ast).expect(<span class="string">&quot;Failed to decode struct&quot;</span>);
+        <span class="macro">assert_eq!</span>(value.len(), <span class="number">4</span>);
+        <span class="macro">assert_eq!</span>(value[<span class="number">0</span>].name.to_string(), <span class="string">&quot;one&quot;</span>);
+        <span class="macro">assert_eq!</span>(value[<span class="number">0</span>].r#type.to_string(), <span class="string">&quot;u32&quot;</span>);
+        <span class="macro">assert_eq!</span>(value[<span class="number">0</span>].element_name, <span class="string">&quot;One&quot;</span>);
+        <span class="macro">assert!</span>(!value[<span class="number">0</span>].array);
+        <span class="macro">assert!</span>(!value[<span class="number">0</span>].option);
+        <span class="macro">assert!</span>(value[<span class="number">0</span>].flatten);
+        <span class="macro">assert_eq!</span>(value[<span class="number">1</span>].name.to_string(), <span class="string">&quot;two&quot;</span>);
+        <span class="macro">assert_eq!</span>(value[<span class="number">1</span>].r#type.to_string(), <span class="string">&quot;String&quot;</span>);
+        <span class="macro">assert_eq!</span>(value[<span class="number">1</span>].element_name, <span class="string">&quot;Two&quot;</span>);
+        <span class="macro">assert!</span>(!value[<span class="number">1</span>].array);
+        <span class="macro">assert!</span>(value[<span class="number">1</span>].option);
+        <span class="macro">assert!</span>(!value[<span class="number">1</span>].flatten);
+        <span class="macro">assert_eq!</span>(value[<span class="number">2</span>].name.to_string(), <span class="string">&quot;three&quot;</span>);
+        <span class="macro">assert_eq!</span>(value[<span class="number">2</span>].r#type.to_string(), <span class="string">&quot;bool&quot;</span>);
+        <span class="macro">assert_eq!</span>(value[<span class="number">2</span>].element_name, <span class="string">&quot;Three&quot;</span>);
+        <span class="macro">assert!</span>(value[<span class="number">2</span>].array);
+        <span class="macro">assert!</span>(!value[<span class="number">2</span>].option);
+        <span class="macro">assert!</span>(!value[<span class="number">2</span>].flatten);
+        <span class="macro">assert_eq!</span>(value[<span class="number">3</span>].name.to_string(), <span class="string">&quot;four&quot;</span>);
+        <span class="macro">assert_eq!</span>(value[<span class="number">3</span>].r#type.to_string(), <span class="string">&quot;i16&quot;</span>);
+        <span class="macro">assert_eq!</span>(value[<span class="number">3</span>].element_name, <span class="string">&quot;Four&quot;</span>);
+        <span class="macro">assert!</span>(value[<span class="number">3</span>].array);
+        <span class="macro">assert!</span>(value[<span class="number">3</span>].option);
+        <span class="macro">assert!</span>(!value[<span class="number">3</span>].flatten);
+    }
 }
 </code></pre></div></section></main></body></html>
