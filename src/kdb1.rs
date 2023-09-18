@@ -18,7 +18,7 @@ use crate::Key;
 use crate::kdf::{transform_aes_kdf, KDF_PARAM_ROUNDS, KDF_PARAM_SALT};
 use crate::utils::{make_u64, unmake_u64_be};
 
-use super::{Group, Entry, Times, AutoType, ProtectedString, ProtectedValue, ProtectedBinary, BinaryRef, TITLE_FIELD, USER_NAME_FIELD, PASSWORD_FIELD, URL_FIELD, NOTES_FIELD};
+use super::{Group, Entry, Times, AutoType, ProtectedString, ProtectedValue, ProtectedBinary, BinaryRef, TITLE_FIELD, USER_NAME_FIELD, PASSWORD_FIELD, URL_FIELD};
 
 pub struct KdbGroup {
     //<'a> {

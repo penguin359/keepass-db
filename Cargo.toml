@@ -14,7 +14,8 @@ categories = ["cryptography"]
 
 [features]
 #default = ["rust-argon2"]
-default = ["argonautica"]
+#default = ["argonautica"]
+default = ["argon2-kdf"]
 write = []
 
 [dependencies]
@@ -31,7 +32,7 @@ base64 = "0.21.4"
 chrono = { version = "0.4.30", default-features = false, features = ["alloc", "std", "clock"] }
 hex = "0.4.3"
 rust-argon2 = { version = "2.0.0", optional = true }
-argonautica = { version = "0.1.0", optional = true }
+#argonautica = { version = "0.1.0", optional = true }
 argon2-kdf = { version = "1.3.0", optional = true }
 chacha20 = "0.9.1"
 log = "0.4.20"
