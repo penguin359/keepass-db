@@ -1,4 +1,4 @@
-use std::{num::Wrapping, rc};
+use std::num::Wrapping;
 
 pub struct ArcFourVariant {
     initial_i: Wrapping<u8>,

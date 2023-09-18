@@ -31,35 +31,23 @@ use std::io::prelude::*;
 use std::io::Cursor;
 use std::io::{self, SeekFrom};
 use std::process;
-//use std::cell::RefCell;
-//use std::rc::Rc;
 use std::cmp;
 
 use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
 
 use log::debug;
 
-//use hex::ToHex;
-// use hex::FromHex;
-use base64::{decode, encode};
-use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
-use hex_literal::hex;
+use base64::engine::{Engine, general_purpose::STANDARD as base64};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use openssl::error::ErrorStack;
 use uuid::{uuid, Uuid};
 //use borsh::de::BorshDeserialize;  // try_from_slice()
-// use chacha20::stream_cipher::generic_array::GenericArray;
-// use chacha20::stream_cipher::{NewStreamCipher, SyncStreamCipher};
-use chacha20::ChaCha20;
-use generic_array::GenericArray;
 use chrono::prelude::*;
 use flate2::read::GzDecoder;
-use openssl::symm::{decrypt, encrypt, Cipher, Crypter, Mode};
+use openssl::symm::{decrypt, Cipher, Crypter, Mode};
 use ring::digest::{Context, SHA256, SHA512};
 use ring::hmac;
-use salsa20::cipher::{KeyIvInit, StreamCipher};
-use salsa20::Key as Salsa20_Key;
-use salsa20::Salsa20;
 use sxd_document::parser;
 use sxd_xpath::{evaluate_xpath, Context as XPathContext, Factory, Value};
 
@@ -438,7 +426,7 @@ impl<R: Read> BlockReader<R> {
         //     let header_hash = evaluate_xpath(&document, "/KeePassFile/Meta/HeaderHash/text()").expect("Missing header hash");
         //     if header_hash.string() != "" {
         //         println!("Header Hash: '{}'", header_hash.string());
-        //         let expected_hash = decode(&header_hash.string()).expect("Valid base64");
+        //         let expected_hash = base64.decode(&header_hash.string()).expect("Valid base64");
         //         if expected_hash != digest.as_ref() {
         //             eprintln!("Possible header corruption\n");
         //             process::exit(1);
@@ -892,16 +880,16 @@ fn decode_optional_base64<R: Read>(
     attributes: Vec<OwnedAttribute>,
 ) -> Result<Option<Vec<u8>>, String> {
     Ok(decode_optional_string(reader, name, attributes)?
-        .map(|x| decode(&x).unwrap() /* .as_bytes().into() */))
+        .map(|x| base64.decode(&x).unwrap() /* .as_bytes().into() */))
 }
 
 fn encode_optional_base64<W: Write, T: AsRef<[u8]>>(
     writer: &mut EventWriter<W>,
     value: Option<T>,
 ) -> Result<(), String> {
-    // let bytes = value.map(|x| encode(x.as_ref()));
+    // let bytes = value.map(|x| base64.encode(x.as_ref()));
     // encode_optional_string(writer, bytes.map(|x| x.as_str()))
-    encode_optional_string(writer, value.map(|x| encode(x.as_ref())).as_deref())
+    encode_optional_string(writer, value.map(|x| base64.encode(x.as_ref())).as_deref())
 }
 
 fn decode_base64<R: Read>(
@@ -1071,7 +1059,7 @@ fn decode_optional_datetime<R: Read>(
         decode_optional_string(reader, name, attributes).map(|x| {
             x.map(|y| {
                 Utc.timestamp_opt(
-                    Cursor::new(decode(&y).expect("Valid base64"))
+                    Cursor::new(base64.decode(&y).expect("Valid base64"))
                         .read_i64::<LittleEndian>()
                         .unwrap()
                         - KDBX4_TIME_OFFSET,
@@ -1106,7 +1094,7 @@ fn encode_optional_datetime<W: Write>(
     encode_optional_string(
         writer,
         value
-            .map(|x| encode(&(x.timestamp() + KDBX4_TIME_OFFSET).to_le_bytes()))
+            .map(|x| base64.encode(&(x.timestamp() + KDBX4_TIME_OFFSET).to_le_bytes()))
             .as_deref(),
     )
 }
@@ -1186,14 +1174,14 @@ fn decode_optional_uuid<R: Read>(
     attributes: Vec<OwnedAttribute>,
 ) -> Result<Option<Uuid>, String> {
     decode_optional_string(reader, name, attributes)
-        .map(|x| x.map(|y| Uuid::from_slice(&decode(&y).expect("Valid base64")).unwrap()))
+        .map(|x| x.map(|y| Uuid::from_slice(&base64.decode(&y).expect("Valid base64")).unwrap()))
 }
 
 fn encode_optional_uuid<W: Write>(
     writer: &mut EventWriter<W>,
     value: Option<Uuid>,
 ) -> Result<(), String> {
-    encode_optional_string(writer, value.map(|x| encode(x.as_ref())).as_deref())
+    encode_optional_string(writer, value.map(|x| base64.encode(x.as_ref())).as_deref())
 }
 
 // fn decode_uuid<R: Read>(
@@ -1531,8 +1519,8 @@ impl KdbxParse<KdbxContext> for ProtectedValue {
 
 impl<C> KdbxSerialize<C> for ProtectedValue {
     fn serialize2<W: Write>(
-        writer: &mut EventWriter<W>,
-        value: Self,
+        _writer: &mut EventWriter<W>,
+        _value: Self,
         _context: &mut C,
     ) -> Result<(), String> {
         //encode_string(writer, &value)
@@ -1563,7 +1551,7 @@ impl Default for BinaryRef {
 impl KdbxParse<KdbxContext> for BinaryRef {
     fn parse<R: Read>(
         reader: &mut EventReader<R>,
-        name: OwnedName,
+        _name: OwnedName,
         attributes: Vec<OwnedAttribute>,
         context: &mut KdbxContext,
     ) -> Result<Option<Self>, String> {
@@ -1579,7 +1567,7 @@ impl KdbxParse<KdbxContext> for BinaryRef {
                     return Err("Malformed XML document".to_string());
                 }
                 XmlEvent::StartElement { .. } => {
-                    reader.skip();
+                    reader.skip().map_err(|e| format!("Malformed XML document: {e}"))?;
                 }
                 XmlEvent::EndElement { .. } => {
                     return Ok(Some(Self(context.binaries.get(id).map(|v| v.clone()).unwrap_or_else(|| vec![]))));
@@ -1592,8 +1580,8 @@ impl KdbxParse<KdbxContext> for BinaryRef {
 
 impl<C> KdbxSerialize<C> for BinaryRef {
     fn serialize2<W: Write>(
-        writer: &mut EventWriter<W>,
-        value: Self,
+        _writer: &mut EventWriter<W>,
+        _value: Self,
         _context: &mut C,
     ) -> Result<(), String> {
         //encode_string(writer, &value)
@@ -2198,7 +2186,7 @@ impl KeePassDoc {
                 .expect("Missing header hash");
             if header_hash.string() != "" {
                 println!("Header Hash: '{}'", header_hash.string());
-                let expected_hash = decode(&header_hash.string()).expect("Valid base64");
+                let expected_hash = base64.decode(&header_hash.string()).expect("Valid base64");
                 if expected_hash != digest.as_ref() {
                     eprintln!("Possible header corruption\n");
                     process::exit(1);
@@ -2247,7 +2235,7 @@ impl KeePassDoc {
                     .with_timezone(&Local)
             } else {
                 let timestamp =
-                    Cursor::new(decode(&database_name_changed_node.string()).expect("Valid base64"))
+                    Cursor::new(base64.decode(&database_name_changed_node.string()).expect("Valid base64"))
                         .read_i64::<LittleEndian>()?
                         - KDBX4_TIME_OFFSET;
                 //let naive = NaiveDateTime::from_timestamp(timestamp, 0);
@@ -2273,7 +2261,7 @@ impl KeePassDoc {
                         .evaluate(&xpath_context, entry)
                         .expect("Missing entry text");
                     println!("P: {:?}, ('{}')", p, p.string());
-                    let mut p_ciphertext = decode(&p.string()).expect("Valid base64");
+                    let mut p_ciphertext = base64.decode(&p.string()).expect("Valid base64");
                     println!("Protected Value Ciphertext: {p_ciphertext:#04X?} (+{protected_offset})");
                     protected_offset += p_ciphertext.len();
                     inner_cipher.apply_keystream(&mut p_ciphertext);
@@ -2331,7 +2319,7 @@ impl KeePassDoc {
                         } else {
                             println!("Inner: {:?}", &t.string());
                             let timestamp =
-                                Cursor::new(decode(&t.string()).expect("Valid base64"))
+                                Cursor::new(base64.decode(&t.string()).expect("Valid base64"))
                                     .read_i64::<LittleEndian>()?
                                     - KDBX4_TIME_OFFSET;
                             //let naive = NaiveDateTime::from_timestamp(timestamp, 0);

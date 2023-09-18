@@ -1,7 +1,7 @@
 //#![feature(iterator_try_collect)]
 
 use proc_macro::TokenStream as TS1;
-use proc_macro2::{token_stream::IntoIter, Delimiter, Ident, Span, TokenStream, TokenTree};
+use proc_macro2::{token_stream::IntoIter, Ident, Span, TokenStream, TokenTree};
 
 use quote::{quote, format_ident};
 
@@ -284,7 +284,7 @@ fn derive_deserializer2(input: TokenStream) -> TokenStream {
                                     });
                                 },
                                 XmlEvent::StartElement { .. } => {
-                                    reader.skip();
+                                    reader.skip().map_err(|e| format!("Malformed XML document: {e}"))?;
                                 },
                                 XmlEvent::EndElement { .. } => {
                                     break;
