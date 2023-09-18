@@ -38,7 +38,7 @@ chacha20 = "0.9.1"
 log = "0.4.20"
 env_logger = "0.10.0"
 rand = "0.8.5"
-clap = "3.0.0"
+clap = "4.4.2"
 xml-rs = "0.8.18"
 keepass-db-derive = { version = "0.0.1", path = "keepass-db-derive/" }
 num-derive = "0.4.0"
