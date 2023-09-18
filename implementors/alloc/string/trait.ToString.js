@@ -1,3 +1,4 @@
 (function() {var implementors = {
+"argon2_kdf":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.71.0/alloc/string/trait.ToString.html\" title=\"trait alloc::string::ToString\">ToString</a> for <a class=\"struct\" href=\"argon2_kdf/struct.Hash.html\" title=\"struct argon2_kdf::Hash\">Hash</a>"]],
 "nom":[]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

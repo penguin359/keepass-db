@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Algorithm","Argon2Error"],"struct":["Hash","Hasher","Secret"]};
