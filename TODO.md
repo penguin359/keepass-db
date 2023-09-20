@@ -10,3 +10,4 @@
     * [ ] Support working with KDB1 directly
     * [ ] Convert KDB1 to KDBX
     * [ ] Validate header hash
+    * [ ] Implement never time
