@@ -1,7 +1,7 @@
 use log::{info, debug};
 
 #[cfg(feature = "rust-argon2")]
-use ::argon2::{Config, ThreadMode, Variant, Version};
+use ::argon2::{Config, Variant, Version};
 #[cfg(feature = "argonautica")]
 use argonautica::{
     config::{Variant, Version},
@@ -41,7 +41,6 @@ fn transform_argon2_lib(
         mem_cost,
         time_cost,
         lanes,
-        thread_mode: ThreadMode::Parallel,
         secret: &[],
         ad: &[],
         hash_length: 32,

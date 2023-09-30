@@ -8,7 +8,7 @@ use super::*;
 #[test]
 #[cfg(feature = "rust-argon2")]
 fn test_argon2() {
-    use ::argon2::{Config, ThreadMode, Variant, Version};
+    use ::argon2::{Config, Variant, Version};
 
     let password = b"password";
     let salt = b"othersalt";
@@ -18,7 +18,6 @@ fn test_argon2() {
         mem_cost: 65536,
         time_cost: 10,
         lanes: 4,
-        thread_mode: ThreadMode::Parallel,
         secret: &[],
         ad: &[],
         hash_length: 32,
