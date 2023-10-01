@@ -1,6 +1,6 @@
 [package]
 name = "keepass-db"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Loren M. Lang <lorenl@north-winds.org>"]
 license = "MIT"
 edition = "2018"
@@ -42,7 +42,7 @@ env_logger = "0.10.0"
 rand = "0.8.5"
 clap = "4.4.2"
 xml-rs = "0.8.18"
-keepass-db-derive = { version = "0.0.1", path = "keepass-db-derive/" }
+keepass-db-derive = { version = "0.0.2", path = "keepass-db-derive/" }
 num-derive = "0.4.0"
 num-traits = "0.2.16"
 salsa20 = "0.10.2"
