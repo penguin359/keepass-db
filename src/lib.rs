@@ -35,17 +35,24 @@ use std::cmp;
 
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
+#[cfg(feature = "write")]
+use num_traits::ToPrimitive;
 
 use log::debug;
 
 use base64::engine::{Engine, general_purpose::STANDARD as base64};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use openssl::error::ErrorStack;
 use uuid::{uuid, Uuid};
 //use borsh::de::BorshDeserialize;  // try_from_slice()
 use chrono::prelude::*;
 use flate2::read::GzDecoder;
+
+use openssl::error::ErrorStack;
 use openssl::symm::{decrypt, Cipher, Crypter, Mode};
+
+#[cfg(feature = "write")]
+use openssl::symm::encrypt;
+
 use ring::digest::{Context, SHA256, SHA512};
 use ring::hmac;
 use sxd_document::parser;
