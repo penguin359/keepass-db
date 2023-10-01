@@ -9,6 +9,8 @@ use argonautica::{
 };
 #[cfg(feature = "argon2-kdf")]
 use argon2_kdf::{Hasher, Algorithm};
+#[cfg(feature = "argon2")]
+use ::argon2::{Argon2, Algorithm, Version, ParamsBuilder};
 
 use crate::utils::{unmake_u32, unmake_u64};
 use super::*;
@@ -111,7 +113,36 @@ fn transform_argon2_lib(
             .to_owned())
 }
 
-#[cfg(any(feature = "rust-argon2", feature = "argonautica", feature = "argon2-kdf"))]
+#[cfg(feature = "argon2")]
+fn transform_argon2_lib(
+    composite_key: &[u8],
+    salt: &[u8],
+    version: u32,
+    mem_cost: u32,
+    time_cost: u32,
+    lanes: u32,
+) -> io::Result<Vec<u8>> {
+    debug!("Argon2");
+    let version = match version {
+        0x13 => Version::V0x13,
+        0x10 => Version::V0x10,
+        _ => {
+            panic!("Misconfigured!");
+        }
+    };
+    let mut hash = [0; 32];
+    Argon2::new(Algorithm::Argon2d, version, ParamsBuilder::new()
+        .m_cost(mem_cost)
+        .t_cost(time_cost)
+        .p_cost(lanes)
+        .output_len(32)
+        .build()
+        .unwrap()
+    ).hash_password_into(composite_key, &salt, &mut hash).unwrap();
+    Ok(hash.to_vec())
+}
+
+#[cfg(any(feature = "rust-argon2", feature = "argonautica", feature = "argon2-kdf", feature = "argon2"))]
 pub fn transform_argon2(
     composite_key: &[u8],
     custom_data: &HashMap<String, Vec<u8>>,
@@ -214,7 +245,7 @@ pub fn transform_argon2(
     Ok(hash)
 }
 
-#[cfg(not(any(feature = "rust-argon2", feature = "argonautica", feature = "argon2-kdf")))]
+#[cfg(not(any(feature = "rust-argon2", feature = "argonautica", feature = "argon2-kdf", feature = "argon2")))]
 pub fn transform_argon2(
     _composite_key: &[u8],
     custom_data: &HashMap<String, Vec<u8>>,

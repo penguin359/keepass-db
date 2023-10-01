@@ -30,7 +30,7 @@ fn test_argon2() {
 //const ARGON2_HASH : &str = "4eb4d1f66ae3c88d85445fb49ae7c4a8fd51eeaa132c53cb8b37610f02569371";
 
 #[test]
-#[cfg(any(feature = "rust-argon2", feature = "argonautica", feature = "argon2-kdf"))]
+#[cfg(any(feature = "rust-argon2", feature = "argonautica", feature = "argon2-kdf", feature = "argon2"))]
 fn test_argon2_kdf() {
     //let data = Vec::from_hex(crate::tests::PASSWORD_SIMPLE).unwrap();
     //let mut key = Key::new();
@@ -49,7 +49,7 @@ fn test_argon2_kdf() {
 }
 
 #[test]
-#[cfg(any(feature = "rust-argon2", feature = "argonautica", feature = "argon2-kdf"))]
+#[cfg(any(feature = "rust-argon2", feature = "argonautica", feature = "argon2-kdf", feature = "argon2"))]
 fn test_argon2_kdf_alternate() {
     let password = b"asdf";
     let salt = b"7kAWcXSFs31RtR0g";
