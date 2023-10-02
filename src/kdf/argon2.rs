@@ -12,7 +12,7 @@ use argon2_kdf::{Hasher, Algorithm};
 #[cfg(feature = "argon2")]
 use ::argon2::{Argon2, Algorithm, Version, ParamsBuilder};
 
-use crate::utils::{unmake_u32, unmake_u64};
+use crate::MapValue;
 use super::*;
 
 /* TODO Use these defaults */
@@ -145,35 +145,35 @@ fn transform_argon2_lib(
 #[cfg(any(feature = "rust-argon2", feature = "argonautica", feature = "argon2-kdf", feature = "argon2"))]
 pub fn transform_argon2(
     composite_key: &[u8],
-    custom_data: &HashMap<String, Vec<u8>>,
+    custom_data: &HashMap<String, MapValue>,
 ) -> io::Result<Vec<u8>> {
     info!("Found Argon2 KDF");
     let salt = match custom_data.get(KDF_PARAM_SALT) {
-        Some(x) => x,
-        None => {
+        Some(MapValue::ByteArray(x)) => x,
+        _ => {
             return Err(io::Error::new(io::ErrorKind::Other, "Argon2 salt missing"));
         }
     };
     let version = match custom_data.get(KDF_PARAM_VERSION) {
-        Some(x) => match unmake_u32(x) {
-            Some(x) if x > 0x13 => {
+        Some(MapValue::UInt32(x)) => match *x {
+            x if x > 0x13 => {
                 println!("Version: {}", x);
                 return Err(io::Error::new(
                     io::ErrorKind::Other,
                     "Argon2 version too new",
                 ));
             }
-            Some(x) if x == 0x13 => 0x13,
-            Some(x) if x >= 0x10 => 0x10,
-            Some(_) => {
+            x if x == 0x13 => 0x13,
+            x if x >= 0x10 => 0x10,
+            _ => {
                 return Err(io::Error::new(
                     io::ErrorKind::Other,
                     "Argon2 version too old",
                 ));
             }
-            None => {
-                return Err(io::Error::new(io::ErrorKind::Other, "Invalid version"));
-            }
+        },
+        Some(_) => {
+            return Err(io::Error::new(io::ErrorKind::Other, "Invalid version"));
         },
         None => {
             return Err(io::Error::new(
@@ -183,14 +183,12 @@ pub fn transform_argon2(
         }
     };
     let mem_cost = match custom_data.get(KDF_PARAM_MEMORY) {
-        Some(x) => match unmake_u64(x) {
-            Some(x) => x / 1024,
-            None => {
-                return Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    "Invalid memory parameter",
-                ));
-            }
+        Some(MapValue::UInt64(x)) => x / 1024,
+        Some(_) => {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Invalid memory parameter",
+            ));
         },
         None => {
             return Err(io::Error::new(
@@ -200,14 +198,12 @@ pub fn transform_argon2(
         }
     };
     let time_cost = match custom_data.get(KDF_PARAM_ITERATIONS) {
-        Some(x) => match unmake_u64(x) {
-            Some(x) => x,
-            None => {
-                return Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    "Invalid time parameter",
-                ));
-            }
+        Some(MapValue::UInt64(x)) => *x,
+        Some(_) => {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Invalid time parameter",
+            ));
         },
         None => {
             return Err(io::Error::new(
@@ -217,14 +213,12 @@ pub fn transform_argon2(
         }
     };
     let lanes = match custom_data.get(KDF_PARAM_PARALLELISM) {
-        Some(x) => match unmake_u32(x) {
-            Some(x) => x,
-            None => {
-                return Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    "Invalid parallelism parameter",
-                ));
-            }
+        Some(MapValue::UInt32(x)) => *x,
+        Some(_) => {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Invalid parallelism parameter",
+            ));
         },
         None => {
             return Err(io::Error::new(
@@ -248,7 +242,7 @@ pub fn transform_argon2(
 #[cfg(not(any(feature = "rust-argon2", feature = "argonautica", feature = "argon2-kdf", feature = "argon2")))]
 pub fn transform_argon2(
     _composite_key: &[u8],
-    custom_data: &HashMap<String, Vec<u8>>,
+    custom_data: &HashMap<String, MapValue>,
 ) -> io::Result<Vec<u8>> {
     Err(io::Error::new(io::ErrorKind::Other, "Argon2 unimplemented"))
 }

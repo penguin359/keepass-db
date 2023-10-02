@@ -1933,8 +1933,7 @@ impl KeePassDoc {
             process::exit(1);
         }
 
-        let mut custom_data = HashMap::<String, Vec<u8>>::new();
-        let mut custom_data2 = HashMap::<_, _>::new();
+        let mut custom_data = HashMap::<_, _>::new();
 
         match magic_type {
             KDBX1_MAGIC_TYPE => {
@@ -1973,14 +1972,14 @@ impl KeePassDoc {
                 };
                 custom_data.insert(
                     KDF_PARAM_UUID.to_string(),
-                    KDF_AES_KDBX3.as_bytes().to_vec(),
+                    MapValue::ByteArray(KDF_AES_KDBX3.into_bytes().to_vec()),
                 );
             }
             4 => {}
             1 => {
                 custom_data.insert(
                     KDF_PARAM_UUID.to_string(),
-                    KDF_AES_KDBX3.as_bytes().to_vec(),
+                    MapValue::ByteArray(KDF_AES_KDBX3.into_bytes().to_vec()),
                 );
             }
             _ => {
@@ -1999,12 +1998,10 @@ impl KeePassDoc {
             debug!("TLV({}, {}): {:?}", tlv_type, tlv_data[0].len(), tlv_data);
             match tlv_type {
                 5 => {
-                    custom_data.insert(KDF_PARAM_SALT.to_string(), tlv_data[0].clone());
-                    custom_data2.insert(KDF_PARAM_SALT.to_string(), MapValue::ByteArray(tlv_data[0].clone()));
+                    custom_data.insert(KDF_PARAM_SALT.to_string(), MapValue::ByteArray(tlv_data[0].clone()));
                 }
                 6 => {
-                    custom_data.insert(KDF_PARAM_ROUNDS.to_string(), tlv_data[0].clone());
-                    custom_data2.insert(
+                    custom_data.insert(
                         KDF_PARAM_ROUNDS.to_string(),
                         MapValue::UInt64(u64::from_le_bytes(tlv_data[0][0..8].try_into().unwrap())),
                     );
@@ -2016,34 +2013,7 @@ impl KeePassDoc {
                     inner_tlvs.insert(1u8, tlv_data.clone());
                 }
                 11 => {
-                    custom_data2 = load_map(&tlv_data[0]).unwrap();
-                    let kdf_parameters = &tlv_data[0];
-                    let mut c = Cursor::new(kdf_parameters);
-                    let variant_minor = c.read_u8()?;
-                    let variant_major = c.read_u8()?;
-                    if variant_major != 1 {
-                        eprintln!(
-                            "Unsupported variant dictionary version ({}.{})\n",
-                            variant_major, variant_minor
-                        );
-                        process::exit(1);
-                    };
-
-                    loop {
-                        let item_type = c.read_u8()?;
-                        if item_type == 0 {
-                            break;
-                        }
-                        let item_key_len = c.read_u32::<LittleEndian>()?;
-                        let mut item_key = vec![0; item_key_len as usize];
-                        c.read_exact(&mut item_key)?;
-                        let item_key_str = String::from_utf8_lossy(&item_key).to_owned();
-                        let item_value_len = c.read_u32::<LittleEndian>()?;
-                        let mut item_value = vec![0; item_value_len as usize];
-                        c.read_exact(&mut item_value)?;
-                        debug!("K: {}, V: {:0x?}", item_key_str, item_value);
-                        custom_data.insert(item_key_str.to_owned().to_string(), item_value);
-                    }
+                    custom_data = load_map(&tlv_data[0]).unwrap();
                 }
                 _ => {
                 }
@@ -2101,21 +2071,23 @@ impl KeePassDoc {
             }
         }
 
-        let kdf_id = Uuid::from_slice(&custom_data[KDF_PARAM_UUID]).unwrap();
+        let kdf_id = match custom_data.get(KDF_PARAM_UUID) {
+            Some(MapValue::ByteArray(x)) => {
+                Uuid::from_slice(&x).unwrap()
+            },
+            _ => { panic!("Unsupported KDF UUID"); },
+        };
         println!("KDF: {:?}", kdf_id);
 
         let transform_key = match kdf_id {
             x if x == KDF_AES_KDBX3 => {
-                //unimplemented!("KDBX 3 AES-KDF not supported!");
-                AesKdf::load(&custom_data2)?.transform_key(&composite_key)?
-                // transform_aes_kdf(&composite_key, &custom_data)?
+                AesKdf::load(&custom_data)?.transform_key(&composite_key)?
             }
             x if x == KDF_AES_KDBX4 => {
                 unimplemented!("KDBX 4 AES-KDF not supported!");
             }
             x if x == KDF_ARGON2_D => {
                 transform_argon2(&composite_key, &custom_data)?
-                //unimplemented!("Argon2 KDF not supported!");
             }
             _ => {
                 unimplemented!("Unknown");

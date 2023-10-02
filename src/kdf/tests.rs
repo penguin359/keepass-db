@@ -2,7 +2,6 @@ use hex::FromHex;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crate::utils::{make_u32, make_u64};
 use super::*;
 
 #[test]
@@ -39,11 +38,11 @@ fn test_argon2_kdf() {
     let password = b"password";
     let salt = b"othersalt";
     let mut custom_data = HashMap::new();
-    custom_data.insert("S".to_string(), salt.to_vec());
-    custom_data.insert("V".to_string(), make_u32(0x13));
-    custom_data.insert("M".to_string(), make_u64(65536));
-    custom_data.insert("I".to_string(), make_u64(10));
-    custom_data.insert("P".to_string(), make_u32(4));
+    custom_data.insert("S".to_string(), MapValue::ByteArray(salt.to_vec()));
+    custom_data.insert("V".to_string(), MapValue::UInt32(0x13));
+    custom_data.insert("M".to_string(), MapValue::UInt64(65536));
+    custom_data.insert("I".to_string(), MapValue::UInt64(10));
+    custom_data.insert("P".to_string(), MapValue::UInt32(4));
     let transform_key = transform_argon2(&password[..], &custom_data);
     assert!(transform_key.is_ok());
 }
@@ -56,11 +55,11 @@ fn test_argon2_kdf_alternate() {
     let hash = "ebe1a1494699ef897bed68f8d934697644e3c5f9b0e9162e2e888d2901fa1ee7";
     let hash_raw = Vec::from_hex(hash).unwrap();
     let mut custom_data = HashMap::new();
-    custom_data.insert("S".to_string(), salt.to_vec());
-    custom_data.insert("V".to_string(), make_u32(0x13));
-    custom_data.insert("M".to_string(), make_u64(32*1024));
-    custom_data.insert("I".to_string(), make_u64(20));
-    custom_data.insert("P".to_string(), make_u32(3));
+    custom_data.insert("S".to_string(), MapValue::ByteArray(salt.to_vec()));
+    custom_data.insert("V".to_string(), MapValue::UInt32(0x13));
+    custom_data.insert("M".to_string(), MapValue::UInt64(32*1024));
+    custom_data.insert("I".to_string(), MapValue::UInt64(20));
+    custom_data.insert("P".to_string(), MapValue::UInt32(3));
     let transform_key = transform_argon2(&password[..], &custom_data);
     assert!(transform_key.is_ok());
     let transform_key_raw = transform_key.unwrap();
