@@ -29,6 +29,12 @@ impl Key {
         }
     }
 
+    pub fn with_password(password: &str) -> Self {
+        let mut key = Self::new();
+        key.set_user_password(password);
+        key
+    }
+
     /// Set the password for the compsite key
     /// ```
     /// # use keepass_db::Key;

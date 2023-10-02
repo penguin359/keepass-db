@@ -32,6 +32,7 @@ use std::io::Cursor;
 use std::io::{self, SeekFrom};
 use std::process;
 use std::cmp;
+use std::path::Path;
 
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
@@ -1918,10 +1919,9 @@ pub struct KeePassDoc {
 
 impl KeePassDoc {
     /// Read in an existing KeePass database
-    pub fn load_file(filename: &str, key: &Key) -> io::Result<Self> {
+    pub fn load<R: Read + Seek>(file: &mut R, key: &Key) -> io::Result<Self> {
         let composite_key = key.composite_key();
 
-        let mut file = File::open(filename)?;
         let magic = file.read_u32::<LittleEndian>()?;
         let magic_type = file.read_u32::<LittleEndian>()?;
 
@@ -1936,7 +1936,7 @@ impl KeePassDoc {
         match magic_type {
             KDBX1_MAGIC_TYPE => {
                 use kdb1::read_kdb1_header;
-                read_kdb1_header(&mut file, &key)?;
+                read_kdb1_header(file, &key)?;
                 return Ok(KeePassDoc::default());
             }
             // KDBX2_BETA_MAGIC_TYPE => {
@@ -2451,9 +2451,14 @@ impl KeePassDoc {
         })
     }
 
+    /// Read in an existing KeePass database
+    pub fn load_file<P: AsRef<Path>>(filename: P, key: &Key) -> io::Result<Self> {
+        let mut file = File::open(filename)?;
+        Self::load(&mut file, key)
+    }
+
     #[cfg(feature = "write")]
-    pub fn save_file(&self, major_version: u16) -> io::Result<()> {
-        let mut file = File::create("data-out.kdbx")?;
+    pub fn save<W: Write>(&self, file: &mut W, major_version: u16) -> io::Result<()> {
         let minor_version = 0;
         let mut header = vec![];
         header.write_u32::<LittleEndian>(KDBX_MAGIC)?;
@@ -2611,6 +2616,12 @@ impl KeePassDoc {
         // drop(output);
 
         Ok(())
+    }
+
+    #[cfg(feature = "write")]
+    pub fn save_file<P: AsRef<Path>>(&self, filename: P, major_version: u16) -> io::Result<()> {
+        let mut file = File::create(filename)?;
+        self.save(&mut file, major_version)
     }
 }
 
