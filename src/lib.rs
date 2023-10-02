@@ -29,7 +29,7 @@ use std::slice::Iter;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Cursor;
-use std::io::{self, SeekFrom};
+use std::io;
 use std::process;
 use std::cmp;
 use std::path::Path;
@@ -1919,11 +1919,14 @@ pub struct KeePassDoc {
 
 impl KeePassDoc {
     /// Read in an existing KeePass database
-    pub fn load<R: Read + Seek>(file: &mut R, key: &Key) -> io::Result<Self> {
+    pub fn load<R: Read>(file: &mut R, key: &Key) -> io::Result<Self> {
         let composite_key = key.composite_key();
 
-        let magic = file.read_u32::<LittleEndian>()?;
-        let magic_type = file.read_u32::<LittleEndian>()?;
+        let mut header = vec![0; 8];
+        file.read_exact(&mut header[..])?;
+        let mut cursor = Cursor::new(header);
+        let magic = cursor.read_u32::<LittleEndian>()?;
+        let magic_type = cursor.read_u32::<LittleEndian>()?;
 
         if magic != KDBX_MAGIC {
             eprintln!("Invalid database file\n");
@@ -1954,11 +1957,15 @@ impl KeePassDoc {
             }
         };
 
+        cursor.get_mut().resize(12, 0);
+        file.read_exact(&mut cursor.get_mut()[8..])?;
+
         // Version field is defined as uint32_t, but it's broken up into
         // major and minor 16-bit components. Due to the nature of little
         // endian, this puts the minor part first.
-        let minor_version = file.read_u16::<LittleEndian>()?;
-        let major_version = file.read_u16::<LittleEndian>()?;
+        let minor_version = cursor.read_u16::<LittleEndian>()?;
+        let major_version = cursor.read_u16::<LittleEndian>()?;
+        let mut header = cursor.into_inner();
         match major_version {
             3 => {
                 unsafe {
@@ -1984,44 +1991,33 @@ impl KeePassDoc {
                 process::exit(1);
             }
         };
-        let mut tlvs = HashMap::new();
+        let (mut tlvs, var_header) = load_tlvs(file, major_version)?;
+        header.extend(var_header);
         let mut inner_tlvs = BTreeMap::<u8, Vec<Vec<u8>>>::new();
         inner_tlvs.insert(3u8, vec![]);
-        loop {
-            let tlv_type = file.read_u8()?;
-            let tlv_len = if major_version == 4 {
-                file.read_u32::<LittleEndian>()?
-            } else {
-                // XXX Untested
-                file.read_u16::<LittleEndian>()? as u32
-            };
-            let mut tlv_data = vec![0; tlv_len as usize];
-            file.read_exact(&mut tlv_data)?;
-            debug!("TLV({}, {}): {:?}", tlv_type, tlv_len, tlv_data);
+        for (tlv_type, tlv_data) in tlvs.iter() {
+            debug!("TLV({}, {}): {:?}", tlv_type, tlv_data[0].len(), tlv_data);
             match tlv_type {
-                0 => {
-                    break;
-                }
                 5 => {
-                    custom_data.insert(KDF_PARAM_SALT.to_string(), tlv_data.clone());
-                    custom_data2.insert(KDF_PARAM_SALT.to_string(), MapValue::ByteArray(tlv_data));
+                    custom_data.insert(KDF_PARAM_SALT.to_string(), tlv_data[0].clone());
+                    custom_data2.insert(KDF_PARAM_SALT.to_string(), MapValue::ByteArray(tlv_data[0].clone()));
                 }
                 6 => {
-                    custom_data.insert(KDF_PARAM_ROUNDS.to_string(), tlv_data.clone());
+                    custom_data.insert(KDF_PARAM_ROUNDS.to_string(), tlv_data[0].clone());
                     custom_data2.insert(
                         KDF_PARAM_ROUNDS.to_string(),
-                        MapValue::UInt64(u64::from_le_bytes(tlv_data[0..8].try_into().unwrap())),
+                        MapValue::UInt64(u64::from_le_bytes(tlv_data[0][0..8].try_into().unwrap())),
                     );
                 }
                 8 => {
-                    inner_tlvs.insert(2u8, vec![tlv_data]);
+                    inner_tlvs.insert(2u8, tlv_data.clone());
                 }
                 10 => {
-                    inner_tlvs.insert(1u8, vec![tlv_data]);
+                    inner_tlvs.insert(1u8, tlv_data.clone());
                 }
                 11 => {
-                    custom_data2 = load_map(&tlv_data).unwrap();
-                    let kdf_parameters = &tlv_data;
+                    custom_data2 = load_map(&tlv_data[0]).unwrap();
+                    let kdf_parameters = &tlv_data[0];
                     let mut c = Cursor::new(kdf_parameters);
                     let variant_minor = c.read_u8()?;
                     let variant_major = c.read_u8()?;
@@ -2050,7 +2046,6 @@ impl KeePassDoc {
                     }
                 }
                 _ => {
-                    tlvs.insert(tlv_type, tlv_data);
                 }
             }
         }
@@ -2060,14 +2055,14 @@ impl KeePassDoc {
         //let b = &src[..uuid.len()];
         //uuid.copy_from_slice(b);
         //let d = Builder::from_bytes(uuid).build();
-        let cipher_id = Uuid::from_slice(&tlvs[&2u8]).unwrap();
+        let cipher_id = Uuid::from_slice(&tlvs[&2u8][0]).unwrap();
         println!("D: {:?}", cipher_id);
         if cipher_id != CIPHER_ID_AES256_CBC {
             eprintln!("Unknown cipher\n");
             process::exit(1);
         }
         println!("AES");
-        let mut c = Cursor::new(&tlvs[&3u8]);
+        let mut c = Cursor::new(&tlvs[&3u8][0]);
         let compression_flags = c.read_u32::<LittleEndian>()?;
         enum Compression {
             None,
@@ -2091,16 +2086,10 @@ impl KeePassDoc {
             }
         };
 
-        let master_seed = &tlvs[&4u8];
-        let encryption_iv = &tlvs[&7u8];
+        let master_seed = &tlvs[&4u8][0];
+        let encryption_iv = &tlvs[&7u8][0];
 
-        //let mut header = vec![];
         let mut context = Context::new(&SHA256);
-        let pos = file.seek(SeekFrom::Current(0))?;
-        file.seek(SeekFrom::Start(0))?;
-        let mut header = vec![0; (pos) as usize];
-        file.read_exact(&mut header)?;
-        file.seek(SeekFrom::Start(pos))?;
         context.update(&header);
         let digest = context.finish();
         if major_version == 4 {
@@ -2224,7 +2213,7 @@ impl KeePassDoc {
             /* Start stream header is used to verify successful decrypt */
             let mut start_stream = vec![0; 32];
             c.read_exact(&mut start_stream)?;
-            assert_eq!(&start_stream, &tlvs[&9u8]);
+            assert_eq!(&start_stream, &tlvs[&9u8][0]);
             println!("Master Key appears valid");
 
             let mut buf = vec![];
