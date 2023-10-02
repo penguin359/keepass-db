@@ -23,7 +23,7 @@
 //! ```
 
 use std::collections::VecDeque;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::convert::TryInto;
 use std::slice::Iter;
 use std::fs::File;
@@ -1363,7 +1363,7 @@ impl<C> KdbxParse<C> for Color {
             // TODO Implement error handling
             //let d = hex::decode(v).map_err(|_| "Invalid color")?;
             let d = hex::decode(&v[1..]).expect("Invalid color");
-            Color {
+            Self {
                 red: *d.get(0).unwrap_or(&0),
                 green: *d.get(1).unwrap_or(&0),
                 blue: *d.get(2).unwrap_or(&0),
@@ -1658,7 +1658,7 @@ pub struct Group {
     last_top_visible_entry: Uuid,
     // TODO custom_data: CustomData,
     previous_parent_group: Option<Uuid>,
-    tags: Option<String>,  // TODO Should be a Vec
+    tags: Option<Tags>,
     #[keepass_db(flatten)]
     #[getter(rename = "entries")]
     entry: Vec<Entry>,
@@ -1772,6 +1772,38 @@ struct AutoType {
     association: Vec<Association>,
 }
 
+#[derive(Clone, Debug, Default, Getters)]
+#[cfg_attr(test, derive(PartialEq))]
+pub struct Tags {
+    tags: BTreeSet<String>,
+}
+
+impl<C> KdbxParse<C> for Tags {
+    fn parse<R: Read>(
+        reader: &mut EventReader<R>,
+        name: OwnedName,
+        attributes: Vec<OwnedAttribute>,
+        _context: &mut C,
+    ) -> Result<Option<Self>, String> {
+        Ok(decode_optional_string(reader, name, attributes)?.map(|v| {
+            Self {
+                tags: v.split(";").map(|v| v.to_string()).collect(),
+            }
+        }))
+    }
+}
+
+impl<C> KdbxSerialize<C> for Tags {
+    fn serialize2<W: Write>(
+        writer: &mut EventWriter<W>,
+        value: Self,
+        _context: &mut C,
+    ) -> Result<(), String> {
+        let value = value.tags.iter().fold(String::new(), |a, b| if a == "" { b.clone() } else { a + ";" + b });
+        encode_string(writer, &value)
+    }
+}
+
 /// Password entry
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize, Getters)]
 #[cfg_attr(test, derive(PartialEq))]
@@ -1793,7 +1825,7 @@ pub struct Entry {
     override_url: String,
     quality_check: Option<bool>,
     /// Tags for password entry
-    tags: String,
+    tags: Tags,
     previous_parent_group: Option<Uuid>,
     times: Times,
     custom_data: Vec<Item>,

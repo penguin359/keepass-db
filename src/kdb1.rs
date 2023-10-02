@@ -15,6 +15,7 @@ use rand::Rng;
 use ring::digest::{Context, SHA256, SHA512};
 
 use crate::Key;
+use crate::Tags;
 use crate::kdf::{transform_aes_kdf, KDF_PARAM_ROUNDS, KDF_PARAM_SALT};
 use crate::utils::{make_u64, unmake_u64_be};
 
@@ -94,7 +95,7 @@ impl From<KdbEntry> for Entry {
             background_color: None,
             override_url: "".to_string(),
             quality_check: None,
-            tags: "".to_string(),
+            tags: Tags::default(),
             previous_parent_group: None,
             times: Times {
                 creation_time: value.creation_time.with_timezone(&Utc),

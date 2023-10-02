@@ -2137,6 +2137,89 @@ fn test_encode_optional_color_filled() {
     assert_eq!(actual, "<OptionColorTest><Field>#80FF0F</Field></OptionColorTest>");
 }
 
+#[derive(Clone, Default, KdbxParse, KdbxSerialize)]
+struct TagsTest {
+    field: Tags,
+}
+
+#[test]
+fn test_decode_tags_empty() {
+    let actual: TagsTest = parse_document("<TagsTest><Field/></TagsTest>");
+    assert!(actual.field.tags.is_empty());
+    assert_eq!(actual.field.tags.len(), 0);
+}
+
+#[test]
+fn test_decode_tags_filled() {
+    let actual: TagsTest = parse_document("<TagsTest><Field>alpha;omega;gamma</Field></TagsTest>");
+    assert_eq!(actual.field.tags.len(), 3);
+    assert!(actual.field.tags.contains("alpha"));
+    assert!(actual.field.tags.contains("gamma"));
+    assert!(actual.field.tags.contains("omega"));
+}
+
+#[test]
+fn test_encode_tags_empty() {
+    let actual = serialize_document(&TagsTest {
+        field: Tags::default(),
+    });
+    assert_eq!(actual, "<TagsTest><Field></Field></TagsTest>");
+}
+
+#[test]
+fn test_encode_tags_filled() {
+    let mut set = BTreeSet::new();
+    set.insert("omega".to_string());
+    set.insert("alpha".to_string());
+    set.insert("gamma".to_string());
+    let actual = serialize_document(&TagsTest {
+        field: Tags { tags: set },
+    });
+    assert_eq!(actual, "<TagsTest><Field>alpha;gamma;omega</Field></TagsTest>");
+}
+
+#[derive(Clone, Default, KdbxParse, KdbxSerialize)]
+struct OptionTagsTest {
+    field: Option<Tags>,
+}
+
+#[test]
+fn test_decode_optional_tags_empty() {
+    let actual: OptionTagsTest = parse_document("<OptionTagsTest/>");
+    assert_eq!(actual.field, None);
+}
+
+#[test]
+fn test_decode_optional_tags_filled() {
+    let actual: OptionTagsTest = parse_document("<OptionTagsTest><Field>alpha;omega;gamma</Field></OptionTagsTest>");
+    assert!(actual.field.is_some());
+    let field = actual.field.unwrap();
+    assert_eq!(field.tags.len(), 3);
+    assert!(field.tags.contains("alpha"));
+    assert!(field.tags.contains("gamma"));
+    assert!(field.tags.contains("omega"));
+}
+
+#[test]
+fn test_encode_optional_tags_empty() {
+    let actual = serialize_document(&OptionTagsTest {
+        field: None,
+    });
+    assert_eq!(actual, "<OptionTagsTest/>");
+}
+
+#[test]
+fn test_encode_optional_tags_filled() {
+    let mut set = BTreeSet::new();
+    set.insert("omega".to_string());
+    set.insert("alpha".to_string());
+    set.insert("gamma".to_string());
+    let actual = serialize_document(&OptionTagsTest {
+        field: Some(Tags { tags: set }),
+    });
+    assert_eq!(actual, "<OptionTagsTest><Field>alpha;gamma;omega</Field></OptionTagsTest>");
+}
+
 #[test]
 fn test_decode_meta_empty() {
     let mut reader = start_document("<Meta/>", "Meta");
