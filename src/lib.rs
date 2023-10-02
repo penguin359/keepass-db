@@ -1344,6 +1344,45 @@ pub struct Item {
     last_modification_time: Option<DateTime<Utc>>,
 }
 
+#[derive(Clone, Debug, Default)]
+#[cfg_attr(test, derive(PartialEq))]
+pub struct Color {
+    red: u8,
+    green: u8,
+    blue: u8,
+}
+
+impl<C> KdbxParse<C> for Color {
+    fn parse<R: Read>(
+        reader: &mut EventReader<R>,
+        name: OwnedName,
+        attributes: Vec<OwnedAttribute>,
+        _context: &mut C,
+    ) -> Result<Option<Self>, String> {
+        Ok(decode_optional_string(reader, name, attributes)?.map(|v| {
+            // TODO Implement error handling
+            //let d = hex::decode(v).map_err(|_| "Invalid color")?;
+            let d = hex::decode(&v[1..]).expect("Invalid color");
+            Color {
+                red: *d.get(0).unwrap_or(&0),
+                green: *d.get(1).unwrap_or(&0),
+                blue: *d.get(2).unwrap_or(&0),
+            }
+        }))
+    }
+}
+
+impl<C> KdbxSerialize<C> for Color {
+    fn serialize2<W: Write>(
+        writer: &mut EventWriter<W>,
+        value: Self,
+        _context: &mut C,
+    ) -> Result<(), String> {
+        let value = format!("#{:02X}{:02X}{:02X}", value.red, value.green, value.blue);
+        encode_string(writer, &value)
+    }
+}
+
 #[derive(Clone, Debug, Default, KdbxParse, KdbxSerialize)]
 struct Meta {
     generator: String,
@@ -1356,7 +1395,7 @@ struct Meta {
     default_user_name: String,
     default_user_name_changed: Option<DateTime<Utc>>,
     maintenance_history_days: u32,
-    color: String,
+    color: Color,
     master_key_changed: Option<DateTime<Utc>>,
     master_key_change_rec: i64,
     master_key_change_force: i64,
@@ -1747,9 +1786,9 @@ pub struct Entry {
     #[keepass_db(element = "CustomIconUUID")]
     custom_icon_uuid: Option<Uuid>,
     /// Foreground text color of entry
-    foreground_color: String,
+    foreground_color: Option<Color>,
     /// Background text color of entry
-    background_color: String,
+    background_color: Option<Color>,
     #[keepass_db(element = "OverrideURL")]
     override_url: String,
     quality_check: Option<bool>,

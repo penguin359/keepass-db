@@ -265,6 +265,26 @@ fn end_document(mut reader: EventReader<Cursor<&[u8]>>) {
 //    start_document_raw(contents.as_bytes(), root)
 //}
 
+fn parse_document<P: KdbxParse<KdbxContext>>(contents: &'static str) -> P {
+    let root = std::any::type_name::<P>().rsplit(":").nth(0).unwrap();
+    let mut reader = start_document(contents, root);
+    let doc = P::parse(
+        &mut reader,
+        OwnedName::local(root),
+        vec![],
+        &mut KdbxContext::default(),
+    )
+    .expect("Parsing error")
+    .expect("Missing object");
+    end_document(reader);
+    return doc;
+}
+
+fn serialize_document<S: KdbxSerialize<KdbxContext> + Clone>(doc: &S) -> String {
+    let value = write_kdbx_document(doc);
+    std::str::from_utf8(&value).expect("Valid UTF-8").to_string()
+}
+
 #[derive(Clone, Default, KdbxParse, KdbxSerialize)]
 struct StringTest {
     field: String,
@@ -2041,6 +2061,80 @@ fn test_decode_custom_data_simple() {
     assert_eq!(custom_data.len(), 1);
     assert!(custom_data.contains_key("one"), "Has appropriate key");
     assert_eq!(custom_data["one"], "1");
+}
+
+#[derive(Clone, Default, KdbxParse, KdbxSerialize)]
+struct ColorTest {
+    field: Color,
+}
+
+#[test]
+fn test_decode_color_empty() {
+    let actual: ColorTest = parse_document("<ColorTest><Field/></ColorTest>");
+    assert_eq!(actual.field.red, 0);
+    assert_eq!(actual.field.green, 0);
+    assert_eq!(actual.field.blue, 0);
+}
+
+#[test]
+fn test_decode_color_filled() {
+    let actual: ColorTest = parse_document("<ColorTest><Field>#80FF0F</Field></ColorTest>");
+    assert_eq!(actual.field.red, 128);
+    assert_eq!(actual.field.green, 255);
+    assert_eq!(actual.field.blue, 15);
+}
+
+#[test]
+fn test_encode_color_empty() {
+    let actual = serialize_document(&ColorTest {
+        field: Color::default(),
+    });
+    assert_eq!(actual, "<ColorTest><Field>#000000</Field></ColorTest>");
+}
+
+#[test]
+fn test_encode_color_filled() {
+    let actual = serialize_document(&ColorTest {
+        field: Color { red: 128, green: 255, blue: 15 },
+    });
+    assert_eq!(actual, "<ColorTest><Field>#80FF0F</Field></ColorTest>");
+}
+
+#[derive(Clone, Default, KdbxParse, KdbxSerialize)]
+struct OptionColorTest {
+    field: Option<Color>,
+}
+
+#[test]
+fn test_decode_optional_color_empty() {
+    let actual: OptionColorTest = parse_document("<OptionColorTest/>");
+    assert_eq!(actual.field, None);
+}
+
+#[test]
+fn test_decode_optional_color_filled() {
+    let actual: OptionColorTest = parse_document("<OptionColorTest><Field>#80FF0F</Field></OptionColorTest>");
+    assert!(actual.field.is_some());
+    let field = actual.field.unwrap();
+    assert_eq!(field.red, 128);
+    assert_eq!(field.green, 255);
+    assert_eq!(field.blue, 15);
+}
+
+#[test]
+fn test_encode_optional_color_empty() {
+    let actual = serialize_document(&OptionColorTest {
+        field: None,
+    });
+    assert_eq!(actual, "<OptionColorTest/>");
+}
+
+#[test]
+fn test_encode_optional_color_filled() {
+    let actual = serialize_document(&OptionColorTest {
+        field: Some(Color { red: 128, green: 255, blue: 15 }),
+    });
+    assert_eq!(actual, "<OptionColorTest><Field>#80FF0F</Field></OptionColorTest>");
 }
 
 #[test]

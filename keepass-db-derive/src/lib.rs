@@ -47,7 +47,7 @@ impl KdbxAttributes {
             syn::Meta::List(ref v) => Some(&v.tokens),
             _ => None
         }) {
-            eprintln!("Inner attr tokens: {:#?}", attr);
+            //eprintln!("Inner attr tokens: {:#?}", attr);
             let mut attr_token = attr.clone().into_iter();
             while let Some(item) = attr_token.next() {
                 if let TokenTree::Ident(name) = item {

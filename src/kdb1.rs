@@ -90,8 +90,8 @@ impl From<KdbEntry> for Entry {
             icon_id: value.icon,
             custom_icon_uuid: None,
 
-            foreground_color: "".to_string(),  // Should be None
-            background_color: "".to_string(),  // Should be None
+            foreground_color: None,
+            background_color: None,
             override_url: "".to_string(),
             quality_check: None,
             tags: "".to_string(),
