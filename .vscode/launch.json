@@ -51,6 +51,26 @@
             },
             "args": [],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration tests in executable 'save-reload-kdbx41'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--features=write",
+                    "--no-run",
+                    "--test=save-reload-kdbx41"
+                    // "--package=keepass-db"
+                ],
+                "filter": {
+                    "name": "save-reload-kdbx41",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

@@ -52,3 +52,6 @@ generic-array = "0.14.7"
 
 [workspace]
 members = [ "keepass-db-derive" ]
+
+[dev-dependencies]
+tempfile = "3.8.0"

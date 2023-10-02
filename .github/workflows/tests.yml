@@ -50,9 +50,11 @@ jobs:
         run: 'echo OPENSSL_DIR="C:\\Program Files\\OpenSSL" > ${env:GITHUB_ENV}'
         if: runner.os == 'Windows'
       - name: Build
-        run: cargo +${{ matrix.rust }} build --verbose
+        run: cargo build --verbose
       - name: Run tests
-        run: cargo +${{ matrix.rust }} test --verbose --all
+        run: cargo test --no-default-features --verbose --workspace
+      - name: Run full tests
+        run: cargo test --features=write --verbose --workspace
       - name: Test executable
         env:
           KDBX_PASSWORD: asdf 

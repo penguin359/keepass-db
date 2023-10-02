@@ -2338,15 +2338,15 @@ impl KeePassDoc {
                     let p = xpath_current
                         .evaluate(&xpath_context, entry)
                         .expect("Missing entry text");
-                    println!("P: {:?}, ('{}')", p, p.string());
+                    //println!("P: {:?}, ('{}')", p, p.string());
                     let mut p_ciphertext = base64.decode(&p.string()).expect("Valid base64");
-                    println!("Protected Value Ciphertext: {p_ciphertext:#04X?} (+{protected_offset})");
+                    //println!("Protected Value Ciphertext: {p_ciphertext:#04X?} (+{protected_offset})");
                     protected_offset += p_ciphertext.len();
                     inner_cipher.apply_keystream(&mut p_ciphertext);
-                    println!("Protected Value Plaintext: {p_ciphertext:#04X?}");
+                    //println!("Protected Value Plaintext: {p_ciphertext:#04X?}");
                     let value = String::from_utf8(p_ciphertext)
                         .unwrap_or("«Failed to decrypt value»".to_owned());
-                    println!("Protected Value: {:?}", &value);
+                    //println!("Protected Value: {:?}", &value);
                     match entry {
                         sxd_xpath::nodeset::Node::Text(t) => {
                             t.set_text(&value);
@@ -2386,7 +2386,7 @@ impl KeePassDoc {
                     let p = xpath_password
                         .evaluate(&xpath_context, entry)
                         .expect("Missing entry password");
-                    println!("Name: {}", n.string());
+                    //println!("Name: {}", n.string());
                     let change_time = if database_name_changed_node.string() == "" {
                         "<missing>".to_owned()
                     } else {
@@ -2395,7 +2395,7 @@ impl KeePassDoc {
                                 .expect("failed to parse timestamp")
                                 .with_timezone(&Local)
                         } else {
-                            println!("Inner: {:?}", &t.string());
+                            //println!("Inner: {:?}", &t.string());
                             let timestamp =
                                 Cursor::new(base64.decode(&t.string()).expect("Valid base64"))
                                     .read_i64::<LittleEndian>()?
@@ -2406,8 +2406,8 @@ impl KeePassDoc {
                         };
                         datetime.format("%Y-%m-%d %l:%M:%S %p %Z").to_string()
                     };
-                    println!("Changed: {}", change_time);
-                    println!("Password: {:?}", p.string());
+                    //println!("Changed: {}", change_time);
+                    //println!("Password: {:?}", p.string());
                 }
             }
             _ => {
@@ -2432,7 +2432,7 @@ impl KeePassDoc {
                     // TODO Check top-level tag name
                     let mut context = KdbxContext::default();
                     context.major_version = major_version;
-                    context.binaries = inner_tlvs.remove(&3u8).unwrap();
+                    context.binaries = inner_tlvs.remove(&3u8).unwrap_or_default();
                     my_doc = Some(KeePassFile::parse(&mut reader, name, attributes, &mut context)
                         .map_err(|x| ::std::io::Error::new(::std::io::ErrorKind::Other, x))?
                         .unwrap());
