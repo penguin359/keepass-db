@@ -3,6 +3,7 @@ use std::{io::Result, path::PathBuf};
 
 use keepass_db::{KeePassDoc, protected_stream::CipherValue, Key};
 
+#[cfg(feature = "argon2")]
 #[test]
 fn main() -> Result<()> {
     let mut key = Key::new();

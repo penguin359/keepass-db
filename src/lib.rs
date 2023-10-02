@@ -13,10 +13,10 @@
 //! fn main() -> Result<(), Error> {
 //!     let mut key = Key::new();
 //!     key.set_user_password("asdf");
-//!     let mut doc = KeePassDoc::load_file("testdata/dummy-kdbx41.kdbx", &key)?;
+//!     let mut doc = KeePassDoc::load_file("testdata/dummy-kdbx3.kdbx", &key)?;
 //!     let database = doc.file;
 //!     let stream = &mut doc.cipher;
-//!     let basic_entry = database.root_group().all_entries().filter(|e| e.url().unprotect(stream).unwrap() == "https://keepass.info/").last().unwrap();
+//!     let basic_entry = database.root_group().all_entries().filter(|e| e.url().unprotect(stream).unwrap() == "https://www.example.net/").last().unwrap();
 //!     println!("Password: {}", basic_entry.password().unprotect(stream).unwrap());
 //!     Ok(())
 //! }

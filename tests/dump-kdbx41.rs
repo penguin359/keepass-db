@@ -1,5 +1,6 @@
 use std::{process::Command, path::PathBuf};
 
+#[cfg(feature = "argon2")]
 #[test]
 fn main() {
     assert!(Command::new(env!("CARGO_BIN_EXE_keepass-db"))
